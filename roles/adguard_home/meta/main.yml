@@ -1,0 +1,31 @@
+---
+# Metadata for AdGuard Home role
+
+galaxy_info:
+  author: Your Name
+  description: Installs and configures AdGuard Home DNS server on Fedora using native binary
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Fedora
+      versions:
+        - 38
+        - 39
+        - 40
+        - 41
+        - 42
+        - 43
+
+  galaxy_tags:
+    - adguard
+    - dns
+    - adblock
+    - privacy
+    - networking
+
+dependencies: []
+
+collections:
+  - ansible.posix
+  - community.general

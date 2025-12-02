@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "leases": [
+{% for lease in adguard_dhcp_static_leases %}
+    {
+      "expires": "",
+      "ip": "{{ lease.ip }}",
+      "hostname": "{{ lease.hostname }}",
+      "mac": "{{ lease.mac }}",
+      "static": true
+    }{{ "," if not loop.last else "" }}
+{% endfor %}
+  ]
+}

@@ -1,0 +1,122 @@
+---
+# Remove AdGuard Home (native binary) playbook
+# This playbook removes AdGuard Home installed as a native binary
+#
+# Usage: ansible-playbook playbooks/remove_adguard.yml
+
+- name: Remove AdGuard Home (native binary)
+  hosts: all
+  become: true
+
+  vars:
+    # Match variables from the role
+    adguard_service_name: AdGuardHome
+    adguard_install_dir: /usr/local/bin
+    adguard_working_dir: /opt/AdGuardHome
+    adguard_user: adguard
+    adguard_group: adguard
+    adguard_firewall_zone: public
+
+    # Removal options
+    remove_data: true  # Set to false to keep configuration and data
+
+  tasks:
+    - name: Check if AdGuard Home binary exists
+      ansible.builtin.stat:
+        path: "{{ adguard_install_dir }}/AdGuardHome"
+      register: adguard_binary
+
+    - name: Stop AdGuard Home service
+      ansible.builtin.systemd:
+        name: "{{ adguard_service_name }}"
+        state: stopped
+      failed_when: false
+      when: adguard_binary.stat.exists
+
+    - name: Uninstall AdGuard Home service
+      ansible.builtin.command: "{{ adguard_install_dir }}/AdGuardHome -s uninstall"
+      failed_when: false
+      when: adguard_binary.stat.exists
+      register: uninstall_result
+
+    - name: Reload systemd after service removal
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Remove AdGuard Home binary
+      ansible.builtin.file:
+        path: "{{ adguard_install_dir }}/AdGuardHome"
+        state: absent
+
+    - name: Remove working directory
+      ansible.builtin.file:
+        path: "{{ adguard_working_dir }}"
+        state: absent
+      when: remove_data | bool
+
+    - name: Remove AdGuard Home user
+      ansible.builtin.user:
+        name: "{{ adguard_user }}"
+        state: absent
+        remove: true
+
+    - name: Remove firewall rules for AdGuard Home
+      ansible.posix.firewalld:
+        zone: "{{ adguard_firewall_zone }}"
+        port: "{{ item }}"
+        permanent: true
+        immediate: true
+        state: disabled
+      loop:
+        - 3000/tcp  # Web UI (initial setup)
+        - 80/tcp    # Web UI (admin interface)
+        - 53/tcp    # DNS
+        - 53/udp    # DNS
+        - 853/tcp   # DNS-over-TLS
+        - 784/udp   # DNS-over-QUIC
+        - 443/tcp   # DNS-over-HTTPS
+      failed_when: false
+
+    - name: Check if systemd-resolved stub listener was disabled
+      ansible.builtin.stat:
+        path: /etc/systemd/resolved.conf.d/adguardhome.conf
+      register: resolved_config
+
+    - name: Remove systemd-resolved configuration
+      ansible.builtin.file:
+        path: /etc/systemd/resolved.conf.d/adguardhome.conf
+        state: absent
+      when: resolved_config.stat.exists
+      notify: restart systemd-resolved
+
+    - name: Remove SELinux file contexts for AdGuard Home
+      community.general.sefcontext:
+        target: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ adguard_install_dir }}/AdGuardHome"
+        - "{{ adguard_working_dir }}(/.*)?"
+      failed_when: false
+
+    - name: Display completion message
+      ansible.builtin.debug:
+        msg: |
+          AdGuard Home (native binary) has been removed.
+
+          Binary removed: {{ adguard_install_dir }}/AdGuardHome
+          User removed: {{ adguard_user }}
+          Data removed: {{ remove_data }}
+
+          {% if not remove_data %}
+          Configuration and data preserved in:
+          - {{ adguard_working_dir }}
+          {% endif %}
+
+          If systemd-resolved was disabled, it will be restarted.
+          You may need to manually reconfigure DNS settings.
+
+  handlers:
+    - name: restart systemd-resolved
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: restarted

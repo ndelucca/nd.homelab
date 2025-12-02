@@ -1,0 +1,312 @@
+---
+# Default variables for AdGuard Home role (native binary installation)
+
+# Installation configuration
+adguard_version: latest  # Can specify version like "v0.107.69" or use "latest"
+adguard_download_url: https://static.adguard.com/adguardhome/release/AdGuardHome_linux_amd64.tar.gz
+adguard_install_dir: /usr/local/bin  # Recommended for Fedora to avoid SELinux issues
+adguard_working_dir: /opt/AdGuardHome  # Where the binary and data will be stored
+adguard_user: adguard
+adguard_group: adguard
+
+# Service configuration
+adguard_service_name: AdGuardHome
+adguard_service_enabled: true
+adguard_service_state: started
+
+# Network configuration
+adguard_bind_host: 0.0.0.0
+adguard_bind_port: 3000  # Web UI (initial setup only)
+adguard_admin_port: 80   # Web UI (after initial setup)
+adguard_dns_port: 53
+adguard_dns_over_tls_port: 853
+adguard_dns_over_quic_port: 853
+adguard_dns_over_https_port: 443
+
+# Capability configuration (for binding to privileged ports without root)
+adguard_set_capabilities: true
+adguard_capabilities:
+  - CAP_NET_BIND_SERVICE
+  - CAP_NET_RAW
+
+# systemd-resolved configuration
+adguard_disable_systemd_resolved_stub: true
+adguard_resolved_dns_servers:
+  - 127.0.0.1
+adguard_resolved_fallback_dns:
+  - 1.1.1.1
+  - 8.8.8.8
+
+# Firewall configuration
+adguard_firewall_zone: public
+adguard_firewall_permanent: true
+adguard_firewall_immediate: true
+adguard_firewall_ports:
+  - port: "{{ adguard_bind_port }}/tcp"
+    description: "AdGuard Home Web UI (initial setup)"
+  - port: "{{ adguard_admin_port }}/tcp"
+    description: "AdGuard Home Web UI (admin interface)"
+  - port: "{{ adguard_dns_port }}/tcp"
+    description: "AdGuard Home DNS TCP"
+  - port: "{{ adguard_dns_port }}/udp"
+    description: "AdGuard Home DNS UDP"
+  - port: "{{ adguard_dns_over_tls_port }}/tcp"
+    description: "AdGuard Home DNS-over-TLS"
+  - port: "{{ adguard_dns_over_quic_port }}/udp"
+    description: "AdGuard Home DNS-over-QUIC"
+  - port: "{{ adguard_dns_over_https_port }}/tcp"
+    description: "AdGuard Home DNS-over-HTTPS"
+
+# SELinux configuration
+adguard_selinux_state: enforcing
+adguard_manage_selinux: true
+
+# AdGuard Home application configuration
+# Set to true to deploy custom configuration, false to let AdGuard use defaults
+adguard_configure_app: true
+
+# HTTP/Web UI configuration
+adguard_pprof_port: 6060
+adguard_pprof_enabled: false
+adguard_session_ttl: 720h
+adguard_auth_attempts: 5
+adguard_block_auth_min: 15
+adguard_http_proxy: ""
+adguard_language: ""
+adguard_theme: auto
+
+# Users (Note: passwords should be bcrypt hashed)
+# To generate password: htpasswd -nbB "" "yourpassword" | cut -d ":" -f 2
+adguard_users:
+  - name: ndelucca
+    password: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      36643333343964356339363431373231643037623637373335613963346265346631316236663933
+      6565646262316538656636313539663861333038623662620a366436343066326432393563663831
+      39343434333830306566666539373331376330303530646636383033363336356565643362393261
+      3765373236386534660a653234366263366263363233386262333334326532306633323430623164
+      63313836616530643735396233393166373431643832663131303062623363613666386330363763
+      33363730396364333137653161613864616163666566663635303331323962396461656165616666
+      633364373561653633663735393035636534
+
+# DNS configuration
+adguard_dns_bind_hosts:
+  - 0.0.0.0
+adguard_anonymize_client_ip: false
+adguard_ratelimit: 20
+adguard_ratelimit_subnet_len_ipv4: 24
+adguard_ratelimit_subnet_len_ipv6: 56
+adguard_ratelimit_whitelist: []
+adguard_refuse_any: true
+
+# Upstream DNS servers
+adguard_upstream_dns:
+  - https://unfiltered.adguard-dns.com/dns-query
+  - https://dns10.quad9.net/dns-query
+adguard_upstream_dns_file: ""
+
+# Bootstrap DNS servers (used to resolve upstream DNS hostnames)
+adguard_bootstrap_dns:
+  - 1.1.1.1
+  - 8.8.8.8
+  - 9.9.9.10
+  - 149.112.112.10
+  - 2620:fe::10
+  - 2620:fe::fe:10
+
+# Fallback DNS servers
+adguard_fallback_dns:
+  - 8.8.8.8
+
+# Upstream mode: load_balance, parallel, or fastest_addr
+adguard_upstream_mode: load_balance
+adguard_fastest_timeout: 1s
+adguard_upstream_timeout: 10s
+
+# Client filtering
+adguard_allowed_clients: []
+adguard_disallowed_clients: []
+
+# Blocked hosts
+adguard_blocked_hosts:
+  - version.bind
+  - id.server
+  - hostname.bind
+
+# Trusted proxies
+adguard_trusted_proxies:
+  - 127.0.0.0/8
+  - ::1/128
+
+# DNS cache configuration
+adguard_cache_enabled: true
+adguard_cache_size: 4194304  # 4MB
+adguard_cache_ttl_min: 0
+adguard_cache_ttl_max: 0
+adguard_cache_optimistic: false
+
+# Advanced DNS settings
+adguard_bogus_nxdomain: []
+adguard_aaaa_disabled: false
+adguard_enable_dnssec: false
+adguard_edns_custom_ip: ""
+adguard_edns_enabled: false
+adguard_edns_use_custom: false
+adguard_max_goroutines: 300
+adguard_handle_ddr: true
+adguard_ipset: []
+adguard_ipset_file: ""
+adguard_bootstrap_prefer_ipv6: false
+adguard_private_networks: []
+adguard_use_private_ptr_resolvers: false
+adguard_local_ptr_upstreams: []
+adguard_use_dns64: false
+adguard_dns64_prefixes: []
+adguard_serve_http3: false
+adguard_use_http3_upstreams: false
+adguard_serve_plain_dns: true
+adguard_hostsfile_enabled: true
+adguard_pending_requests_enabled: true
+
+# TLS/Encryption configuration
+adguard_tls_enabled: false
+adguard_tls_server_name: ""
+adguard_tls_force_https: false
+adguard_tls_port_dnscrypt: 0
+adguard_tls_dnscrypt_config_file: ""
+adguard_tls_allow_unencrypted_doh: false
+adguard_tls_certificate_chain: ""
+adguard_tls_private_key: ""
+adguard_tls_certificate_path: ""
+adguard_tls_private_key_path: ""
+adguard_tls_strict_sni_check: false
+
+# Query log configuration
+adguard_querylog_dir_path: ""
+adguard_querylog_ignored: []
+adguard_querylog_interval: 2160h  # 90 days
+adguard_querylog_size_memory: 1000
+adguard_querylog_enabled: true
+adguard_querylog_file_enabled: true
+
+# Statistics configuration
+adguard_stats_dir_path: ""
+adguard_stats_ignored: []
+adguard_stats_interval: 24h
+adguard_stats_enabled: true
+
+# Filters configuration
+adguard_filters:
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
+    name: AdGuard DNS filter
+    id: 1
+  - enabled: false
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt
+    name: AdAway Default Blocklist
+    id: 2
+
+adguard_whitelist_filters: []
+adguard_user_rules: []
+
+# DHCP server configuration
+adguard_dhcp_enabled: false
+adguard_dhcp_interface_name: eth0
+adguard_dhcp_local_domain: lan
+adguard_dhcp_gateway_ip: 192.168.1.1
+adguard_dhcp_subnet_mask: 255.255.255.0
+adguard_dhcp_range_start: 192.168.1.100
+adguard_dhcp_range_end: 192.168.1.200
+adguard_dhcp_lease_duration: 86400  # 24 hours
+adguard_dhcp_icmp_timeout: 1000
+adguard_dhcp_options: []
+
+# DHCPv6 configuration
+adguard_dhcpv6_range_start: ""
+adguard_dhcpv6_lease_duration: 86400
+adguard_dhcpv6_ra_slaac_only: false
+adguard_dhcpv6_ra_allow_slaac: false
+
+# DHCP static leases
+adguard_dhcp_static_leases: []
+  # Example:
+  # - ip: 192.168.1.100
+  #   hostname: device1
+  #   mac: "aa:bb:cc:dd:ee:ff"
+  # - ip: 192.168.1.101
+  #   hostname: device2
+  #   mac: "11:22:33:44:55:66"
+
+# Filtering configuration
+adguard_blocking_ipv4: ""
+adguard_blocking_ipv6: ""
+adguard_blocked_services_timezone: Local
+adguard_blocked_services_ids: []
+adguard_protection_disabled_until: null
+
+# Safe search configuration
+adguard_safe_search_enabled: false
+adguard_safe_search_bing: true
+adguard_safe_search_duckduckgo: true
+adguard_safe_search_ecosia: true
+adguard_safe_search_google: true
+adguard_safe_search_pixabay: true
+adguard_safe_search_yandex: true
+adguard_safe_search_youtube: true
+
+# Blocking mode: default, nxdomain, null_ip, or custom_ip
+adguard_blocking_mode: default
+adguard_parental_block_host: family-block.dns.adguard.com
+adguard_safebrowsing_block_host: standard-block.dns.adguard.com
+
+# DNS rewrites (custom local DNS entries)
+adguard_dns_rewrites: []
+  # Example:
+  # - domain: myserver.local
+  #   answer: 192.168.1.10
+  #   enabled: true
+
+# Safe filesystem patterns
+adguard_safe_fs_patterns:
+  - "{{ adguard_working_dir }}/userfilters/*"
+
+# Cache sizes
+adguard_safebrowsing_cache_size: 1048576
+adguard_safesearch_cache_size: 1048576
+adguard_parental_cache_size: 1048576
+adguard_filtering_cache_time: 30
+adguard_filters_update_interval: 24
+adguard_blocked_response_ttl: 10
+
+# Protection features
+adguard_filtering_enabled: true
+adguard_rewrites_enabled: true
+adguard_parental_enabled: false
+adguard_safebrowsing_enabled: false
+adguard_protection_enabled: true
+
+# Client identification sources
+adguard_clients_whois: true
+adguard_clients_arp: true
+adguard_clients_rdns: true
+adguard_clients_dhcp: true
+adguard_clients_hosts: true
+adguard_clients_persistent: []
+
+# Logging configuration
+adguard_log_enabled: true
+adguard_log_file: ""
+adguard_log_max_backups: 0
+adguard_log_max_size: 100
+adguard_log_max_age: 3
+adguard_log_compress: false
+adguard_log_local_time: false
+adguard_log_verbose: false
+
+# OS configuration (leave empty - systemd manages the user/group)
+adguard_os_user: ""
+adguard_os_group: ""
+adguard_rlimit_nofile: 0
+
+# Schema version (do not change unless you know what you're doing)
+adguard_schema_version: 31

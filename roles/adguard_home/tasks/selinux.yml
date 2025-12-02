@@ -1,0 +1,57 @@
+---
+# Configure SELinux for AdGuard Home native installation
+
+- name: Check current SELinux status
+  ansible.builtin.command: getenforce
+  register: selinux_status
+  changed_when: false
+  failed_when: false
+
+- name: Display SELinux status
+  ansible.builtin.debug:
+    msg: "SELinux is {{ selinux_status.stdout }}"
+
+- name: Install SELinux policy packages
+  ansible.builtin.dnf:
+    name:
+      - policycoreutils-python-utils
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+
+- name: Set SELinux context for AdGuard Home binary
+  community.general.sefcontext:
+    target: "{{ adguard_install_dir }}/AdGuardHome"
+    setype: bin_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+
+- name: Set SELinux context for AdGuard Home working directory
+  community.general.sefcontext:
+    target: "{{ adguard_working_dir }}(/.*)?"
+    setype: var_lib_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+
+- name: Apply SELinux context to AdGuard Home binary
+  ansible.builtin.command: "restorecon -v {{ adguard_install_dir }}/AdGuardHome"
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  changed_when: false
+
+- name: Apply SELinux context to AdGuard Home working directory
+  ansible.builtin.command: "restorecon -Rv {{ adguard_working_dir }}"
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  changed_when: false
+
+- name: Allow AdGuard Home to bind to privileged ports
+  ansible.posix.seboolean:
+    name: nis_enabled
+    state: true
+    persistent: true
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  failed_when: false

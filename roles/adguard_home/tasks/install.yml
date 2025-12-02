@@ -1,0 +1,85 @@
+---
+# Install AdGuard Home as a native binary
+
+- name: Create temporary download directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: _adguard_download
+  register: download_dir
+
+- name: Download AdGuard Home archive
+  ansible.builtin.get_url:
+    url: "{{ adguard_download_url }}"
+    dest: "{{ download_dir.path }}/AdGuardHome.tar.gz"
+    mode: '0644'
+  register: download_result
+
+- name: Extract AdGuard Home archive
+  ansible.builtin.unarchive:
+    src: "{{ download_dir.path }}/AdGuardHome.tar.gz"
+    dest: "{{ download_dir.path }}"
+    remote_src: true
+  when: download_result is changed or not adguard_binary.stat.exists
+
+- name: Stop AdGuard Home service if running
+  ansible.builtin.systemd:
+    name: "{{ adguard_service_name }}"
+    state: stopped
+  become: true
+  failed_when: false
+  when: adguard_binary.stat.exists
+
+- name: Copy AdGuard Home binary to installation directory
+  ansible.builtin.copy:
+    src: "{{ download_dir.path }}/AdGuardHome/AdGuardHome"
+    dest: "{{ adguard_install_dir }}/AdGuardHome"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  notify: restart adguardhome
+
+- name: Set capabilities on AdGuard Home binary
+  ansible.builtin.command: >
+    setcap '{{ adguard_capabilities | map("regex_replace", "^(.*)$", "\1=+eip") | join(" ") }}'
+    {{ adguard_install_dir }}/AdGuardHome
+  become: true
+  when: adguard_set_capabilities | bool
+  changed_when: true
+
+- name: Install AdGuard Home as a systemd service
+  ansible.builtin.command: >
+    {{ adguard_install_dir }}/AdGuardHome -s install
+    -w {{ adguard_working_dir }}
+  become: true
+  args:
+    creates: /etc/systemd/system/{{ adguard_service_name }}.service
+  notify:
+    - daemon-reload
+
+- name: Set ownership of working directory
+  ansible.builtin.file:
+    path: "{{ adguard_working_dir }}"
+    state: directory
+    owner: "{{ adguard_user }}"
+    group: "{{ adguard_group }}"
+    recurse: true
+  become: true
+
+- name: Clean up temporary download directory
+  ansible.builtin.file:
+    path: "{{ download_dir.path }}"
+    state: absent
+  when: download_dir.path is defined
+
+- name: Display installation information
+  ansible.builtin.debug:
+    msg: |
+      AdGuard Home has been installed successfully!
+
+      Binary location: {{ adguard_install_dir }}/AdGuardHome
+      Working directory: {{ adguard_working_dir }}
+      Service name: {{ adguard_service_name }}
+
+      Initial setup: http://{{ ansible_default_ipv4.address }}:{{ adguard_bind_port }}

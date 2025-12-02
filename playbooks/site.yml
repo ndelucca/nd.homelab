@@ -1,0 +1,14 @@
+---
+# Main orchestration playbook for home server setup
+# Usage: ansible-playbook playbooks/site.yml
+
+- name: Configure home servers
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - role: cockpit
+      tags: ['cockpit', 'monitoring']
+
+    - role: adguard_home
+      tags: ['adguard', 'dns']

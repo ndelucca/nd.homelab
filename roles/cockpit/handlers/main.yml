@@ -1,0 +1,14 @@
+---
+# Handlers for Cockpit role
+
+- name: restart cockpit
+  ansible.builtin.systemd:
+    name: "{{ cockpit_service_name }}"
+    state: restarted
+  become: true
+
+- name: reload firewalld
+  ansible.builtin.systemd:
+    name: firewalld
+    state: reloaded
+  become: true

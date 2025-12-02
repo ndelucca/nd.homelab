@@ -1,0 +1,10 @@
+---
+# AdGuard Home-specific playbook
+# Usage: ansible-playbook playbooks/adguard.yml
+
+- name: Install and configure AdGuard Home
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - adguard_home

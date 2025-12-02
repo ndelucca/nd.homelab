@@ -1,0 +1,65 @@
+---
+# Handle systemd-resolved conflicts on port 53
+# Based on: https://github.com/AdguardTeam/AdGuardHome/wiki/FAQ
+
+- name: Create systemd-resolved configuration directory
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Configure systemd-resolved to disable DNSStubListener
+  ansible.builtin.template:
+    src: resolved.conf.j2
+    dest: /etc/systemd/resolved.conf.d/adguardhome.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: reload systemd-resolved
+
+- name: Backup original resolv.conf
+  ansible.builtin.copy:
+    src: /etc/resolv.conf
+    dest: /etc/resolv.conf.backup
+    remote_src: true
+    force: false
+  become: true
+
+- name: Remove existing resolv.conf
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+  become: true
+
+- name: Link resolv.conf to systemd-resolved
+  ansible.builtin.file:
+    src: /run/systemd/resolve/resolv.conf
+    dest: /etc/resolv.conf
+    state: link
+    force: true
+  become: true
+
+- name: Flush handlers to reload systemd-resolved
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for systemd-resolved to release DNS port
+  ansible.builtin.wait_for:
+    port: 53
+    state: stopped
+    timeout: 30
+  ignore_errors: true
+
+- name: Verify DNS port is free
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":53\s" && echo "occupied" || echo "free"
+  register: port_53_check
+  changed_when: false
+  become: true
+
+- name: Display DNS port status
+  ansible.builtin.debug:
+    msg: "Port 53 is {{ port_53_check.stdout }}"

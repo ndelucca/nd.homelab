@@ -1,0 +1,27 @@
+# Ansible vault password file
+.vault_pass
+
+# Ansible retry files
+*.retry
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Fact cache
+/tmp/ansible_facts
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

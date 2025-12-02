@@ -1,0 +1,36 @@
+---
+# Default variables for Cockpit role
+
+# Packages to install
+cockpit_packages:
+  - cockpit
+  - cockpit-networkmanager
+  - cockpit-packagekit
+  - cockpit-selinux
+  - cockpit-storaged
+  - cockpit-system
+  - cockpit-files # File browser
+  - cockpit-podman  # Podman container management
+
+# Podman packages
+podman_packages:
+  - podman
+  - podman-compose
+  - slirp4netns  # Required for rootless container networking
+
+# Service configuration
+cockpit_service_name: cockpit.socket
+cockpit_service_enabled: true
+cockpit_service_state: started
+
+# Podman socket configuration
+podman_enable_socket: true
+
+# Firewall configuration
+cockpit_firewall_service: cockpit
+cockpit_firewall_zone: public
+cockpit_firewall_permanent: true
+cockpit_firewall_immediate: true
+
+# Port configuration
+cockpit_port: 9090

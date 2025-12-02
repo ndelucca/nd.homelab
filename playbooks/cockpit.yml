@@ -1,0 +1,10 @@
+---
+# Cockpit-specific playbook
+# Usage: ansible-playbook playbooks/cockpit.yml
+
+- name: Install and configure Cockpit
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - cockpit

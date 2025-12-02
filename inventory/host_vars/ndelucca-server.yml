@@ -1,0 +1,56 @@
+---
+# Host-specific configuration for ndelucca-server
+
+# Enable application configuration deployment
+adguard_configure_app: true
+
+# User configuration (password is already hashed from your current setup)
+adguard_users:
+  - name: ndelucca
+    password: $2a$10$A/PkUdTvjpRlqwtFvEYEX.L8ypXT3saCpsxE0/XzsUTV6SRZAwJ.a
+
+# DHCP server configuration
+adguard_dhcp_enabled: true
+adguard_dhcp_interface_name: enp6s0
+adguard_dhcp_local_domain: lan
+adguard_dhcp_gateway_ip: 192.168.10.1
+adguard_dhcp_subnet_mask: 255.255.255.0
+adguard_dhcp_range_start: 192.168.10.100
+adguard_dhcp_range_end: 192.168.10.200
+adguard_dhcp_lease_duration: 86400
+
+# DHCP static leases
+adguard_dhcp_static_leases:
+  - ip: 192.168.10.10
+    hostname: ndelucca-server
+    mac: "4c:cc:6a:d3:fc:a1"
+  - ip: 192.168.10.11
+    hostname: ndelucca-raspberry-printer
+    mac: "b8:27:eb:f1:af:50"
+  - ip: 192.168.10.12
+    hostname: ndelucca-raspberry-printer-wireless
+    mac: "b8:27:eb:a4:fa:05"
+  - ip: 192.168.10.13
+    hostname: ndelucca-acer
+    mac: "fa:da:6d:73:ff:15"
+  - ip: 192.168.10.20
+    hostname: ndelucca-tv-tcl
+    mac: "48:9e:9d:8f:65:20"
+  - ip: 192.168.10.21
+    hostname: ndelucca-pixel-8-5ghz
+    mac: "1e:9c:15:ee:48:26"
+  - ip: 192.168.10.22
+    hostname: ndelucca-pixel-8-2.4ghz
+    mac: "ca:61:9f:ce:53:ce"
+
+# DNS rewrites (custom local DNS entries)
+adguard_dns_rewrites:
+  - domain: ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: ndelucca-acer.com
+    answer: 192.168.10.13
+    enabled: true
+  - domain: ndelucca-raspberry-printer.com
+    answer: 192.168.10.11
+    enabled: true

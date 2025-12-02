@@ -1,0 +1,11 @@
+# AdGuard Home configuration for systemd-resolved
+# This file disables DNSStubListener to free port 53
+
+[Resolve]
+{% if adguard_resolved_dns_servers %}
+DNS={{ adguard_resolved_dns_servers | join(' ') }}
+{% endif %}
+{% if adguard_resolved_fallback_dns %}
+FallbackDNS={{ adguard_resolved_fallback_dns | join(' ') }}
+{% endif %}
+DNSStubListener=no

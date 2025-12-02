@@ -1,0 +1,65 @@
+---
+# Main tasks for Cockpit role
+
+- name: Install Podman packages
+  ansible.builtin.dnf:
+    name: "{{ podman_packages }}"
+    state: present
+  become: true
+
+- name: Install Cockpit packages
+  ansible.builtin.dnf:
+    name: "{{ cockpit_packages }}"
+    state: present
+  become: true
+  notify: restart cockpit
+
+- name: Enable and start Cockpit socket
+  ansible.builtin.systemd:
+    name: "{{ cockpit_service_name }}"
+    enabled: "{{ cockpit_service_enabled }}"
+    state: "{{ cockpit_service_state }}"
+    daemon_reload: true
+  become: true
+
+- name: Enable and start Podman socket (for API access)
+  ansible.builtin.systemd:
+    name: podman.socket
+    enabled: "{{ podman_enable_socket }}"
+    state: "{{ 'started' if podman_enable_socket else 'stopped' }}"
+    daemon_reload: true
+  become: true
+
+- name: Configure Podman for rootless operation
+  ansible.builtin.shell: |
+    loginctl enable-linger {{ ansible_user }}
+  become: true
+  changed_when: false
+
+- name: Display Podman version
+  ansible.builtin.command: podman --version
+  register: podman_version_check
+  changed_when: false
+
+- name: Show installed Podman version
+  ansible.builtin.debug:
+    msg: "Installed {{ podman_version_check.stdout }}"
+
+- name: Ensure firewalld is running
+  ansible.builtin.systemd:
+    name: firewalld
+    state: started
+    enabled: true
+  become: true
+  when: firewall_enabled | default(true)
+
+- name: Configure firewall for Cockpit
+  ansible.posix.firewalld:
+    service: "{{ cockpit_firewall_service }}"
+    zone: "{{ cockpit_firewall_zone }}"
+    permanent: "{{ cockpit_firewall_permanent }}"
+    immediate: "{{ cockpit_firewall_immediate }}"
+    state: enabled
+  become: true
+  when: firewall_enabled | default(true)
+  notify: reload firewalld

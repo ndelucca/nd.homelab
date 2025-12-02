@@ -1,0 +1,21 @@
+---
+# Configure AdGuard Home service
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start AdGuard Home service
+  ansible.builtin.systemd:
+    name: "{{ adguard_service_name }}"
+    enabled: "{{ adguard_service_enabled }}"
+    state: "{{ adguard_service_state }}"
+    daemon_reload: true
+  become: true
+
+- name: Wait for AdGuard Home to be available
+  ansible.builtin.wait_for:
+    host: "{{ adguard_bind_host }}"
+    port: "{{ adguard_admin_port if adguard_configure_app else adguard_bind_port }}"
+    delay: 2
+    timeout: 30
+  when: adguard_service_state == 'started'

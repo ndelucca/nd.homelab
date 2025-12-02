@@ -1,0 +1,66 @@
+---
+# Preflight checks for AdGuard Home native installation
+
+- name: Verify we're running on Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role is designed for Fedora systems"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Check if required commands are available
+  ansible.builtin.command: which {{ item }}
+  register: command_check
+  changed_when: false
+  failed_when: false
+  loop:
+    - curl
+    - tar
+    - systemctl
+
+- name: Ensure required packages are installed
+  ansible.builtin.dnf:
+    name:
+      - curl
+      - tar
+      - libcap  # For setcap command
+    state: present
+  become: true
+
+- name: Check if AdGuard Home is already installed
+  ansible.builtin.stat:
+    path: "{{ adguard_install_dir }}/AdGuardHome"
+  register: adguard_binary
+
+- name: Display installation status
+  ansible.builtin.debug:
+    msg: "AdGuard Home {{ 'is already installed' if adguard_binary.stat.exists else 'will be installed' }}"
+
+- name: Check if DNS port is available
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":{{ adguard_dns_port }}\s" && echo "occupied" || echo "available"
+  register: port_check
+  changed_when: false
+  failed_when: false
+
+- name: Display DNS port status
+  ansible.builtin.debug:
+    msg: "Port {{ adguard_dns_port }} is {{ port_check.stdout }}"
+
+- name: Create AdGuard Home user
+  ansible.builtin.user:
+    name: "{{ adguard_user }}"
+    system: true
+    shell: /sbin/nologin
+    create_home: false
+    comment: "AdGuard Home service user"
+  become: true
+
+- name: Create working directory for AdGuard Home
+  ansible.builtin.file:
+    path: "{{ adguard_working_dir }}"
+    state: directory
+    owner: "{{ adguard_user }}"
+    group: "{{ adguard_group }}"
+    mode: '0755'
+  become: true

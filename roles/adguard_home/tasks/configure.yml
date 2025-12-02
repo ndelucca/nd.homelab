@@ -1,0 +1,61 @@
+---
+# Configure AdGuard Home with custom settings
+
+- name: Stop AdGuard Home service before configuration
+  ansible.builtin.systemd:
+    name: "{{ adguard_service_name }}"
+    state: stopped
+  become: true
+  when: adguard_configure_app | bool
+
+- name: Deploy AdGuard Home configuration file
+  ansible.builtin.template:
+    src: AdGuardHome.yaml.j2
+    dest: "{{ adguard_working_dir }}/AdGuardHome.yaml"
+    owner: root
+    group: root
+    mode: '0600'
+    backup: true
+  become: true
+  when: adguard_configure_app | bool
+  notify: restart adguardhome
+
+- name: Ensure data directory exists
+  ansible.builtin.file:
+    path: "{{ adguard_working_dir }}/data"
+    state: directory
+    owner: "{{ adguard_user }}"
+    group: "{{ adguard_group }}"
+    mode: '0700'
+  become: true
+  when: adguard_configure_app | bool
+
+- name: Deploy DHCP static leases configuration
+  ansible.builtin.template:
+    src: leases.json.j2
+    dest: "{{ adguard_working_dir }}/data/leases.json"
+    owner: root
+    group: root
+    mode: '0600'
+    backup: true
+  become: true
+  when:
+    - adguard_configure_app | bool
+    - adguard_dhcp_enabled | bool
+    - adguard_dhcp_static_leases | length > 0
+  notify: restart adguardhome
+
+- name: Display configuration information
+  ansible.builtin.debug:
+    msg: |
+      AdGuard Home configuration has been deployed.
+
+      Configuration file: {{ adguard_working_dir }}/AdGuardHome.yaml
+      DHCP leases: {{ adguard_working_dir }}/data/leases.json
+
+      IMPORTANT: If you set custom passwords in the configuration,
+      make sure they are bcrypt hashed.
+
+      To generate a bcrypt hash:
+      htpasswd -nbB "" "yourpassword" | cut -d ":" -f 2
+  when: adguard_configure_app | bool

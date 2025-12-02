@@ -1,0 +1,20 @@
+---
+# Configure firewall for AdGuard Home
+
+- name: Ensure firewalld is running
+  ansible.builtin.systemd:
+    name: firewalld
+    state: started
+    enabled: true
+  become: true
+
+- name: Configure firewall ports for AdGuard Home
+  ansible.posix.firewalld:
+    port: "{{ item.port }}"
+    zone: "{{ adguard_firewall_zone }}"
+    permanent: "{{ adguard_firewall_permanent }}"
+    immediate: "{{ adguard_firewall_immediate }}"
+    state: enabled
+  become: true
+  loop: "{{ adguard_firewall_ports }}"
+  notify: reload firewalld
