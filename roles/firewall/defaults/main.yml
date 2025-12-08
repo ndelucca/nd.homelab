@@ -1,0 +1,23 @@
+---
+# Default variables for Firewall role
+
+# Global firewall settings
+firewall_enabled: true
+firewall_default_zone: public
+
+# Cockpit firewall settings
+cockpit_firewall_enabled: true
+cockpit_firewall_zone: "{{ firewall_default_zone }}"
+cockpit_firewall_service: cockpit
+
+# AdGuard Home firewall settings
+adguard_firewall_enabled: true
+adguard_firewall_zone: "{{ firewall_default_zone }}"
+
+# Port definitions (referenced from role variables)
+adguard_bind_port: 3000
+adguard_admin_port: 80
+adguard_dns_port: 53
+adguard_dns_over_tls_port: 853
+adguard_dns_over_quic_port: 853
+adguard_dns_over_https_port: 443

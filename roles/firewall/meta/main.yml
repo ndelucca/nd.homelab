@@ -1,0 +1,28 @@
+---
+# Metadata for Firewall role
+
+galaxy_info:
+  author: Naza
+  description: Centralized firewall management for home server services
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Fedora
+      versions:
+        - 38
+        - 39
+        - 40
+        - 41
+        - 42
+        - 43
+
+  galaxy_tags:
+    - firewall
+    - firewalld
+    - security
+
+dependencies: []
+
+collections:
+  - ansible.posix

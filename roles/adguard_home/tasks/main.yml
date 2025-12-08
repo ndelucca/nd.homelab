@@ -23,11 +23,6 @@
   ansible.builtin.import_tasks: service.yml
   tags: ['adguard', 'service']
 
-- name: Configure firewall
-  ansible.builtin.import_tasks: firewall.yml
-  tags: ['adguard', 'firewall']
-  when: firewall_enabled | default(true)
-
 - name: Configure SELinux
   ansible.builtin.import_tasks: selinux.yml
   tags: ['adguard', 'selinux']

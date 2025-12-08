@@ -1,5 +1,6 @@
 ---
 # AdGuard Home-specific playbook
+# Note: Run firewall role separately or use site.yml for complete setup
 # Usage: ansible-playbook playbooks/adguard.yml
 
 - name: Install and configure AdGuard Home

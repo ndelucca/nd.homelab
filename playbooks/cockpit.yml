@@ -1,5 +1,6 @@
 ---
 # Cockpit-specific playbook
+# Note: Run firewall role separately or use site.yml for complete setup
 # Usage: ansible-playbook playbooks/cockpit.yml
 
 - name: Install and configure Cockpit

@@ -12,3 +12,7 @@
 
     - role: adguard_home
       tags: ['adguard', 'dns']
+
+    - role: firewall
+      tags: ['firewall']
+      when: firewall_enabled | default(true)

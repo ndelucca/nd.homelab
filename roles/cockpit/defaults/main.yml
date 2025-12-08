@@ -26,11 +26,9 @@ cockpit_service_state: started
 # Podman socket configuration
 podman_enable_socket: true
 
-# Firewall configuration
+# Firewall settings (used by firewall role)
 cockpit_firewall_service: cockpit
 cockpit_firewall_zone: public
-cockpit_firewall_permanent: true
-cockpit_firewall_immediate: true
 
 # Port configuration
 cockpit_port: 9090

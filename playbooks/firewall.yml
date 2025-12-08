@@ -1,0 +1,10 @@
+---
+# Firewall-specific playbook
+# Usage: ansible-playbook playbooks/firewall.yml
+
+- name: Configure firewall rules
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - firewall

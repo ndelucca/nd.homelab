@@ -1,0 +1,12 @@
+---
+# Configure firewall for Cockpit
+
+- name: Enable Cockpit service in firewall
+  ansible.posix.firewalld:
+    service: "{{ cockpit_firewall_service }}"
+    zone: "{{ cockpit_firewall_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  become: true
+  notify: reload firewalld

@@ -1,28 +1,13 @@
 ---
 # Host-specific configuration for ndelucca-server
+# Complex data structures only - simple values moved to hosts.yml
 
-# Enable application configuration deployment
-adguard_configure_app: true
-
-# Firewall zone (Fedora Server uses FedoraServer zone by default)
-adguard_firewall_zone: FedoraServer
-
-# User configuration (password is already hashed from your current setup)
+# User credentials (complex structure with secrets)
 adguard_users:
   - name: ndelucca
     password: $2a$10$A/PkUdTvjpRlqwtFvEYEX.L8ypXT3saCpsxE0/XzsUTV6SRZAwJ.a
 
-# DHCP server configuration
-adguard_dhcp_enabled: true
-adguard_dhcp_interface_name: enp6s0
-adguard_dhcp_local_domain: lan
-adguard_dhcp_gateway_ip: 192.168.10.1
-adguard_dhcp_subnet_mask: 255.255.255.0
-adguard_dhcp_range_start: 192.168.10.100
-adguard_dhcp_range_end: 192.168.10.200
-adguard_dhcp_lease_duration: 86400
-
-# DHCP static leases
+# DHCP static leases (complex list structure)
 adguard_dhcp_static_leases:
   - ip: 192.168.10.10
     hostname: ndelucca-server
