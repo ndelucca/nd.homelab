@@ -73,8 +73,17 @@
         - 53/tcp    # DNS
         - 53/udp    # DNS
         - 853/tcp   # DNS-over-TLS
-        - 784/udp   # DNS-over-QUIC
+        - 853/udp   # DNS-over-QUIC
         - 443/tcp   # DNS-over-HTTPS
+      failed_when: false
+
+    - name: Remove DHCP service from firewall
+      ansible.posix.firewalld:
+        zone: "{{ adguard_firewall_zone }}"
+        service: dhcp
+        permanent: true
+        immediate: true
+        state: disabled
       failed_when: false
 
     - name: Check if systemd-resolved stub listener was disabled
