@@ -4,6 +4,9 @@
 # Enable application configuration deployment
 adguard_configure_app: true
 
+# Firewall zone (Fedora Server uses FedoraServer zone by default)
+adguard_firewall_zone: FedoraServer
+
 # User configuration (password is already hashed from your current setup)
 adguard_users:
   - name: ndelucca
