@@ -8,8 +8,8 @@ adguard_version: latest
 adguard_download_url: https://static.adguard.com/adguardhome/release/AdGuardHome_linux_amd64.tar.gz
 adguard_install_dir: /usr/local/bin
 adguard_working_dir: /opt/AdGuardHome
-adguard_user: adguard
-adguard_group: adguard
+adguard_user: ndelucca
+adguard_group: ndelucca
 
 # Service configuration
 adguard_service_name: AdGuardHome

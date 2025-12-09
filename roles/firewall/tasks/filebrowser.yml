@@ -1,0 +1,12 @@
+---
+# Configure firewall for FileBrowser
+
+- name: Configure firewall port for FileBrowser
+  ansible.posix.firewalld:
+    port: "{{ filebrowser_port }}/tcp"
+    zone: "{{ filebrowser_firewall_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  become: true
+  notify: reload firewalld

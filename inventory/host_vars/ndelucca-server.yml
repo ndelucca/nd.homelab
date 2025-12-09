@@ -1,13 +1,33 @@
 ---
-# Host-specific configuration for ndelucca-server
-# Complex data structures only - simple values moved to hosts.yml
+# Firewall configuration
+firewall_enabled: true
+firewall_default_zone: public
 
-# User credentials (complex structure with secrets)
+# AdGuard Home configuration
+adguard_configure_app: true
+adguard_firewall_zone: FedoraServer
+
+# DHCP configuration
+adguard_dhcp_enabled: true
+adguard_dhcp_interface_name: enp6s0
+adguard_dhcp_local_domain: lan
+adguard_dhcp_gateway_ip: 192.168.10.1
+adguard_dhcp_subnet_mask: 255.255.255.0
+adguard_dhcp_range_start: 192.168.10.100
+adguard_dhcp_range_end: 192.168.10.200
+adguard_dhcp_lease_duration: 86400
+
+# FileBrowser configuration
+filebrowser_port: 8080
+filebrowser_firewall_zone: FedoraServer
+filebrowser_root_dir: /srv/filebrowser
+
+# User credentials
 adguard_users:
   - name: ndelucca
     password: $2a$10$A/PkUdTvjpRlqwtFvEYEX.L8ypXT3saCpsxE0/XzsUTV6SRZAwJ.a
 
-# DHCP static leases (complex list structure)
+# DHCP static leases
 adguard_dhcp_static_leases:
   - ip: 192.168.10.10
     hostname: ndelucca-server
@@ -31,7 +51,7 @@ adguard_dhcp_static_leases:
     hostname: ndelucca-pixel-8-2.4ghz
     mac: "ca:61:9f:ce:53:ce"
 
-# DNS rewrites (custom local DNS entries)
+# DNS rewrites
 adguard_dns_rewrites:
   - domain: ndelucca-server.com
     answer: 192.168.10.10

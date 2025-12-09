@@ -47,15 +47,6 @@
   ansible.builtin.debug:
     msg: "Port {{ adguard_dns_port }} is {{ port_check.stdout }}"
 
-- name: Create AdGuard Home user
-  ansible.builtin.user:
-    name: "{{ adguard_user }}"
-    system: true
-    shell: /sbin/nologin
-    create_home: false
-    comment: "AdGuard Home service user"
-  become: true
-
 - name: Create working directory for AdGuard Home
   ansible.builtin.file:
     path: "{{ adguard_working_dir }}"

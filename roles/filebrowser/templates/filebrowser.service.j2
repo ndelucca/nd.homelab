@@ -1,0 +1,35 @@
+[Unit]
+Description=FileBrowser - Web File Browser
+Documentation=https://filebrowser.org
+After=network.target
+
+[Service]
+Type=simple
+User={{ filebrowser_user }}
+Group={{ filebrowser_group }}
+WorkingDirectory={{ filebrowser_working_dir }}
+
+{% if filebrowser_use_config_file %}
+ExecStart={{ filebrowser_install_dir }}/filebrowser \
+  -c {{ filebrowser_config_file }} \
+  -d {{ filebrowser_database }}
+{% else %}
+ExecStart={{ filebrowser_install_dir }}/filebrowser \
+  -d {{ filebrowser_database }} \
+  -r {{ filebrowser_root_dir }} \
+  -a {{ filebrowser_bind_address }} \
+  -p {{ filebrowser_port }}
+{% endif %}
+
+Restart=on-failure
+RestartSec=5s
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ filebrowser_working_dir }} {{ filebrowser_root_dir }}
+
+[Install]
+WantedBy=multi-user.target

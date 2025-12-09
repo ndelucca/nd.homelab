@@ -6,6 +6,7 @@
     state: directory
     suffix: _adguard_download
   register: download_dir
+  when: not adguard_binary.stat.exists or adguard_version != 'latest'
 
 - name: Download AdGuard Home archive
   ansible.builtin.get_url:
@@ -13,6 +14,7 @@
     dest: "{{ download_dir.path }}/AdGuardHome.tar.gz"
     mode: '0644'
   register: download_result
+  when: not adguard_binary.stat.exists or adguard_version != 'latest'
 
 - name: Extract AdGuard Home archive
   ansible.builtin.unarchive:
@@ -39,6 +41,7 @@
     mode: '0755'
   become: true
   notify: restart adguardhome
+  when: not adguard_binary.stat.exists or adguard_version != 'latest'
 
 - name: Set capabilities on AdGuard Home binary
   ansible.builtin.command: >
@@ -58,6 +61,24 @@
   notify:
     - daemon-reload
 
+- name: Override AdGuard Home service to run as ndelucca user
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/system/{{ adguard_service_name }}.service
+    regexp: '^User='
+    line: 'User={{ adguard_user }}'
+    insertafter: '^\[Service\]'
+  become: true
+  notify: daemon-reload
+
+- name: Override AdGuard Home service group
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/system/{{ adguard_service_name }}.service
+    regexp: '^Group='
+    line: 'Group={{ adguard_group }}'
+    insertafter: '^User='
+  become: true
+  notify: daemon-reload
+
 - name: Set ownership of working directory
   ansible.builtin.file:
     path: "{{ adguard_working_dir }}"
@@ -71,7 +92,7 @@
   ansible.builtin.file:
     path: "{{ download_dir.path }}"
     state: absent
-  when: download_dir.path is defined
+  when: download_dir is defined and download_dir.path is defined
 
 - name: Display installation information
   ansible.builtin.debug:

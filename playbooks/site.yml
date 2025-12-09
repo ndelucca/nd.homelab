@@ -13,6 +13,9 @@
     - role: adguard_home
       tags: ['adguard', 'dns']
 
+    - role: filebrowser
+      tags: ['filebrowser', 'files']
+
     - role: firewall
       tags: ['firewall']
       when: firewall_enabled | default(true)

@@ -1,0 +1,11 @@
+---
+# FileBrowser-specific playbook
+# Note: Run firewall role separately or use site.yml for complete setup
+# Usage: ansible-playbook playbooks/filebrowser.yml
+
+- name: Install and configure FileBrowser
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - filebrowser

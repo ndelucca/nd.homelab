@@ -1,0 +1,53 @@
+---
+# Configure SELinux for FileBrowser
+
+- name: Check current SELinux status
+  ansible.builtin.command: getenforce
+  register: selinux_status
+  changed_when: false
+
+- name: Install SELinux policy packages
+  ansible.builtin.dnf:
+    name:
+      - policycoreutils-python-utils
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+
+- name: Set SELinux context for FileBrowser binary
+  community.general.sefcontext:
+    target: "{{ filebrowser_install_dir }}/filebrowser"
+    setype: bin_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context
+
+- name: Set SELinux context for working directory
+  community.general.sefcontext:
+    target: "{{ filebrowser_working_dir }}(/.*)?"
+    setype: var_lib_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context
+
+- name: Set SELinux context for root directory
+  community.general.sefcontext:
+    target: "{{ filebrowser_root_dir }}(/.*)?"
+    setype: public_content_rw_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context
+
+- name: Allow FileBrowser to bind to custom port
+  community.general.seport:
+    ports: "{{ filebrowser_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  become: true
+  when:
+    - selinux_status.stdout == "Enforcing"
+    - filebrowser_port != 80 and filebrowser_port != 443

@@ -1,0 +1,56 @@
+---
+# Install FileBrowser binary
+
+- name: Check if FileBrowser is already installed
+  ansible.builtin.stat:
+    path: "{{ filebrowser_install_dir }}/filebrowser"
+  register: filebrowser_binary
+
+- name: Create temporary download directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: _filebrowser_download
+  register: download_dir
+  when: not filebrowser_binary.stat.exists or filebrowser_version != 'latest'
+
+- name: Download FileBrowser archive
+  ansible.builtin.get_url:
+    url: "{{ filebrowser_download_url }}"
+    dest: "{{ download_dir.path }}/filebrowser.tar.gz"
+    mode: '0644'
+  register: download_result
+  when: not filebrowser_binary.stat.exists or filebrowser_version != 'latest'
+
+- name: Extract FileBrowser archive
+  ansible.builtin.unarchive:
+    src: "{{ download_dir.path }}/filebrowser.tar.gz"
+    dest: "{{ download_dir.path }}"
+    remote_src: true
+  when: not filebrowser_binary.stat.exists or filebrowser_version != 'latest'
+
+- name: Copy binary to installation directory
+  ansible.builtin.copy:
+    src: "{{ download_dir.path }}/filebrowser"
+    dest: "{{ filebrowser_install_dir }}/filebrowser"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  notify: restart filebrowser
+  when: not filebrowser_binary.stat.exists or filebrowser_version != 'latest'
+
+- name: Clean up temporary download directory
+  ansible.builtin.file:
+    path: "{{ download_dir.path }}"
+    state: absent
+  when: download_dir is defined and download_dir.path is defined
+
+- name: Verify FileBrowser binary is executable
+  ansible.builtin.command: "{{ filebrowser_install_dir }}/filebrowser version"
+  register: filebrowser_version_check
+  changed_when: false
+
+- name: Display FileBrowser version
+  ansible.builtin.debug:
+    msg: "Installed {{ filebrowser_version_check.stdout }}"

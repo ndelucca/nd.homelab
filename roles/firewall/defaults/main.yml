@@ -21,3 +21,8 @@ adguard_dns_port: 53
 adguard_dns_over_tls_port: 853
 adguard_dns_over_quic_port: 853
 adguard_dns_over_https_port: 443
+
+# FileBrowser firewall settings
+filebrowser_firewall_enabled: true
+filebrowser_firewall_zone: "{{ firewall_default_zone }}"
+filebrowser_port: 8080

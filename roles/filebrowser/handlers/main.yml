@@ -1,0 +1,22 @@
+---
+# Handlers for FileBrowser role
+
+- name: daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+- name: restart filebrowser
+  ansible.builtin.systemd:
+    name: "{{ filebrowser_service_name }}"
+    state: restarted
+  become: true
+
+- name: apply selinux context
+  ansible.builtin.command: "restorecon -Rv {{ item }}"
+  become: true
+  loop:
+    - "{{ filebrowser_install_dir }}/filebrowser"
+    - "{{ filebrowser_working_dir }}"
+    - "{{ filebrowser_root_dir }}"
+  changed_when: false

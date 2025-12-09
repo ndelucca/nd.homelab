@@ -1,0 +1,30 @@
+---
+# Metadata for FileBrowser role
+
+galaxy_info:
+  author: Naza
+  description: Install and configure FileBrowser web file manager
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Fedora
+      versions:
+        - 38
+        - 39
+        - 40
+        - 41
+        - 42
+        - 43
+
+  galaxy_tags:
+    - filebrowser
+    - filemanager
+    - web
+    - files
+
+dependencies: []
+
+collections:
+  - ansible.posix
+  - community.general

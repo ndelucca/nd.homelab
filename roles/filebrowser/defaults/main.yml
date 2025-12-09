@@ -1,0 +1,47 @@
+---
+# Default variables for FileBrowser role
+# Only essential installation and service configuration
+
+# Installation configuration
+filebrowser_version: latest  # Or pin to specific version like "v2.27.0"
+filebrowser_arch: amd64
+filebrowser_download_url: "https://github.com/filebrowser/filebrowser/releases/latest/download/linux-{{ filebrowser_arch }}-filebrowser.tar.gz"
+filebrowser_install_dir: /usr/local/bin
+filebrowser_working_dir: /opt/filebrowser
+filebrowser_user: ndelucca
+filebrowser_group: ndelucca
+
+# Service configuration
+filebrowser_service_name: filebrowser
+filebrowser_service_enabled: true
+filebrowser_service_state: started
+
+# Network configuration
+filebrowser_bind_address: 0.0.0.0
+filebrowser_port: 8080
+
+# Firewall settings (used by firewall role)
+filebrowser_firewall_zone: public
+
+# Root directory to serve (simple value, can override in inventory)
+filebrowser_root_dir: /srv/filebrowser
+
+# Database location
+filebrowser_database: "{{ filebrowser_working_dir }}/filebrowser.db"
+
+# Configuration file (optional - FileBrowser can use CLI flags instead)
+filebrowser_use_config_file: true
+filebrowser_config_file: "{{ filebrowser_working_dir }}/config.json"
+
+# SELinux configuration
+filebrowser_manage_selinux: true
+
+# Initial admin credentials (override in host_vars or vault)
+filebrowser_admin_username: ndelucca
+filebrowser_admin_password: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  32653231303665616139383161393830353334396639633838613533633461353964646132653530
+  3262623063643262313966313137343539613665643965340a393665343431383832653036363633
+  32346536303335636266663935626565303935346465303336613939303063653437356464393837
+  3664666236386631610a383134363334353463393961326163306263366539356363376239313731
+  37373131336135326162383931663336303566313561393564326331643533383137

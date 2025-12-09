@@ -23,3 +23,8 @@
   ansible.builtin.import_tasks: adguard.yml
   when: adguard_firewall_enabled | default(true)
   tags: ['firewall-adguard']
+
+- name: Configure firewall for FileBrowser
+  ansible.builtin.import_tasks: filebrowser.yml
+  when: filebrowser_firewall_enabled | default(true)
+  tags: ['firewall-filebrowser']

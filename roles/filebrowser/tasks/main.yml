@@ -1,0 +1,24 @@
+---
+# Main entry point for FileBrowser role
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['filebrowser', 'preflight']
+
+- name: Install FileBrowser binary
+  ansible.builtin.import_tasks: install.yml
+  tags: ['filebrowser', 'install']
+
+- name: Configure FileBrowser application
+  ansible.builtin.import_tasks: configure.yml
+  tags: ['filebrowser', 'configure']
+  when: filebrowser_use_config_file | bool
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['filebrowser', 'service']
+
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['filebrowser', 'selinux']
+  when: filebrowser_manage_selinux | bool

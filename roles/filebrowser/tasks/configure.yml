@@ -1,0 +1,12 @@
+---
+# Configure FileBrowser application
+
+- name: Deploy FileBrowser configuration file
+  ansible.builtin.template:
+    src: filebrowser.json.j2
+    dest: "{{ filebrowser_config_file }}"
+    owner: "{{ filebrowser_user }}"
+    group: "{{ filebrowser_group }}"
+    mode: '0644'
+  become: true
+  notify: restart filebrowser

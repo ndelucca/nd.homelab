@@ -1,0 +1,35 @@
+---
+# Preflight checks and setup
+
+- name: Verify we're running on Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role is designed for Fedora systems"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Ensure required packages are installed
+  ansible.builtin.dnf:
+    name:
+      - tar
+      - gzip
+    state: present
+  become: true
+
+- name: Create FileBrowser working directory
+  ansible.builtin.file:
+    path: "{{ filebrowser_working_dir }}"
+    state: directory
+    owner: "{{ filebrowser_user }}"
+    group: "{{ filebrowser_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create FileBrowser root directory (directory to serve)
+  ansible.builtin.file:
+    path: "{{ filebrowser_root_dir }}"
+    state: directory
+    owner: "{{ filebrowser_user }}"
+    group: "{{ filebrowser_group }}"
+    mode: '0755'
+  become: true
