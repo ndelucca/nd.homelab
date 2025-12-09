@@ -14,7 +14,7 @@
 
 - name: Wait for AdGuard Home to be available
   ansible.builtin.wait_for:
-    host: "{{ adguard_bind_host }}"
+    host: 127.0.0.1
     port: "{{ adguard_admin_port if adguard_configure_app else adguard_bind_port }}"
     delay: 2
     timeout: 30

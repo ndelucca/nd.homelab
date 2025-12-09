@@ -26,7 +26,7 @@
 
 - name: Wait for FileBrowser to be available
   ansible.builtin.wait_for:
-    host: "{{ filebrowser_bind_address }}"
+    host: 127.0.0.1
     port: "{{ filebrowser_port }}"
     delay: 2
     timeout: 30
