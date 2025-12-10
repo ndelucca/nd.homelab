@@ -1,0 +1,11 @@
+---
+# Jellyfin-specific playbook
+# Note: Run firewall role separately or use site.yml for complete setup
+# Usage: ansible-playbook playbooks/jellyfin.yml -i inventory/hosts.yml
+
+- name: Install and configure Jellyfin
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - jellyfin

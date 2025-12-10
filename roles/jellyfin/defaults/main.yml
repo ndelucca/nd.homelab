@@ -1,0 +1,39 @@
+---
+# Default variables for Jellyfin role
+
+# Installation configuration
+jellyfin_enable_rpmfusion: true
+jellyfin_rpmfusion_free_enabled: true
+jellyfin_rpmfusion_nonfree_enabled: false
+
+# Service user configuration
+jellyfin_user: ndelucca
+jellyfin_group: ndelucca
+
+# Directory configuration
+jellyfin_data_dir: /srv/jellyfin/data
+jellyfin_config_dir: /srv/jellyfin/config
+jellyfin_cache_dir: /srv/jellyfin/cache
+jellyfin_log_dir: /srv/jellyfin/log
+
+# Media directory (where you put your movies, TV shows, music, etc.)
+jellyfin_media_dir: /srv/jellyfin/media
+
+# Service configuration
+jellyfin_service_name: jellyfin
+jellyfin_service_enabled: true
+jellyfin_service_state: started
+
+# Network configuration
+jellyfin_http_port: 8096
+jellyfin_https_port: 8920
+
+# Firewall settings
+jellyfin_firewall_zone: FedoraServer
+jellyfin_firewall_enabled: true
+
+# SELinux configuration
+jellyfin_manage_selinux: true
+
+# Hardware acceleration
+jellyfin_enable_hardware_acceleration: false

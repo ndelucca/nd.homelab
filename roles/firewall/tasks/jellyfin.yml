@@ -1,0 +1,22 @@
+---
+# Configure firewall for Jellyfin
+
+- name: Configure firewall port for Jellyfin HTTP
+  ansible.posix.firewalld:
+    port: "{{ jellyfin_http_port | default(8096) }}/tcp"
+    zone: "{{ jellyfin_firewall_zone | default('FedoraServer') }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  become: true
+  notify: reload firewalld
+
+- name: Configure firewall port for Jellyfin HTTPS
+  ansible.posix.firewalld:
+    port: "{{ jellyfin_https_port | default(8920) }}/tcp"
+    zone: "{{ jellyfin_firewall_zone | default('FedoraServer') }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  become: true
+  notify: reload firewalld

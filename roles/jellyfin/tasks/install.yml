@@ -1,0 +1,32 @@
+---
+# Install Jellyfin packages from RPMFusion
+
+- name: Install Jellyfin server and dependencies
+  ansible.builtin.dnf:
+    name:
+      - jellyfin
+      - jellyfin-server
+      - jellyfin-web
+    state: present
+  become: true
+  notify: restart jellyfin
+
+- name: Verify Jellyfin installation
+  ansible.builtin.command: rpm -q jellyfin
+  register: jellyfin_verify
+  changed_when: false
+
+- name: Display Jellyfin version
+  ansible.builtin.debug:
+    msg: "Installed {{ jellyfin_verify.stdout }}"
+
+- name: Display installation information
+  ansible.builtin.debug:
+    msg: |
+      Jellyfin has been installed successfully from RPMFusion!
+
+      Data directory: {{ jellyfin_data_dir }}
+      Config directory: {{ jellyfin_config_dir }}
+      Service name: {{ jellyfin_service_name }}
+
+      Web UI: http://{{ ansible_default_ipv4.address }}:{{ jellyfin_http_port }}

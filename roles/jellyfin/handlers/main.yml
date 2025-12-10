@@ -1,0 +1,38 @@
+---
+# Handlers for Jellyfin role
+
+- name: daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+- name: restart jellyfin
+  ansible.builtin.systemd:
+    name: "{{ jellyfin_service_name }}"
+    state: restarted
+  become: true
+
+- name: apply selinux context jellyfin data
+  ansible.builtin.command: "restorecon -Rv {{ jellyfin_data_dir }}"
+  become: true
+  changed_when: false
+
+- name: apply selinux context jellyfin config
+  ansible.builtin.command: "restorecon -Rv {{ jellyfin_config_dir }}"
+  become: true
+  changed_when: false
+
+- name: apply selinux context jellyfin cache
+  ansible.builtin.command: "restorecon -Rv {{ jellyfin_cache_dir }}"
+  become: true
+  changed_when: false
+
+- name: apply selinux context jellyfin log
+  ansible.builtin.command: "restorecon -Rv {{ jellyfin_log_dir }}"
+  become: true
+  changed_when: false
+
+- name: apply selinux context jellyfin media
+  ansible.builtin.command: "restorecon -Rv {{ jellyfin_media_dir }}"
+  become: true
+  changed_when: false

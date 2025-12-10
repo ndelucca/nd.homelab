@@ -1,0 +1,28 @@
+---
+# Main entry point for Jellyfin role
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['jellyfin', 'preflight']
+
+- name: Setup RPMFusion repository
+  ansible.builtin.import_tasks: repository.yml
+  tags: ['jellyfin', 'repository']
+  when: jellyfin_enable_rpmfusion | bool
+
+- name: Install Jellyfin packages
+  ansible.builtin.import_tasks: install.yml
+  tags: ['jellyfin', 'install']
+
+- name: Configure Jellyfin directories and settings
+  ansible.builtin.import_tasks: configure.yml
+  tags: ['jellyfin', 'configure']
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['jellyfin', 'service']
+
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['jellyfin', 'selinux']
+  when: jellyfin_manage_selinux | bool

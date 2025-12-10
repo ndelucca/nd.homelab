@@ -1,0 +1,44 @@
+---
+# Configure Jellyfin directories and initial setup
+
+- name: Ensure all Jellyfin directories exist with correct ownership
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ jellyfin_user }}"
+    group: "{{ jellyfin_group }}"
+    mode: '0755'
+    recurse: true
+  become: true
+  loop:
+    - "{{ jellyfin_data_dir }}"
+    - "{{ jellyfin_config_dir }}"
+    - "{{ jellyfin_cache_dir }}"
+    - "{{ jellyfin_log_dir }}"
+    - "{{ jellyfin_media_dir }}"
+
+- name: Check if default Jellyfin directories exist
+  ansible.builtin.stat:
+    path: /var/lib/jellyfin
+  register: default_jellyfin_dir
+
+- name: Stop Jellyfin service before directory migration
+  ansible.builtin.systemd:
+    name: "{{ jellyfin_service_name }}"
+    state: stopped
+  become: true
+  when: default_jellyfin_dir.stat.exists
+  failed_when: false
+
+- name: Migrate existing Jellyfin data if present
+  ansible.builtin.copy:
+    src: /var/lib/jellyfin/
+    dest: "{{ jellyfin_data_dir }}/"
+    remote_src: true
+    owner: "{{ jellyfin_user }}"
+    group: "{{ jellyfin_group }}"
+  become: true
+  when:
+    - default_jellyfin_dir.stat.exists
+    - default_jellyfin_dir.stat.isdir
+  notify: restart jellyfin

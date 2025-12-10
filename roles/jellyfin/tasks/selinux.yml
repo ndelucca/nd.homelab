@@ -1,0 +1,95 @@
+---
+# Configure SELinux for Jellyfin
+
+- name: Check current SELinux status
+  ansible.builtin.command: getenforce
+  register: selinux_status
+  changed_when: false
+
+- name: Display SELinux status
+  ansible.builtin.debug:
+    msg: "SELinux is {{ selinux_status.stdout }}"
+
+- name: Install SELinux policy packages
+  ansible.builtin.dnf:
+    name:
+      - policycoreutils-python-utils
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+
+- name: Set SELinux context for Jellyfin data directory
+  community.general.sefcontext:
+    target: "{{ jellyfin_data_dir }}(/.*)?"
+    setype: var_lib_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context jellyfin data
+
+- name: Set SELinux context for Jellyfin config directory
+  community.general.sefcontext:
+    target: "{{ jellyfin_config_dir }}(/.*)?"
+    setype: var_lib_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context jellyfin config
+
+- name: Set SELinux context for Jellyfin cache directory
+  community.general.sefcontext:
+    target: "{{ jellyfin_cache_dir }}(/.*)?"
+    setype: var_lib_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context jellyfin cache
+
+- name: Set SELinux context for Jellyfin log directory
+  community.general.sefcontext:
+    target: "{{ jellyfin_log_dir }}(/.*)?"
+    setype: var_log_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context jellyfin log
+
+- name: Set SELinux context for media directory
+  community.general.sefcontext:
+    target: "{{ jellyfin_media_dir }}(/.*)?"
+    setype: public_content_rw_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context jellyfin media
+
+- name: Allow Jellyfin to bind to custom HTTP port
+  community.general.seport:
+    ports: "{{ jellyfin_http_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  become: true
+  when:
+    - selinux_status.stdout == "Enforcing"
+    - jellyfin_http_port != 80 and jellyfin_http_port != 443
+
+- name: Allow Jellyfin to bind to custom HTTPS port
+  community.general.seport:
+    ports: "{{ jellyfin_https_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  become: true
+  when:
+    - selinux_status.stdout == "Enforcing"
+    - jellyfin_https_port != 80 and jellyfin_https_port != 443
+
+- name: Enable SELinux boolean for network connectivity
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect
+    state: true
+    persistent: true
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  failed_when: false

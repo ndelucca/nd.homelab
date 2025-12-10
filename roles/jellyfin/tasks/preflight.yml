@@ -1,0 +1,86 @@
+---
+# Preflight checks for Jellyfin installation
+
+- name: Verify we're running on Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role is designed for Fedora systems"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Check if Jellyfin is already installed
+  ansible.builtin.command: rpm -q jellyfin
+  register: jellyfin_installed
+  changed_when: false
+  failed_when: false
+
+- name: Display installation status
+  ansible.builtin.debug:
+    msg: "Jellyfin {{ 'is already installed' if jellyfin_installed.rc == 0 else 'will be installed' }}"
+
+- name: Check if HTTP port is available
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":{{ jellyfin_http_port }}\s" && echo "occupied" || echo "available"
+  register: http_port_check
+  changed_when: false
+  failed_when: false
+
+- name: Display HTTP port status
+  ansible.builtin.debug:
+    msg: "Port {{ jellyfin_http_port }} is {{ http_port_check.stdout }}"
+
+- name: Check if HTTPS port is available
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":{{ jellyfin_https_port }}\s" && echo "occupied" || echo "available"
+  register: https_port_check
+  changed_when: false
+  failed_when: false
+
+- name: Display HTTPS port status
+  ansible.builtin.debug:
+    msg: "Port {{ jellyfin_https_port }} is {{ https_port_check.stdout }}"
+
+- name: Create Jellyfin data directory
+  ansible.builtin.file:
+    path: "{{ jellyfin_data_dir }}"
+    state: directory
+    owner: "{{ jellyfin_user }}"
+    group: "{{ jellyfin_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Jellyfin config directory
+  ansible.builtin.file:
+    path: "{{ jellyfin_config_dir }}"
+    state: directory
+    owner: "{{ jellyfin_user }}"
+    group: "{{ jellyfin_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Jellyfin cache directory
+  ansible.builtin.file:
+    path: "{{ jellyfin_cache_dir }}"
+    state: directory
+    owner: "{{ jellyfin_user }}"
+    group: "{{ jellyfin_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Jellyfin log directory
+  ansible.builtin.file:
+    path: "{{ jellyfin_log_dir }}"
+    state: directory
+    owner: "{{ jellyfin_user }}"
+    group: "{{ jellyfin_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Jellyfin media directory
+  ansible.builtin.file:
+    path: "{{ jellyfin_media_dir }}"
+    state: directory
+    owner: "{{ jellyfin_user }}"
+    group: "{{ jellyfin_group }}"
+    mode: '0755'
+  become: true

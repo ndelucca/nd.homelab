@@ -28,3 +28,8 @@
   ansible.builtin.import_tasks: filebrowser.yml
   when: filebrowser_firewall_enabled | default(true)
   tags: ['firewall-filebrowser']
+
+- name: Configure firewall for Jellyfin
+  ansible.builtin.import_tasks: jellyfin.yml
+  when: jellyfin_firewall_enabled | default(true)
+  tags: ['firewall-jellyfin']

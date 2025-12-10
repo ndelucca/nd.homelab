@@ -1,0 +1,42 @@
+---
+# Configure Jellyfin systemd service
+
+- name: Create systemd override directory for Jellyfin
+  ansible.builtin.file:
+    path: /etc/systemd/system/{{ jellyfin_service_name }}.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Deploy Jellyfin systemd override configuration
+  ansible.builtin.template:
+    src: jellyfin-override.conf.j2
+    dest: /etc/systemd/system/{{ jellyfin_service_name }}.service.d/override.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - daemon-reload
+    - restart jellyfin
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start Jellyfin service
+  ansible.builtin.systemd:
+    name: "{{ jellyfin_service_name }}"
+    enabled: "{{ jellyfin_service_enabled }}"
+    state: "{{ jellyfin_service_state }}"
+    daemon_reload: true
+  become: true
+
+- name: Wait for Jellyfin to be available
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ jellyfin_http_port }}"
+    delay: 5
+    timeout: 60
+  when: jellyfin_service_state == 'started'

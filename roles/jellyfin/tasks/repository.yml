@@ -1,0 +1,37 @@
+---
+# Setup RPMFusion repository for Jellyfin
+
+- name: Check if RPMFusion Free repository is enabled
+  ansible.builtin.command: dnf repolist --enabled
+  register: repo_list
+  changed_when: false
+
+- name: Install RPMFusion Free repository
+  ansible.builtin.dnf:
+    name: "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_distribution_version }}.noarch.rpm"
+    state: present
+    disable_gpg_check: true
+  become: true
+  when:
+    - jellyfin_rpmfusion_free_enabled | bool
+    - "'rpmfusion-free' not in repo_list.stdout"
+
+- name: Install RPMFusion Nonfree repository (optional)
+  ansible.builtin.dnf:
+    name: "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ ansible_distribution_version }}.noarch.rpm"
+    state: present
+    disable_gpg_check: true
+  become: true
+  when:
+    - jellyfin_rpmfusion_nonfree_enabled | bool
+    - "'rpmfusion-nonfree' not in repo_list.stdout"
+
+- name: Update DNF cache after adding RPMFusion
+  ansible.builtin.dnf:
+    update_cache: true
+  become: true
+  when: "'rpmfusion-free' not in repo_list.stdout"
+
+- name: Display repository status
+  ansible.builtin.debug:
+    msg: "RPMFusion repositories configured successfully"

@@ -16,6 +16,9 @@
     - role: filebrowser
       tags: ['filebrowser', 'files']
 
+    - role: jellyfin
+      tags: ['jellyfin', 'media']
+
     - role: firewall
       tags: ['firewall']
       when: firewall_enabled | default(true)
