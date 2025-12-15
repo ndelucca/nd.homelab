@@ -1,0 +1,41 @@
+---
+# Configure SELinux for Cloud Torrent
+
+- name: Set SELinux context for Cloud Torrent binary
+  community.general.sefcontext:
+    target: "{{ cloud_torrent_install_dir }}/cloud-torrent"
+    setype: bin_t
+    state: present
+  become: true
+  notify: apply selinux context
+
+- name: Set SELinux context for working directory
+  community.general.sefcontext:
+    target: "{{ cloud_torrent_working_dir }}(/.*)?"
+    setype: var_lib_t
+    state: present
+  become: true
+  notify: apply selinux context
+
+- name: Set SELinux context for downloads directory
+  community.general.sefcontext:
+    target: "{{ cloud_torrent_downloads_dir }}(/.*)?"
+    setype: public_content_rw_t
+    state: present
+  become: true
+  notify: apply selinux context
+
+- name: Configure SELinux port for Cloud Torrent
+  community.general.seport:
+    ports: "{{ cloud_torrent_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  become: true
+
+- name: Enable httpd_can_network_connect SELinux boolean
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect
+    state: true
+    persistent: true
+  become: true

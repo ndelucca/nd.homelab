@@ -1,0 +1,22 @@
+---
+# Handlers for Cloud Torrent role
+
+- name: daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+- name: restart cloud-torrent
+  ansible.builtin.systemd:
+    name: "{{ cloud_torrent_service_name }}"
+    state: restarted
+  become: true
+
+- name: apply selinux context
+  ansible.builtin.command: "restorecon -Rv {{ item }}"
+  become: true
+  loop:
+    - "{{ cloud_torrent_install_dir }}/cloud-torrent"
+    - "{{ cloud_torrent_working_dir }}"
+    - "{{ cloud_torrent_downloads_dir }}"
+  changed_when: false

@@ -1,0 +1,66 @@
+---
+# Preflight checks and setup
+
+- name: Verify we're running on Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role is designed for Fedora systems"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Check if Cloud Torrent is already installed
+  ansible.builtin.stat:
+    path: "{{ cloud_torrent_install_dir }}/cloud-torrent"
+  register: cloud_torrent_installed
+
+- name: Check if port {{ cloud_torrent_port }} is available
+  ansible.builtin.wait_for:
+    port: "{{ cloud_torrent_port }}"
+    state: stopped
+    timeout: 1
+  ignore_errors: true
+  register: port_check
+  when: not cloud_torrent_installed.stat.exists
+
+- name: Fail if port is already in use
+  ansible.builtin.fail:
+    msg: "Port {{ cloud_torrent_port }} is already in use. Please choose a different port."
+  when:
+    - not cloud_torrent_installed.stat.exists
+    - port_check is failed
+
+- name: Ensure required packages are installed
+  ansible.builtin.dnf:
+    name:
+      - gzip
+    state: present
+  become: true
+
+- name: Create Cloud Torrent working directory
+  ansible.builtin.file:
+    path: "{{ cloud_torrent_working_dir }}"
+    state: directory
+    owner: "{{ cloud_torrent_user }}"
+    group: "{{ cloud_torrent_group }}"
+    mode: '0755'
+  become: true
+
+- name: Verify downloads directory exists
+  ansible.builtin.stat:
+    path: "{{ cloud_torrent_downloads_dir }}"
+  register: downloads_dir_stat
+
+- name: Warn if downloads directory does not exist
+  ansible.builtin.debug:
+    msg: "WARNING: Downloads directory {{ cloud_torrent_downloads_dir }} does not exist. Please ensure it is mounted before starting the service."
+  when: not downloads_dir_stat.stat.exists
+
+- name: Create downloads directory if it doesn't exist (not a mount point)
+  ansible.builtin.file:
+    path: "{{ cloud_torrent_downloads_dir }}"
+    state: directory
+    owner: "{{ cloud_torrent_user }}"
+    group: "{{ cloud_torrent_group }}"
+    mode: '0755'
+  become: true
+  when: not downloads_dir_stat.stat.exists

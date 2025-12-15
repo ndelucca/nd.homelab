@@ -1,0 +1,19 @@
+---
+# Main entry point for Cloud Torrent role
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['cloud-torrent', 'preflight']
+
+- name: Install Cloud Torrent binary
+  ansible.builtin.import_tasks: install.yml
+  tags: ['cloud-torrent', 'install']
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['cloud-torrent', 'service']
+
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['cloud-torrent', 'selinux']
+  when: cloud_torrent_manage_selinux | bool

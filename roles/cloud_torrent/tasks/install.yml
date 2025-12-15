@@ -1,0 +1,57 @@
+---
+# Install Cloud Torrent binary
+
+- name: Check if Cloud Torrent is already installed
+  ansible.builtin.stat:
+    path: "{{ cloud_torrent_install_dir }}/cloud-torrent"
+  register: cloud_torrent_binary
+
+- name: Create temporary download directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: _cloud_torrent_download
+  register: download_dir
+  when: not cloud_torrent_binary.stat.exists
+
+- name: Download Cloud Torrent binary
+  ansible.builtin.get_url:
+    url: "{{ cloud_torrent_download_url }}"
+    dest: "{{ download_dir.path }}/cloud-torrent.gz"
+    mode: '0644'
+  register: download_result
+  when: not cloud_torrent_binary.stat.exists
+
+- name: Extract Cloud Torrent binary
+  ansible.builtin.command:
+    cmd: gunzip cloud-torrent.gz
+    chdir: "{{ download_dir.path }}"
+    creates: "{{ download_dir.path }}/cloud-torrent"
+  when: not cloud_torrent_binary.stat.exists
+
+- name: Copy binary to installation directory
+  ansible.builtin.copy:
+    src: "{{ download_dir.path }}/cloud-torrent"
+    dest: "{{ cloud_torrent_install_dir }}/cloud-torrent"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  notify: restart cloud-torrent
+  when: not cloud_torrent_binary.stat.exists
+
+- name: Clean up temporary download directory
+  ansible.builtin.file:
+    path: "{{ download_dir.path }}"
+    state: absent
+  when: download_dir is defined and download_dir.path is defined
+
+- name: Verify Cloud Torrent binary is executable
+  ansible.builtin.command: "{{ cloud_torrent_install_dir }}/cloud-torrent --version"
+  register: cloud_torrent_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Display Cloud Torrent version
+  ansible.builtin.debug:
+    msg: "Installed Cloud Torrent version: {{ cloud_torrent_version_check.stderr | default(cloud_torrent_version) }}"

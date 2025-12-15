@@ -33,3 +33,8 @@
   ansible.builtin.import_tasks: jellyfin.yml
   when: jellyfin_firewall_enabled | default(true)
   tags: ['firewall-jellyfin']
+
+- name: Configure firewall for Cloud Torrent
+  ansible.builtin.import_tasks: cloud_torrent.yml
+  when: cloud_torrent_firewall_enabled | default(true)
+  tags: ['firewall-cloud-torrent']

@@ -1,0 +1,11 @@
+---
+# Cloud Torrent-specific playbook
+# Note: Run firewall role separately or use site.yml for complete setup
+# Usage: ansible-playbook playbooks/cloud_torrent.yml -i inventory/hosts.yml
+
+- name: Install and configure Cloud Torrent
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - cloud_torrent

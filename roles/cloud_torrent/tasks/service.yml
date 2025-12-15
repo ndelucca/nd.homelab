@@ -1,0 +1,33 @@
+---
+# Configure Cloud Torrent systemd service
+
+- name: Deploy Cloud Torrent systemd service file
+  ansible.builtin.template:
+    src: cloud-torrent.service.j2
+    dest: /etc/systemd/system/{{ cloud_torrent_service_name }}.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - daemon-reload
+    - restart cloud-torrent
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start Cloud Torrent service
+  ansible.builtin.systemd:
+    name: "{{ cloud_torrent_service_name }}"
+    enabled: "{{ cloud_torrent_service_enabled }}"
+    state: "{{ cloud_torrent_service_state }}"
+    daemon_reload: true
+  become: true
+
+- name: Wait for Cloud Torrent to be available
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ cloud_torrent_port }}"
+    delay: 5
+    timeout: 60
+  when: cloud_torrent_service_state == 'started'

@@ -1,0 +1,12 @@
+---
+# Configure firewall for Cloud Torrent
+
+- name: Configure firewall port for Cloud Torrent
+  ansible.posix.firewalld:
+    port: "{{ cloud_torrent_port | default(9091) }}/tcp"
+    zone: "{{ cloud_torrent_firewall_zone | default('FedoraServer') }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  become: true
+  notify: reload firewalld

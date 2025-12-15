@@ -1,0 +1,37 @@
+---
+# Default variables for Cloud Torrent role
+
+# Installation configuration
+cloud_torrent_version: "0.9.4"
+cloud_torrent_arch: amd64
+cloud_torrent_download_url: "https://github.com/jpillora/cloud-torrent/releases/download/v{{ cloud_torrent_version }}/cloud-torrent_{{ cloud_torrent_version }}_linux_{{ cloud_torrent_arch }}.gz"
+cloud_torrent_install_dir: /usr/local/bin
+cloud_torrent_working_dir: /opt/cloud-torrent
+
+# Service configuration
+cloud_torrent_user: ndelucca
+cloud_torrent_group: ndelucca
+cloud_torrent_service_name: cloud-torrent
+cloud_torrent_service_enabled: true
+cloud_torrent_service_state: started
+
+# Network configuration
+cloud_torrent_port: 9091
+cloud_torrent_host: 0.0.0.0
+
+# Application configuration
+cloud_torrent_title: "Cloud Torrent"
+cloud_torrent_downloads_dir: /srv/disks/D-Draco/media
+cloud_torrent_config_path: "{{ cloud_torrent_working_dir }}/cloud-torrent.json"
+
+# Authentication (disabled per user request)
+cloud_torrent_enable_auth: false
+cloud_torrent_auth_user: ""
+cloud_torrent_auth_password: ""
+
+# Firewall settings
+cloud_torrent_firewall_zone: FedoraServer
+cloud_torrent_firewall_enabled: true
+
+# SELinux configuration
+cloud_torrent_manage_selinux: true

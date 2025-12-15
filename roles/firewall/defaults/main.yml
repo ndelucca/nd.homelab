@@ -26,3 +26,8 @@ adguard_dns_over_https_port: 443
 filebrowser_firewall_enabled: true
 filebrowser_firewall_zone: "{{ firewall_default_zone }}"
 filebrowser_port: 8080
+
+# Cloud Torrent firewall settings
+cloud_torrent_firewall_enabled: true
+cloud_torrent_firewall_zone: FedoraServer
+cloud_torrent_port: 9091
