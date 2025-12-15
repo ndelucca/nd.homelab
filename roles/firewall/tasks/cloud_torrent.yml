@@ -1,12 +1,15 @@
 ---
 # Configure firewall for Cloud Torrent
+# Cloud Torrent is now behind NGINX reverse proxy
+# Access via torrent.ndelucca-server.com on ports 80/443 (handled by NGINX firewall rules)
 
-- name: Configure firewall port for Cloud Torrent
+- name: Remove old direct Cloud Torrent port from firewall
   ansible.posix.firewalld:
     port: "{{ cloud_torrent_port | default(9091) }}/tcp"
     zone: "{{ cloud_torrent_firewall_zone | default('FedoraServer') }}"
     permanent: true
     immediate: true
-    state: enabled
+    state: disabled
   become: true
   notify: reload firewalld
+  ignore_errors: true

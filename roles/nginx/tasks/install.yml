@@ -1,0 +1,35 @@
+---
+# Install NGINX and generate self-signed certificates
+
+- name: Install NGINX
+  ansible.builtin.dnf:
+    name: nginx
+    state: present
+  become: true
+
+- name: Ensure SSL directory exists
+  ansible.builtin.file:
+    path: /etc/pki/nginx
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Check if SSL certificate exists
+  ansible.builtin.stat:
+    path: "{{ nginx_ssl_certificate }}"
+  register: ssl_cert_stat
+
+- name: Generate self-signed SSL certificate
+  ansible.builtin.command:
+    cmd: >
+      openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509
+      -subj "/C=US/ST=State/L=City/O=Organization/CN={{ nginx_domain }}"
+      -keyout {{ nginx_ssl_certificate_key }}
+      -out {{ nginx_ssl_certificate }}
+    creates: "{{ nginx_ssl_certificate }}"
+  become: true
+  when:
+    - nginx_generate_selfsigned_cert | bool
+    - not ssl_cert_stat.stat.exists

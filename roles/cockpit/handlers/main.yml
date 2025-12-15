@@ -3,12 +3,12 @@
 
 - name: restart cockpit
   ansible.builtin.systemd:
-    name: "{{ cockpit_service_name }}"
+    name: cockpit.service
     state: restarted
   become: true
 
-- name: reload firewalld
+- name: restart cockpit socket
   ansible.builtin.systemd:
-    name: firewalld
-    state: reloaded
+    name: cockpit.socket
+    state: restarted
   become: true

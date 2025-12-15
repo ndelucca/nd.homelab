@@ -1,0 +1,20 @@
+---
+# Handlers for NGINX service
+
+- name: start nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+  become: true
+
+- name: reload nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+  become: true
+
+- name: restart nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: restarted
+  become: true

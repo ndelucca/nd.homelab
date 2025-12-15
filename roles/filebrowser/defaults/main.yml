@@ -17,7 +17,7 @@ filebrowser_service_enabled: true
 filebrowser_service_state: started
 
 # Network configuration
-filebrowser_bind_address: 0.0.0.0
+filebrowser_bind_address: 127.0.0.1
 filebrowser_port: 8080
 
 # Firewall settings (used by firewall role)

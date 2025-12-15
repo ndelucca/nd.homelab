@@ -1,0 +1,19 @@
+---
+# Main entry point for NGINX reverse proxy role
+
+- name: Install NGINX
+  ansible.builtin.import_tasks: install.yml
+  tags: ['nginx', 'install']
+
+- name: Configure NGINX
+  ansible.builtin.import_tasks: configure.yml
+  tags: ['nginx', 'configure']
+
+- name: Configure SELinux for NGINX
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['nginx', 'selinux']
+  when: nginx_manage_selinux | bool
+
+- name: Manage NGINX service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['nginx', 'service']

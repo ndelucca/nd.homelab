@@ -1,0 +1,24 @@
+---
+# Default variables for NGINX reverse proxy role
+
+# Domain configuration
+nginx_domain: ndelucca-server.com
+
+# SSL/TLS configuration
+nginx_ssl_certificate: /etc/pki/nginx/server.crt
+nginx_ssl_certificate_key: /etc/pki/nginx/server.key
+nginx_generate_selfsigned_cert: true
+
+# Backend service ports
+nginx_adguard_port: 8081
+nginx_filebrowser_port: 8080
+nginx_jellyfin_port: 8096
+nginx_cloud_torrent_port: 9091
+nginx_cockpit_port: 9090
+
+# Firewall configuration
+nginx_firewall_enabled: true
+nginx_firewall_zone: FedoraServer
+
+# SELinux configuration
+nginx_manage_selinux: true

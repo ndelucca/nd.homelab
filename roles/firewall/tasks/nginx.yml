@@ -1,0 +1,15 @@
+---
+# Configure firewall for NGINX reverse proxy
+
+- name: Configure firewall ports for NGINX
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    zone: "{{ nginx_firewall_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  become: true
+  loop:
+    - "80/tcp"   # HTTP
+    - "443/tcp"  # HTTPS
+  notify: reload firewalld

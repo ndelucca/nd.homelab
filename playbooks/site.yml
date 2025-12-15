@@ -10,6 +10,9 @@
     - role: cockpit
       tags: ['cockpit', 'monitoring']
 
+    - role: nginx
+      tags: ['nginx', 'proxy']
+
     - role: adguard_home
       tags: ['adguard', 'dns']
 

@@ -1,0 +1,21 @@
+---
+# Configure NGINX reverse proxy
+
+- name: Deploy NGINX configuration
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: '0644'
+    validate: 'nginx -t -c %s'
+  become: true
+  register: nginx_config
+
+- name: Ensure NGINX can connect to network
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect
+    state: true
+    persistent: true
+  become: true
+  when: ansible_selinux.status == "enabled"

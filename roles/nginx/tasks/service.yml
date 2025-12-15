@@ -1,0 +1,9 @@
+---
+# Manage NGINX service (enable but do NOT start yet)
+
+- name: Enable NGINX service
+  ansible.builtin.systemd:
+    name: nginx
+    enabled: true
+  become: true
+  # NOTE: Do NOT notify here - NGINX will be started by AdGuard handler chain after port 80 is freed

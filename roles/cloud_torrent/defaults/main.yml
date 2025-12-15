@@ -17,7 +17,7 @@ cloud_torrent_service_state: started
 
 # Network configuration
 cloud_torrent_port: 9091
-cloud_torrent_host: 0.0.0.0
+cloud_torrent_host: 127.0.0.1
 
 # Application configuration
 cloud_torrent_title: "Cloud Torrent"

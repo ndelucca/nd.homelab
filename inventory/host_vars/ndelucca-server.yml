@@ -56,9 +56,29 @@ adguard_dns_rewrites:
   - domain: ndelucca-server.com
     answer: 192.168.10.10
     enabled: true
+  - domain: adguard.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: torrent.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: files.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: jellyfin.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: cockpit.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
   - domain: ndelucca-acer.com
     answer: 192.168.10.13
     enabled: true
   - domain: ndelucca-raspberry-printer.com
     answer: 192.168.10.11
     enabled: true
+
+# NGINX Reverse Proxy
+nginx_firewall_enabled: true
+nginx_firewall_zone: FedoraServer
+nginx_domain: ndelucca-server.com

@@ -11,6 +11,7 @@
     name: "{{ adguard_service_name }}"
     state: restarted
   become: true
+  listen: restart adguardhome
 
 - name: reload systemd-resolved
   ansible.builtin.systemd:
@@ -23,3 +24,19 @@
     name: firewalld
     state: reloaded
   become: true
+
+- name: wait for adguard
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 53
+    timeout: 10
+    msg: "AdGuard DNS did not come back up"
+  listen: restart adguardhome
+
+- name: start nginx after adguard
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+  become: true
+  ignore_errors: true
+  listen: restart adguardhome

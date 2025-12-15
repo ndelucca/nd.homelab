@@ -10,13 +10,10 @@
     state: enabled
   become: true
   loop:
-    - "{{ adguard_bind_port }}/tcp"        # Web UI initial setup
-    - "{{ adguard_admin_port }}/tcp"       # Web UI admin
     - "{{ adguard_dns_port }}/tcp"         # DNS TCP
     - "{{ adguard_dns_port }}/udp"         # DNS UDP
     - "{{ adguard_dns_over_tls_port }}/tcp"  # DNS-over-TLS
     - "{{ adguard_dns_over_quic_port }}/udp" # DNS-over-QUIC
-    - "{{ adguard_dns_over_https_port }}/tcp" # DNS-over-HTTPS
   notify: reload firewalld
 
 - name: Enable DHCP service in firewall

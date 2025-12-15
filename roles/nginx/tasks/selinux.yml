@@ -1,0 +1,18 @@
+---
+# Configure SELinux for NGINX reverse proxy
+
+- name: Install SELinux Python bindings
+  ansible.builtin.dnf:
+    name:
+      - python3-libselinux
+      - python3-policycoreutils
+    state: present
+  become: true
+
+- name: Allow NGINX to connect to network
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect
+    state: true
+    persistent: true
+  become: true
+  when: ansible_selinux.status == "enabled"

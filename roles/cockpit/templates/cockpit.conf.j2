@@ -1,0 +1,4 @@
+[WebService]
+AllowUnencrypted=true
+Origins = https://cockpit.{{ nginx_domain | default('ndelucca-server.com') }} http://cockpit.{{ nginx_domain | default('ndelucca-server.com') }}
+ProtocolHeader = X-Forwarded-Proto
