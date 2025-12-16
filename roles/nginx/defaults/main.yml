@@ -15,6 +15,7 @@ nginx_filebrowser_port: 8080
 nginx_jellyfin_port: 8096
 nginx_cloud_torrent_port: 9091
 nginx_cockpit_port: 9090
+nginx_immich_port: 2283
 
 # Firewall configuration
 nginx_firewall_enabled: true

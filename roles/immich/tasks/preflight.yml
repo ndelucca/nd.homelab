@@ -1,0 +1,89 @@
+---
+# Preflight checks for Immich installation
+
+- name: Verify running on Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role is designed for Fedora systems"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Get user UID for rootless Podman
+  ansible.builtin.command: id -u {{ immich_user }}
+  register: immich_user_uid_result
+  changed_when: false
+
+- name: Set immich_uid fact
+  ansible.builtin.set_fact:
+    immich_uid: "{{ immich_user_uid_result.stdout }}"
+
+- name: Check if port {{ immich_port }} is available
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":{{ immich_port }}\s" && echo "occupied" || echo "available"
+  register: port_check
+  changed_when: false
+  failed_when: false
+
+- name: Display port status
+  ansible.builtin.debug:
+    msg: "Port {{ immich_port }} is {{ port_check.stdout }}"
+
+- name: Warn if port is occupied
+  ansible.builtin.fail:
+    msg: "Port {{ immich_port }} is already in use"
+  when: port_check.stdout == "occupied"
+  ignore_errors: true
+
+- name: Create Immich base directory
+  ansible.builtin.file:
+    path: "{{ immich_base_dir }}"
+    state: directory
+    owner: "{{ immich_user }}"
+    group: "{{ immich_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Immich upload directory
+  ansible.builtin.file:
+    path: "{{ immich_upload_location }}"
+    state: directory
+    owner: "{{ immich_user }}"
+    group: "{{ immich_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Immich database directory
+  ansible.builtin.file:
+    path: "{{ immich_db_data_location }}"
+    state: directory
+    owner: "{{ immich_user }}"
+    group: "{{ immich_group }}"
+    mode: '0700'
+  become: true
+
+- name: Create Immich config directory
+  ansible.builtin.file:
+    path: "{{ immich_config_dir }}"
+    state: directory
+    owner: "{{ immich_user }}"
+    group: "{{ immich_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Immich model cache directory
+  ansible.builtin.file:
+    path: "{{ immich_model_cache }}"
+    state: directory
+    owner: "{{ immich_user }}"
+    group: "{{ immich_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Quadlet directory for user
+  ansible.builtin.file:
+    path: "{{ immich_quadlet_dir }}/{{ immich_uid }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true

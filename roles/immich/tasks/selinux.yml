@@ -1,0 +1,56 @@
+---
+# Configure SELinux for Immich containers
+
+- name: Check current SELinux status
+  ansible.builtin.command: getenforce
+  register: selinux_status
+  changed_when: false
+
+- name: Display SELinux status
+  ansible.builtin.debug:
+    msg: "SELinux is {{ selinux_status.stdout }}"
+
+- name: Install SELinux policy packages
+  ansible.builtin.dnf:
+    name:
+      - policycoreutils-python-utils
+      - container-selinux
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+
+- name: Set SELinux context for Immich upload directory
+  community.general.sefcontext:
+    target: "{{ immich_upload_location }}(/.*)?"
+    setype: container_file_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context immich upload
+
+- name: Set SELinux context for Immich database directory
+  community.general.sefcontext:
+    target: "{{ immich_db_data_location }}(/.*)?"
+    setype: container_file_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context immich database
+
+- name: Set SELinux context for Immich model cache
+  community.general.sefcontext:
+    target: "{{ immich_model_cache }}(/.*)?"
+    setype: container_file_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context immich cache
+
+- name: Enable SELinux boolean for container port binding
+  ansible.posix.seboolean:
+    name: container_use_devices
+    state: true
+    persistent: true
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  failed_when: false

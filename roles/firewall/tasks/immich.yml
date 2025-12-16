@@ -1,0 +1,15 @@
+---
+# Configure firewall for Immich
+# Immich is behind NGINX reverse proxy
+# Access via gallery.ndelucca-server.com on ports 80/443 (handled by NGINX firewall rules)
+
+- name: Ensure Immich port is NOT exposed externally
+  ansible.posix.firewalld:
+    port: "{{ immich_port | default(2283) }}/tcp"
+    zone: "{{ immich_firewall_zone | default('FedoraServer') }}"
+    permanent: true
+    immediate: true
+    state: disabled
+  become: true
+  notify: reload firewalld
+  ignore_errors: true

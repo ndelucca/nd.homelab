@@ -1,0 +1,17 @@
+---
+# Deploy Quadlet unit files
+
+- name: Deploy Immich Quadlet .kube unit
+  ansible.builtin.template:
+    src: immich.kube.j2
+    dest: "{{ immich_quadlet_dir }}/{{ immich_uid }}/{{ immich_service_name }}.kube"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - daemon-reload-user
+    - restart immich-pod
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers

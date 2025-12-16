@@ -25,6 +25,9 @@
     - role: cloud_torrent
       tags: ['cloud-torrent', 'torrent', 'media']
 
+    - role: immich
+      tags: ['immich', 'photos']
+
     - role: firewall
       tags: ['firewall']
       when: firewall_enabled | default(true)

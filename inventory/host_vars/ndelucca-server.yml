@@ -71,6 +71,9 @@ adguard_dns_rewrites:
   - domain: cockpit.ndelucca-server.com
     answer: 192.168.10.10
     enabled: true
+  - domain: gallery.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
   - domain: ndelucca-acer.com
     answer: 192.168.10.13
     enabled: true
@@ -82,3 +85,6 @@ adguard_dns_rewrites:
 nginx_firewall_enabled: true
 nginx_firewall_zone: FedoraServer
 nginx_domain: ndelucca-server.com
+
+# Immich configuration
+immich_upload_location: /srv/disks/D-Draco/media/Gallery

@@ -1,0 +1,38 @@
+---
+# Configure systemd service for Immich pod
+
+- name: Enable and start Immich pod service
+  ansible.builtin.systemd:
+    name: "{{ immich_service_name }}"
+    enabled: "{{ immich_service_enabled }}"
+    state: "{{ immich_service_state }}"
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ immich_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ immich_uid }}"
+
+- name: Wait for Immich server to be available
+  ansible.builtin.wait_for:
+    host: "{{ immich_host }}"
+    port: "{{ immich_port }}"
+    delay: 10
+    timeout: 120
+  when: immich_service_state == 'started'
+
+- name: Display Immich access information
+  ansible.builtin.debug:
+    msg: |
+      Immich has been deployed successfully!
+
+      Access via: http://{{ ansible_default_ipv4.address }}:{{ immich_port }}
+      Or via NGINX: https://gallery.{{ nginx_domain | default('ndelucca-server.com') }}
+
+      Upload location: {{ immich_upload_location }}
+      Database location: {{ immich_db_data_location }}
+
+      Manage service:
+      - Status: systemctl --user -M {{ immich_user }}@ status {{ immich_service_name }}
+      - Logs: journalctl --user -M {{ immich_user }}@ -u {{ immich_service_name }}
+      - Restart: systemctl --user -M {{ immich_user }}@ restart {{ immich_service_name }}

@@ -1,0 +1,36 @@
+---
+# Handlers for Immich role
+
+- name: daemon-reload-user
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ immich_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ immich_uid }}"
+
+- name: restart immich-pod
+  ansible.builtin.systemd:
+    name: "{{ immich_service_name }}"
+    state: restarted
+    scope: user
+  become: true
+  become_user: "{{ immich_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ immich_uid }}"
+
+- name: apply selinux context immich upload
+  ansible.builtin.command: "restorecon -Rv {{ immich_upload_location }}"
+  become: true
+  changed_when: false
+
+- name: apply selinux context immich database
+  ansible.builtin.command: "restorecon -Rv {{ immich_db_data_location }}"
+  become: true
+  changed_when: false
+
+- name: apply selinux context immich cache
+  ansible.builtin.command: "restorecon -Rv {{ immich_model_cache }}"
+  become: true
+  changed_when: false

@@ -1,0 +1,10 @@
+---
+# Immich photo management playbook
+# Usage: ansible-playbook playbooks/immich.yml
+
+- name: Install and configure Immich
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - immich

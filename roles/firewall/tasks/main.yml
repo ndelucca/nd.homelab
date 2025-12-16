@@ -39,6 +39,11 @@
   when: cloud_torrent_firewall_enabled | default(true)
   tags: ['firewall-cloud-torrent']
 
+- name: Configure firewall for Immich
+  ansible.builtin.import_tasks: immich.yml
+  when: immich_firewall_enabled | default(false)
+  tags: ['firewall-immich']
+
 - name: Configure firewall for NGINX
   ansible.builtin.import_tasks: nginx.yml
   when: nginx_firewall_enabled | default(true)

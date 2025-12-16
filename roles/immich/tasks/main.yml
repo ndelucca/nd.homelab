@@ -1,0 +1,27 @@
+---
+# Main entry point for Immich role
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['immich', 'preflight']
+
+- name: Install Podman and dependencies
+  ansible.builtin.import_tasks: install.yml
+  tags: ['immich', 'install']
+
+- name: Configure Immich pod and environment
+  ansible.builtin.import_tasks: configure.yml
+  tags: ['immich', 'configure']
+
+- name: Deploy Quadlet unit files
+  ansible.builtin.import_tasks: quadlet.yml
+  tags: ['immich', 'quadlet']
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['immich', 'service']
+
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['immich', 'selinux']
+  when: immich_manage_selinux | bool
