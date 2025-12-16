@@ -1,7 +1,7 @@
 ---
 # Configure NGINX reverse proxy
 
-- name: Deploy NGINX configuration
+- name: Deploy main NGINX configuration
   ansible.builtin.template:
     src: nginx.conf.j2
     dest: /etc/nginx/nginx.conf
@@ -10,7 +10,43 @@
     mode: '0644'
     validate: 'nginx -t -c %s'
   become: true
-  register: nginx_config
+  register: nginx_main_config
+
+- name: Ensure conf.d directory exists
+  ansible.builtin.file:
+    path: /etc/nginx/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Deploy service configurations
+  ansible.builtin.template:
+    src: "conf.d/{{ item }}"
+    dest: "/etc/nginx/conf.d/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  loop:
+    - adguard-root.conf.j2
+    - adguard-subdomain.conf.j2
+    - filebrowser.conf.j2
+    - jellyfin.conf.j2
+    - cloud-torrent.conf.j2
+    - cockpit.conf.j2
+  register: nginx_service_configs
+
+- name: Validate complete NGINX configuration
+  ansible.builtin.command: nginx -t
+  become: true
+  changed_when: false
+
+- name: Set configuration changed flag
+  ansible.builtin.set_fact:
+    nginx_config:
+      changed: "{{ nginx_main_config.changed or nginx_service_configs.changed }}"
 
 - name: Ensure NGINX can connect to network
   ansible.posix.seboolean:

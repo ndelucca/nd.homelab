@@ -1,0 +1,71 @@
+# ========================================
+# CLOUD TORRENT SUBDOMAIN
+# ========================================
+
+# HTTP
+server {
+    listen 80;
+    server_name torrent.{{ nginx_domain }};
+
+    location / {
+        proxy_pass http://127.0.0.1:{{ nginx_cloud_torrent_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_http_version 1.1;
+    }
+
+    # Server-Sent Events (SSE) endpoint for real-time updates
+    location /sync {
+        proxy_pass http://127.0.0.1:{{ nginx_cloud_torrent_port }}/sync;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # SSE specific settings
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 3600s;
+        proxy_http_version 1.1;
+        chunked_transfer_encoding off;
+    }
+}
+
+# HTTPS
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name torrent.{{ nginx_domain }};
+
+    ssl_certificate {{ nginx_ssl_certificate }};
+    ssl_certificate_key {{ nginx_ssl_certificate_key }};
+
+    location / {
+        proxy_pass http://127.0.0.1:{{ nginx_cloud_torrent_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_http_version 1.1;
+    }
+
+    # Server-Sent Events (SSE) endpoint for real-time updates
+    location /sync {
+        proxy_pass http://127.0.0.1:{{ nginx_cloud_torrent_port }}/sync;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # SSE specific settings
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 3600s;
+        proxy_http_version 1.1;
+        chunked_transfer_encoding off;
+    }
+}

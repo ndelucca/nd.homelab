@@ -1,0 +1,51 @@
+# ========================================
+# FILEBROWSER SUBDOMAIN
+# ========================================
+
+# HTTP
+server {
+    listen 80;
+    server_name files.{{ nginx_domain }};
+
+    # Disable buffering for large file uploads
+    client_max_body_size 0;
+    proxy_request_buffering off;
+
+    location / {
+        proxy_pass http://127.0.0.1:{{ nginx_filebrowser_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Support for large file uploads
+        proxy_buffering off;
+        proxy_http_version 1.1;
+    }
+}
+
+# HTTPS
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name files.{{ nginx_domain }};
+
+    ssl_certificate {{ nginx_ssl_certificate }};
+    ssl_certificate_key {{ nginx_ssl_certificate_key }};
+
+    # Disable buffering for large file uploads
+    client_max_body_size 0;
+    proxy_request_buffering off;
+
+    location / {
+        proxy_pass http://127.0.0.1:{{ nginx_filebrowser_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Support for large file uploads
+        proxy_buffering off;
+        proxy_http_version 1.1;
+    }
+}
