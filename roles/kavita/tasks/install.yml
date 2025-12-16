@@ -1,0 +1,34 @@
+---
+# Install Podman and dependencies
+
+- name: Install Podman packages
+  ansible.builtin.dnf:
+    name:
+      - podman
+      - slirp4netns     # For rootless networking
+      - fuse-overlayfs  # For rootless storage
+      - crun            # Modern OCI runtime
+    state: present
+  become: true
+
+- name: Verify Podman installation
+  ansible.builtin.command: podman --version
+  register: podman_version
+  changed_when: false
+
+- name: Display Podman version
+  ansible.builtin.debug:
+    msg: "Installed {{ podman_version.stdout }}"
+
+- name: Check Podman version is >= 4.4 (required for Quadlet)
+  ansible.builtin.assert:
+    that:
+      - podman_version.stdout is version('podman version 4.4', '>=', version_type='loose')
+    fail_msg: "Podman 4.4+ is required for Quadlet support"
+    success_msg: "Podman version is compatible with Quadlet"
+  when: podman_version.stdout is defined
+
+- name: Enable lingering for user (allows user services without login)
+  ansible.builtin.command: loginctl enable-linger {{ kavita_user }}
+  become: true
+  changed_when: false

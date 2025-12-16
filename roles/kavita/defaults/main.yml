@@ -1,0 +1,43 @@
+---
+# Default variables for Kavita role
+
+# Service user configuration
+kavita_user: ndelucca
+kavita_group: ndelucca
+kavita_uid: 1000  # Obtained dynamically via getent in preflight
+
+# Directory configuration
+kavita_base_dir: /srv/kavita
+kavita_config_dir: "{{ kavita_base_dir }}/config"
+kavita_library_dir: "{{ kavita_base_dir }}/library"
+
+# Additional library paths to mount (list of paths)
+kavita_extra_libraries: []
+
+# Podman configuration
+kavita_podman_user: "{{ kavita_user }}"
+kavita_pod_name: kavita
+kavita_quadlet_dir: /etc/containers/systemd/users  # System-managed user containers
+
+# Network configuration
+kavita_port: 5000
+kavita_host: 127.0.0.1
+
+# Application configuration
+kavita_version: latest
+kavita_timezone: America/Los_Angeles
+
+# Service configuration
+kavita_service_name: kavita-pod
+kavita_service_enabled: true
+kavita_service_state: started
+
+# Firewall settings
+kavita_firewall_zone: FedoraServer
+kavita_firewall_enabled: false  # False because NGINX handles external access
+
+# SELinux configuration
+kavita_manage_selinux: true
+
+# Podman images
+kavita_image: "docker.io/jvmilazz0/kavita:{{ kavita_version }}"

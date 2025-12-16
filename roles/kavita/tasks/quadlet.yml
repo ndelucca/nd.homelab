@@ -1,0 +1,17 @@
+---
+# Deploy Quadlet unit files
+
+- name: Deploy Kavita Quadlet .kube unit
+  ansible.builtin.template:
+    src: kavita.kube.j2
+    dest: "{{ kavita_quadlet_dir }}/{{ kavita_uid }}/{{ kavita_service_name }}.kube"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - daemon-reload-user
+    - restart kavita-pod
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers

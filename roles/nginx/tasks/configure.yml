@@ -37,6 +37,7 @@
     - cloud-torrent.conf.j2
     - cockpit.conf.j2
     - immich.conf.j2
+    - kavita.conf.j2
   register: nginx_service_configs
 
 - name: Validate complete NGINX configuration

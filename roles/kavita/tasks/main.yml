@@ -1,0 +1,27 @@
+---
+# Main entry point for Kavita role
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['kavita', 'preflight']
+
+- name: Install Podman and dependencies
+  ansible.builtin.import_tasks: install.yml
+  tags: ['kavita', 'install']
+
+- name: Configure Kavita pod
+  ansible.builtin.import_tasks: configure.yml
+  tags: ['kavita', 'configure']
+
+- name: Deploy Quadlet unit files
+  ansible.builtin.import_tasks: quadlet.yml
+  tags: ['kavita', 'quadlet']
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['kavita', 'service']
+
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['kavita', 'selinux']
+  when: kavita_manage_selinux | bool

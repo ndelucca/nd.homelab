@@ -80,6 +80,9 @@ adguard_dns_rewrites:
   - domain: ndelucca-raspberry-printer.com
     answer: 192.168.10.11
     enabled: true
+  - domain: books.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
 
 # NGINX Reverse Proxy
 nginx_firewall_enabled: true
@@ -88,3 +91,8 @@ nginx_domain: ndelucca-server.com
 
 # Immich configuration
 immich_upload_location: /srv/disks/D-Draco/media/Gallery
+
+# Kavita configuration
+kavita_extra_libraries:
+  - name: books
+    path: /srv/disks/D-Draco/media/Books

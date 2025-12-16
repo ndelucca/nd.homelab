@@ -1,0 +1,71 @@
+---
+# Preflight checks for Kavita installation
+
+- name: Verify running on Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role is designed for Fedora systems"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Get user UID for rootless Podman
+  ansible.builtin.command: id -u {{ kavita_user }}
+  register: kavita_user_uid_result
+  changed_when: false
+
+- name: Set kavita_uid fact
+  ansible.builtin.set_fact:
+    kavita_uid: "{{ kavita_user_uid_result.stdout }}"
+
+- name: Check if port {{ kavita_port }} is available
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":{{ kavita_port }}\s" && echo "occupied" || echo "available"
+  register: port_check
+  changed_when: false
+  failed_when: false
+
+- name: Display port status
+  ansible.builtin.debug:
+    msg: "Port {{ kavita_port }} is {{ port_check.stdout }}"
+
+- name: Warn if port is occupied
+  ansible.builtin.fail:
+    msg: "Port {{ kavita_port }} is already in use"
+  when: port_check.stdout == "occupied"
+  ignore_errors: true
+
+- name: Create Kavita base directory
+  ansible.builtin.file:
+    path: "{{ kavita_base_dir }}"
+    state: directory
+    owner: "{{ kavita_user }}"
+    group: "{{ kavita_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Kavita config directory
+  ansible.builtin.file:
+    path: "{{ kavita_config_dir }}"
+    state: directory
+    owner: "{{ kavita_user }}"
+    group: "{{ kavita_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Kavita library directory
+  ansible.builtin.file:
+    path: "{{ kavita_library_dir }}"
+    state: directory
+    owner: "{{ kavita_user }}"
+    group: "{{ kavita_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Quadlet directory for user
+  ansible.builtin.file:
+    path: "{{ kavita_quadlet_dir }}/{{ kavita_uid }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true

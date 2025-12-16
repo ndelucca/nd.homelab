@@ -1,0 +1,15 @@
+---
+# Firewall configuration for Kavita
+# Kavita is behind NGINX reverse proxy
+# Access via books.ndelucca-server.com on ports 80/443
+
+- name: Ensure Kavita port is NOT exposed externally (behind NGINX)
+  ansible.posix.firewalld:
+    port: "{{ kavita_port | default(5000) }}/tcp"
+    zone: "{{ kavita_firewall_zone | default('FedoraServer') }}"
+    permanent: true
+    immediate: true
+    state: disabled
+  become: true
+  notify: reload firewalld
+  ignore_errors: true

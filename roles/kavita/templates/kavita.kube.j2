@@ -1,0 +1,27 @@
+# Kavita Quadlet Unit File
+# Managed by Ansible - DO NOT EDIT MANUALLY
+
+[Unit]
+Description=Kavita Reading Server Pod
+Documentation=https://wiki.kavitareader.com
+After=network-online.target
+Wants=network-online.target
+
+[Kube]
+# Path to Kubernetes YAML
+Yaml={{ kavita_config_dir }}/kavita-pod.yaml
+
+# Set SELinux labels for volumes
+SetWorkingDirectory=yaml
+
+# Auto-update images
+AutoUpdate=registry
+
+[Service]
+# Restart policy
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target default.target

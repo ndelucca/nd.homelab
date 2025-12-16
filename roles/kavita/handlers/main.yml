@@ -1,0 +1,38 @@
+---
+# Handlers for Kavita role
+
+- name: daemon-reload-user
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ kavita_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ kavita_uid }}"
+
+- name: restart kavita-pod
+  ansible.builtin.systemd:
+    name: "{{ kavita_service_name }}"
+    state: restarted
+    scope: user
+  become: true
+  become_user: "{{ kavita_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ kavita_uid }}"
+
+- name: apply selinux context kavita config
+  ansible.builtin.command: "restorecon -Rv {{ kavita_config_dir }}"
+  become: true
+  changed_when: false
+
+- name: apply selinux context kavita library
+  ansible.builtin.command: "restorecon -Rv {{ kavita_library_dir }}"
+  become: true
+  changed_when: false
+
+- name: apply selinux context kavita extra libraries
+  ansible.builtin.command: "restorecon -Rv {{ item.path }}"
+  become: true
+  loop: "{{ kavita_extra_libraries }}"
+  when: kavita_extra_libraries | length > 0
+  changed_when: false

@@ -1,0 +1,59 @@
+---
+# Configure SELinux for Kavita containers
+
+- name: Check current SELinux status
+  ansible.builtin.command: getenforce
+  register: selinux_status
+  changed_when: false
+
+- name: Display SELinux status
+  ansible.builtin.debug:
+    msg: "SELinux is {{ selinux_status.stdout }}"
+
+- name: Install SELinux policy packages
+  ansible.builtin.dnf:
+    name:
+      - policycoreutils-python-utils
+      - container-selinux
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+
+- name: Set SELinux context for Kavita config directory
+  community.general.sefcontext:
+    target: "{{ kavita_config_dir }}(/.*)?"
+    setype: container_file_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context kavita config
+
+- name: Set SELinux context for Kavita library directory
+  community.general.sefcontext:
+    target: "{{ kavita_library_dir }}(/.*)?"
+    setype: container_file_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context kavita library
+
+- name: Set SELinux context for extra library directories
+  community.general.sefcontext:
+    target: "{{ item.path }}(/.*)?"
+    setype: container_file_t
+    state: present
+  become: true
+  loop: "{{ kavita_extra_libraries }}"
+  when:
+    - selinux_status.stdout == "Enforcing"
+    - kavita_extra_libraries | length > 0
+  notify: apply selinux context kavita extra libraries
+
+- name: Enable SELinux boolean for container port binding
+  ansible.posix.seboolean:
+    name: container_use_devices
+    state: true
+    persistent: true
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  failed_when: false

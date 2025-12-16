@@ -1,0 +1,38 @@
+---
+# Configure systemd service for Kavita pod
+
+- name: Enable and start Kavita pod service
+  ansible.builtin.systemd:
+    name: "{{ kavita_service_name }}"
+    enabled: "{{ kavita_service_enabled }}"
+    state: "{{ kavita_service_state }}"
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ kavita_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ kavita_uid }}"
+
+- name: Wait for Kavita server to be available
+  ansible.builtin.wait_for:
+    host: "{{ kavita_host }}"
+    port: "{{ kavita_port }}"
+    delay: 10
+    timeout: 120
+  when: kavita_service_state == 'started'
+
+- name: Display Kavita access information
+  ansible.builtin.debug:
+    msg: |
+      Kavita has been deployed successfully!
+
+      Access via: http://{{ ansible_default_ipv4.address }}:{{ kavita_port }}
+      Or via NGINX: https://books.{{ nginx_domain | default('ndelucca-server.com') }}
+
+      Library location: {{ kavita_library_dir }}
+      Config location: {{ kavita_config_dir }}
+
+      Manage service:
+      - Status: systemctl --user -M {{ kavita_user }}@ status {{ kavita_service_name }}
+      - Logs: journalctl --user -M {{ kavita_user }}@ -u {{ kavita_service_name }}
+      - Restart: systemctl --user -M {{ kavita_user }}@ restart {{ kavita_service_name }}

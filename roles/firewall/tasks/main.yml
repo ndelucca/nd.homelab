@@ -44,6 +44,11 @@
   when: immich_firewall_enabled | default(false)
   tags: ['firewall-immich']
 
+- name: Configure firewall for Kavita
+  ansible.builtin.import_tasks: kavita.yml
+  when: kavita_firewall_enabled | default(false)
+  tags: ['firewall-kavita']
+
 - name: Configure firewall for NGINX
   ansible.builtin.import_tasks: nginx.yml
   when: nginx_firewall_enabled | default(true)

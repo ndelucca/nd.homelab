@@ -1,0 +1,10 @@
+---
+# Kavita-specific playbook
+# Usage: ansible-playbook playbooks/kavita.yml -l ndelucca-server
+
+- name: Install and configure Kavita reading server
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - kavita

@@ -1,0 +1,13 @@
+---
+# Configure Kavita pod
+
+- name: Deploy Kavita pod YAML
+  ansible.builtin.template:
+    src: kavita-pod.yaml.j2
+    dest: "{{ kavita_config_dir }}/kavita-pod.yaml"
+    owner: "{{ kavita_user }}"
+    group: "{{ kavita_group }}"
+    mode: '0644'
+  notify:
+    - daemon-reload-user
+    - restart kavita-pod

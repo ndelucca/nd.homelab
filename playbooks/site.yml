@@ -28,6 +28,9 @@
     - role: immich
       tags: ['immich', 'photos']
 
+    - role: kavita
+      tags: ['kavita', 'books', 'reading']
+
     - role: firewall
       tags: ['firewall']
       when: firewall_enabled | default(true)
