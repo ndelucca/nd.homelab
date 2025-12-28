@@ -1,0 +1,23 @@
+---
+# Deploy Podman Quadlet configuration for OrcaSlicer
+
+- name: Ensure systemd user directory exists
+  ansible.builtin.file:
+    path: "{{ orcaslicer_quadlet_dir }}/{{ orcaslicer_uid }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Deploy OrcaSlicer Quadlet .container unit
+  ansible.builtin.template:
+    src: orcaslicer.container.j2
+    dest: "{{ orcaslicer_quadlet_dir }}/{{ orcaslicer_uid }}/{{ orcaslicer_service_name }}.container"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - daemon-reload-user
+    - restart orcaslicer

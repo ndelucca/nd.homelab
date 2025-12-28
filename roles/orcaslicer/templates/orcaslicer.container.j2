@@ -1,0 +1,32 @@
+[Unit]
+Description=OrcaSlicer Web 3D Slicer
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ orcaslicer_image }}
+ContainerName=orcaslicer
+PublishPort={{ orcaslicer_host }}:{{ orcaslicer_port }}:3001
+
+# Config volume (container home directory)
+Volume={{ orcaslicer_config_dir }}:/config:Z
+
+Environment=PUID={{ orcaslicer_uid }}
+Environment=PGID={{ orcaslicer_uid }}
+Environment=TZ={{ orcaslicer_timezone }}
+Environment=CUSTOM_USER={{ orcaslicer_custom_user }}
+Environment=PASSWORD={{ orcaslicer_password }}
+
+# Force CPU encoding (GPU not supported on this hardware)
+Environment=SELKIES_USE_CPU=true
+Environment=DISABLE_DRI3=true
+
+AutoUpdate=registry
+
+[Service]
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target default.target

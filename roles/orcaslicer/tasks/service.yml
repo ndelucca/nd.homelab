@@ -1,0 +1,33 @@
+---
+# Configure systemd user service for OrcaSlicer
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start OrcaSlicer service
+  ansible.builtin.systemd:
+    name: "{{ orcaslicer_service_name }}"
+    enabled: "{{ orcaslicer_service_enabled }}"
+    state: "{{ orcaslicer_service_state }}"
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ orcaslicer_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ orcaslicer_uid }}"
+
+- name: Wait for OrcaSlicer to be available
+  ansible.builtin.wait_for:
+    host: "{{ orcaslicer_host }}"
+    port: "{{ orcaslicer_port }}"
+    delay: 10
+    timeout: 120
+  when: orcaslicer_service_state == 'started'
+
+- name: Display OrcaSlicer access information
+  ansible.builtin.debug:
+    msg: |
+      OrcaSlicer is now running!
+      - Direct access: https://{{ orcaslicer_host }}:{{ orcaslicer_port }}
+      - Via NGINX: https://slicer.ndelucca-server.com (after NGINX config)
+      - Config location: {{ orcaslicer_config_dir }}/.config/OrcaSlicer/

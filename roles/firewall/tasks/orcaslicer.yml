@@ -1,0 +1,14 @@
+---
+# OrcaSlicer is behind NGINX reverse proxy
+# Access via slicer.ndelucca-server.com on ports 80/443 (handled by NGINX)
+
+- name: Ensure OrcaSlicer port not directly exposed
+  ansible.posix.firewalld:
+    port: "{{ orcaslicer_port | default(3001) }}/tcp"
+    zone: "{{ orcaslicer_firewall_zone | default('FedoraServer') }}"
+    permanent: true
+    immediate: true
+    state: disabled
+  become: true
+  notify: reload firewalld
+  ignore_errors: true

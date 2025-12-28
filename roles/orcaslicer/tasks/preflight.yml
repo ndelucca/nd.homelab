@@ -1,0 +1,80 @@
+---
+# Preflight checks and directory setup for OrcaSlicer
+
+- name: Verify Fedora operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role only supports Fedora"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Get user UID dynamically
+  ansible.builtin.command: "getent passwd {{ orcaslicer_user }}"
+  register: getent_output
+  changed_when: false
+
+- name: Extract UID from getent
+  ansible.builtin.set_fact:
+    orcaslicer_uid: "{{ getent_output.stdout.split(':')[2] }}"
+
+- name: Display user UID
+  ansible.builtin.debug:
+    msg: "Using UID {{ orcaslicer_uid }} for user {{ orcaslicer_user }}"
+
+- name: Ensure base directory exists
+  ansible.builtin.file:
+    path: "{{ orcaslicer_base_dir }}"
+    state: directory
+    owner: "{{ orcaslicer_user }}"
+    group: "{{ orcaslicer_group }}"
+    mode: '0755'
+  become: true
+
+- name: Ensure config directory exists
+  ansible.builtin.file:
+    path: "{{ orcaslicer_config_dir }}"
+    state: directory
+    owner: "{{ orcaslicer_user }}"
+    group: "{{ orcaslicer_group }}"
+    mode: '0755'
+  become: true
+
+- name: Ensure downloads and gcodes directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ orcaslicer_user }}"
+    group: "{{ orcaslicer_group }}"
+    mode: '0755'
+  become: true
+  loop:
+    - "{{ orcaslicer_config_dir }}/downloads"
+    - "{{ orcaslicer_config_dir }}/gcodes"
+
+- name: Set ACLs for user access to downloads and gcodes
+  ansible.posix.acl:
+    path: "{{ item.path }}"
+    entity: "{{ orcaslicer_user }}"
+    etype: user
+    permissions: rwx
+    default: "{{ item.default }}"
+    state: present
+  become: true
+  loop:
+    - { path: "{{ orcaslicer_config_dir }}/downloads", default: false }
+    - { path: "{{ orcaslicer_config_dir }}/downloads", default: true }
+    - { path: "{{ orcaslicer_config_dir }}/gcodes", default: false }
+    - { path: "{{ orcaslicer_config_dir }}/gcodes", default: true }
+
+- name: Check if port is available
+  ansible.builtin.wait_for:
+    port: "{{ orcaslicer_port }}"
+    host: "{{ orcaslicer_host }}"
+    state: stopped
+    timeout: 1
+  ignore_errors: true
+  register: port_check
+
+- name: Display port availability
+  ansible.builtin.debug:
+    msg: "Port {{ orcaslicer_port }} is {{ 'available' if port_check is not failed else 'in use (may be existing OrcaSlicer)' }}"

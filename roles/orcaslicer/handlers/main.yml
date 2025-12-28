@@ -1,0 +1,28 @@
+---
+# Handlers for OrcaSlicer rootless Podman role
+
+- name: daemon-reload-user
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ orcaslicer_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ orcaslicer_uid }}"
+
+- name: restart orcaslicer
+  ansible.builtin.systemd:
+    name: "{{ orcaslicer_service_name }}"
+    state: restarted
+    scope: user
+  become: true
+  become_user: "{{ orcaslicer_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ orcaslicer_uid }}"
+
+- name: apply selinux context
+  ansible.builtin.command: "restorecon -Rv {{ item }}"
+  become: true
+  loop:
+    - "{{ orcaslicer_config_dir }}"
+  changed_when: false

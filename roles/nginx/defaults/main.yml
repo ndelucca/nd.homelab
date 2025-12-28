@@ -17,6 +17,7 @@ nginx_cloud_torrent_port: 9091
 nginx_cockpit_port: 9090
 nginx_immich_port: 2283
 nginx_kavita_port: 5000
+nginx_orcaslicer_port: 3001
 
 # Firewall configuration
 nginx_firewall_enabled: true

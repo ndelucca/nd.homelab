@@ -31,6 +31,9 @@
     - role: kavita
       tags: ['kavita', 'books', 'reading']
 
+    - role: orcaslicer
+      tags: ['orcaslicer', '3dprint', 'slicer']
+
     - role: firewall
       tags: ['firewall']
       when: firewall_enabled | default(true)

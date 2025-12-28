@@ -1,0 +1,41 @@
+---
+# Default variables for OrcaSlicer role
+
+# Service user configuration
+orcaslicer_user: ndelucca
+orcaslicer_group: ndelucca
+orcaslicer_uid: 1000
+
+# Directory configuration
+orcaslicer_base_dir: /srv/orcaslicer
+orcaslicer_config_dir: "{{ orcaslicer_base_dir }}/config"
+
+# Podman/Quadlet configuration
+orcaslicer_quadlet_dir: /etc/containers/systemd/users
+orcaslicer_image: lscr.io/linuxserver/orcaslicer:latest
+
+# Network configuration
+orcaslicer_port: 3001
+orcaslicer_host: 127.0.0.1
+
+# Application configuration
+orcaslicer_timezone: America/Los_Angeles
+
+# Authentication (password must be set in host_vars - vault encrypted)
+orcaslicer_custom_user: admin
+orcaslicer_password: ""
+
+# GPU acceleration (disabled - GeForce 210 not supported)
+orcaslicer_gpu_enabled: false
+
+# Service configuration
+orcaslicer_service_name: orcaslicer
+orcaslicer_service_enabled: true
+orcaslicer_service_state: started
+
+# Firewall settings
+orcaslicer_firewall_zone: FedoraServer
+orcaslicer_firewall_enabled: false
+
+# SELinux configuration
+orcaslicer_manage_selinux: true

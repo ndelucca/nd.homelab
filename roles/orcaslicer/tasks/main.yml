@@ -1,0 +1,23 @@
+---
+# Main entry point for OrcaSlicer role
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['orcaslicer', 'preflight']
+
+- name: Install Podman and dependencies
+  ansible.builtin.import_tasks: install.yml
+  tags: ['orcaslicer', 'install']
+
+- name: Deploy Quadlet configuration
+  ansible.builtin.import_tasks: quadlet.yml
+  tags: ['orcaslicer', 'quadlet']
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['orcaslicer', 'service']
+
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['orcaslicer', 'selinux']
+  when: orcaslicer_manage_selinux | bool

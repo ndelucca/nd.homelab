@@ -1,0 +1,10 @@
+---
+# OrcaSlicer-specific playbook
+# Usage: ansible-playbook playbooks/orcaslicer.yml -l ndelucca-server
+
+- name: Install and configure OrcaSlicer
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - orcaslicer

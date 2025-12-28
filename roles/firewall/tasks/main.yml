@@ -49,6 +49,11 @@
   when: kavita_firewall_enabled | default(false)
   tags: ['firewall-kavita']
 
+- name: Configure firewall for OrcaSlicer
+  ansible.builtin.import_tasks: orcaslicer.yml
+  when: orcaslicer_firewall_enabled | default(false)
+  tags: ['firewall-orcaslicer']
+
 - name: Configure firewall for NGINX
   ansible.builtin.import_tasks: nginx.yml
   when: nginx_firewall_enabled | default(true)
