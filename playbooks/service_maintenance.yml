@@ -1,0 +1,11 @@
+---
+# Playbook for service maintenance (watchdog timer)
+# Usage: ansible-playbook playbooks/service_maintenance.yml
+
+- name: Configure service watchdog timer
+  hosts: homeservers
+  gather_facts: false
+
+  roles:
+    - role: service_maintenance
+      tags: ['service_maintenance', 'watchdog']

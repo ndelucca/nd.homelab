@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer for {{ service_maintenance_unit_description | lower }}
+
+[Timer]
+OnCalendar={{ service_maintenance_interval }}
+Persistent=true
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target

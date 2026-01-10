@@ -34,6 +34,9 @@
     - role: orcaslicer
       tags: ['orcaslicer', '3dprint', 'slicer']
 
+    - role: service_maintenance
+      tags: ['service_maintenance', 'watchdog']
+
     - role: firewall
       tags: ['firewall']
       when: firewall_enabled | default(true)

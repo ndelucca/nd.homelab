@@ -1,0 +1,20 @@
+---
+# Default variables for service maintenance role
+# Configures scheduled restart/reload of services via systemd timer
+
+# Timer configuration
+service_maintenance_enabled: true
+service_maintenance_interval: "*:0/5"  # Every 5 minutes (OnCalendar format)
+
+# Services to manage
+# AdGuardHome is restarted (full restart)
+service_maintenance_restart_services:
+  - AdGuardHome
+
+# nginx is reloaded (graceful reload)
+service_maintenance_reload_services:
+  - nginx
+
+# Systemd unit configuration
+service_maintenance_unit_name: service-watchdog
+service_maintenance_unit_description: "Service watchdog"

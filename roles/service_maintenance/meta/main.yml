@@ -1,0 +1,26 @@
+---
+# Metadata for service maintenance role
+
+galaxy_info:
+  author: ndelucca
+  description: Configures systemd timer for periodic service restart/reload (watchdog)
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Fedora
+      versions:
+        - 38
+        - 39
+        - 40
+        - 41
+        - 42
+        - 43
+
+  galaxy_tags:
+    - systemd
+    - timer
+    - watchdog
+    - maintenance
+
+dependencies: []

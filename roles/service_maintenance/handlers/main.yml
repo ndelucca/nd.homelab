@@ -1,0 +1,7 @@
+---
+# Handlers for service maintenance role
+
+- name: daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
