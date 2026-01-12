@@ -1,20 +1,27 @@
 ---
 # Default variables for service maintenance role
-# Configures scheduled restart/reload of services via systemd timer
+# Fixes AdGuard DHCP not working after power outage / cold boot
+#
+# Two-pronged approach:
+# 1. AdGuard drop-in: Wait for network before starting, auto-restart on failure
+# 2. Post-boot timer: Restart AdGuard once after boot as safety net
 
-# Timer configuration
+# Enable the post-boot watchdog timer
 service_maintenance_enabled: true
-service_maintenance_interval: "*:0/5"  # Every 5 minutes (OnCalendar format)
 
-# Services to manage
-# AdGuardHome is restarted (full restart)
+# How long after boot to restart services (gives router time to come up)
+service_maintenance_boot_delay: 2min
+
+# Services to restart after boot
 service_maintenance_restart_services:
   - AdGuardHome
 
-# nginx is reloaded (graceful reload)
-service_maintenance_reload_services:
-  - nginx
+# AdGuard drop-in configuration
+# Delay before AdGuard starts (seconds)
+service_maintenance_adguard_start_delay: 10
+# Delay before auto-restart on failure (seconds)
+service_maintenance_adguard_restart_delay: 30
 
 # Systemd unit configuration
 service_maintenance_unit_name: service-watchdog
-service_maintenance_unit_description: "Service watchdog"
+service_maintenance_unit_description: "Post-boot service watchdog"

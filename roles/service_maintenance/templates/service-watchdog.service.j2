@@ -1,15 +1,13 @@
 [Unit]
 Description={{ service_maintenance_unit_description }}
-After=network.target AdGuardHome.service nginx.service
+After=network-online.target AdGuardHome.service
+Wants=network-online.target
 
 [Service]
 Type=oneshot
 
 {% for service in service_maintenance_restart_services %}
 ExecStart=/usr/bin/systemctl restart {{ service }}
-{% endfor %}
-{% for service in service_maintenance_reload_services %}
-ExecStart=/usr/bin/systemctl reload {{ service }}
 {% endfor %}
 
 # Logging

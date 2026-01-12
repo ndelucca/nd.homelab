@@ -1,0 +1,11 @@
+# Drop-in to ensure AdGuard waits for network and auto-restarts on failure
+[Unit]
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Wait for network to be fully ready before starting
+ExecStartPre=/bin/sleep {{ service_maintenance_adguard_start_delay }}
+# Auto-restart on failure
+Restart=on-failure
+RestartSec={{ service_maintenance_adguard_restart_delay }}

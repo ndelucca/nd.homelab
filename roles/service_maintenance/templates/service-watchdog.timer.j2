@@ -2,9 +2,8 @@
 Description=Timer for {{ service_maintenance_unit_description | lower }}
 
 [Timer]
-OnCalendar={{ service_maintenance_interval }}
-Persistent=true
-RandomizedDelaySec=30
+# Only run once after boot, with delay for router to be ready
+OnBootSec={{ service_maintenance_boot_delay }}
 
 [Install]
 WantedBy=timers.target
