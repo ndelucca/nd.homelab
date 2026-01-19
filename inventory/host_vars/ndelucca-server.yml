@@ -7,6 +7,14 @@ firewall_default_zone: public
 adguard_configure_app: true
 adguard_firewall_zone: FedoraServer
 
+# AdGuard allowed domains (whitelist rules)
+adguard_user_rules:
+  - "@@||events.launchdarkly.com^"
+  - "@@||clientstream.launchdarkly.com^"
+  - "@@||analytics.google.com^"
+  - "@@||www.google-analytics.com^"
+  - "@@||api.amplitude.com^"
+
 # DHCP configuration
 adguard_dhcp_enabled: true
 adguard_dhcp_interface_name: enp6s0

@@ -108,6 +108,9 @@ adguard_dhcp_static_leases: []
 # DNS rewrites - provide complex structure in host_vars
 adguard_dns_rewrites: []
 
+# User rules - custom filtering rules (use @@||domain^ to whitelist)
+adguard_user_rules: []
+
 # Protection features
 adguard_filtering_enabled: true
 adguard_rewrites_enabled: true

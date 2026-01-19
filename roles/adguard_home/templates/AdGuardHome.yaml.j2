@@ -113,7 +113,10 @@ filters:
     id: {{ filter.id }}
 {% endfor %}
 whitelist_filters: []
-user_rules: []
+user_rules:
+{% for rule in adguard_user_rules %}
+  - "{{ rule }}"
+{% endfor %}
 dhcp:
   enabled: {{ adguard_dhcp_enabled | lower }}
   interface_name: {{ adguard_dhcp_interface_name }}
