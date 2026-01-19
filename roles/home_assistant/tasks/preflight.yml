@@ -1,0 +1,53 @@
+---
+# Preflight checks and directory setup for Home Assistant
+
+- name: Verify Fedora operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role only supports Fedora"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Get user UID dynamically
+  ansible.builtin.command: "getent passwd {{ home_assistant_user }}"
+  register: getent_output
+  changed_when: false
+
+- name: Extract UID from getent
+  ansible.builtin.set_fact:
+    home_assistant_uid: "{{ getent_output.stdout.split(':')[2] }}"
+
+- name: Display user UID
+  ansible.builtin.debug:
+    msg: "Using UID {{ home_assistant_uid }} for user {{ home_assistant_user }}"
+
+- name: Ensure base directory exists
+  ansible.builtin.file:
+    path: "{{ home_assistant_base_dir }}"
+    state: directory
+    owner: "{{ home_assistant_user }}"
+    group: "{{ home_assistant_group }}"
+    mode: '0755'
+  become: true
+
+- name: Ensure config directory exists
+  ansible.builtin.file:
+    path: "{{ home_assistant_config_dir }}"
+    state: directory
+    owner: "{{ home_assistant_user }}"
+    group: "{{ home_assistant_group }}"
+    mode: '0755'
+  become: true
+
+- name: Check if port is available
+  ansible.builtin.wait_for:
+    port: "{{ home_assistant_port }}"
+    host: "{{ home_assistant_host }}"
+    state: stopped
+    timeout: 1
+  ignore_errors: true
+  register: port_check
+
+- name: Display port availability
+  ansible.builtin.debug:
+    msg: "Port {{ home_assistant_port }} is {{ 'available' if port_check is not failed else 'in use (may be existing Home Assistant)' }}"

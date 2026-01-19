@@ -86,6 +86,9 @@ adguard_dns_rewrites:
   - domain: slicer.ndelucca-server.com
     answer: 192.168.10.10
     enabled: true
+  - domain: home.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
 
 # NGINX Reverse Proxy
 nginx_firewall_enabled: true

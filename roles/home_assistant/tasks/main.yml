@@ -1,0 +1,23 @@
+---
+# Main entry point for Home Assistant role
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['home_assistant', 'preflight']
+
+- name: Install Podman and dependencies
+  ansible.builtin.import_tasks: install.yml
+  tags: ['home_assistant', 'install']
+
+- name: Deploy Quadlet configuration
+  ansible.builtin.import_tasks: quadlet.yml
+  tags: ['home_assistant', 'quadlet']
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['home_assistant', 'service']
+
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['home_assistant', 'selinux']
+  when: home_assistant_manage_selinux | bool

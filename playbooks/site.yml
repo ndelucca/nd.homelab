@@ -34,6 +34,9 @@
     - role: orcaslicer
       tags: ['orcaslicer', '3dprint', 'slicer']
 
+    - role: home_assistant
+      tags: ['home_assistant', 'automation', 'smart-home']
+
     - role: service_maintenance
       tags: ['service_maintenance', 'watchdog']
 

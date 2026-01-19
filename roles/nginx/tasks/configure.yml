@@ -39,6 +39,7 @@
     - immich.conf.j2
     - kavita.conf.j2
     - orcaslicer.conf.j2
+    - home-assistant.conf.j2
   register: nginx_service_configs
 
 - name: Validate complete NGINX configuration

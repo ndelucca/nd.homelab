@@ -1,0 +1,34 @@
+---
+# Default variables for Home Assistant role
+
+# Service user configuration
+home_assistant_user: ndelucca
+home_assistant_group: ndelucca
+home_assistant_uid: 1000
+
+# Directory configuration
+home_assistant_base_dir: /srv/home_assistant
+home_assistant_config_dir: "{{ home_assistant_base_dir }}/config"
+
+# Podman/Quadlet configuration
+home_assistant_quadlet_dir: /etc/containers/systemd/users
+home_assistant_image: ghcr.io/home-assistant/home-assistant:stable
+
+# Network configuration
+home_assistant_port: 8123
+home_assistant_host: 127.0.0.1
+
+# Application configuration
+home_assistant_timezone: America/Los_Angeles
+
+# Service configuration
+home_assistant_service_name: home_assistant
+home_assistant_service_enabled: true
+home_assistant_service_state: started
+
+# Firewall settings
+home_assistant_firewall_zone: FedoraServer
+home_assistant_firewall_enabled: false
+
+# SELinux configuration
+home_assistant_manage_selinux: true

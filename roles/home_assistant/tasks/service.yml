@@ -1,0 +1,33 @@
+---
+# Configure systemd user service for Home Assistant
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start Home Assistant service
+  ansible.builtin.systemd:
+    name: "{{ home_assistant_service_name }}"
+    enabled: "{{ home_assistant_service_enabled }}"
+    state: "{{ home_assistant_service_state }}"
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ home_assistant_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ home_assistant_uid }}"
+
+- name: Wait for Home Assistant to be available
+  ansible.builtin.wait_for:
+    host: "{{ home_assistant_host }}"
+    port: "{{ home_assistant_port }}"
+    delay: 15
+    timeout: 180
+  when: home_assistant_service_state == 'started'
+
+- name: Display Home Assistant access information
+  ansible.builtin.debug:
+    msg: |
+      Home Assistant is now running!
+      - Direct access: http://{{ home_assistant_host }}:{{ home_assistant_port }}
+      - Via NGINX: https://home.ndelucca-server.com (after NGINX config)
+      - Config location: {{ home_assistant_config_dir }}

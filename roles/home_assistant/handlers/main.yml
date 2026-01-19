@@ -1,0 +1,28 @@
+---
+# Handlers for Home Assistant rootless Podman role
+
+- name: daemon-reload-user
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ home_assistant_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ home_assistant_uid }}"
+
+- name: restart home_assistant
+  ansible.builtin.systemd:
+    name: "{{ home_assistant_service_name }}"
+    state: restarted
+    scope: user
+  become: true
+  become_user: "{{ home_assistant_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ home_assistant_uid }}"
+
+- name: apply selinux context
+  ansible.builtin.command: "restorecon -Rv {{ item }}"
+  become: true
+  loop:
+    - "{{ home_assistant_config_dir }}"
+  changed_when: false

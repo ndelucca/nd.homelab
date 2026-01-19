@@ -1,0 +1,23 @@
+---
+# Deploy Podman Quadlet configuration for Home Assistant
+
+- name: Ensure systemd user directory exists
+  ansible.builtin.file:
+    path: "{{ home_assistant_quadlet_dir }}/{{ home_assistant_uid }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Deploy Home Assistant Quadlet .container unit
+  ansible.builtin.template:
+    src: home_assistant.container.j2
+    dest: "{{ home_assistant_quadlet_dir }}/{{ home_assistant_uid }}/{{ home_assistant_service_name }}.container"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - daemon-reload-user
+    - restart home_assistant

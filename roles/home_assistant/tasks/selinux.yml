@@ -1,0 +1,33 @@
+---
+# Configure SELinux for Home Assistant
+
+- name: Check SELinux status
+  ansible.builtin.command: getenforce
+  register: selinux_status
+  changed_when: false
+
+- name: Display SELinux status
+  ansible.builtin.debug:
+    msg: "SELinux is {{ selinux_status.stdout }}"
+
+- name: Install SELinux packages
+  ansible.builtin.dnf:
+    name: policycoreutils-python-utils
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+
+- name: Set SELinux context for config directory
+  community.general.sefcontext:
+    target: "{{ home_assistant_config_dir }}(/.*)?"
+    setype: container_file_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: apply selinux context
+
+- name: Apply SELinux context immediately
+  ansible.builtin.command: "restorecon -Rv {{ home_assistant_config_dir }}"
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  changed_when: false

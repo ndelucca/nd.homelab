@@ -1,0 +1,10 @@
+---
+# Home Assistant-specific playbook
+# Usage: ansible-playbook playbooks/home_assistant.yml -l ndelucca-server
+
+- name: Install and configure Home Assistant
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - home_assistant

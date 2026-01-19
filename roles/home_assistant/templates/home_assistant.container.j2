@@ -1,0 +1,26 @@
+[Unit]
+Description=Home Assistant Container
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ home_assistant_image }}
+ContainerName=home_assistant
+PublishPort={{ home_assistant_host }}:{{ home_assistant_port }}:8123
+
+# Config volume
+Volume={{ home_assistant_config_dir }}:/config:Z
+
+# Timezone
+Environment=TZ={{ home_assistant_timezone }}
+
+# Auto-update from registry
+AutoUpdate=registry
+
+[Service]
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target default.target
