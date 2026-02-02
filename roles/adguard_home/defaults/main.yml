@@ -51,21 +51,18 @@ adguard_users: []
 
 # DNS upstream servers - can override in host_vars
 adguard_upstream_dns:
-  - https://unfiltered.adguard-dns.com/dns-query
-  - https://dns10.quad9.net/dns-query
   - tls://1.1.1.1
+  - tls://8.8.8.8
+  - tls://94.140.14.140
 
 # Bootstrap DNS - can override in host_vars
 adguard_bootstrap_dns:
   - 1.1.1.1
   - 8.8.8.8
-  - 9.9.9.10
-  - 149.112.112.10
-  - 2620:fe::10
-  - 2620:fe::fe:10
 
 # Fallback DNS servers
 adguard_fallback_dns:
+  - 1.1.1.1
   - 8.8.8.8
 
 # Blocked hosts - can override in host_vars
