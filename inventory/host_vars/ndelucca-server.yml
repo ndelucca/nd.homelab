@@ -86,7 +86,7 @@ adguard_dns_rewrites:
     answer: 192.168.10.13
     enabled: true
   - domain: ndelucca-raspberry-printer.com
-    answer: 192.168.10.11
+    answer: 192.168.10.12
     enabled: true
   - domain: books.ndelucca-server.com
     answer: 192.168.10.10
