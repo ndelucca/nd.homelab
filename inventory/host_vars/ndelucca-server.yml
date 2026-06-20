@@ -28,7 +28,7 @@ adguard_dhcp_lease_duration: 86400
 # FileBrowser configuration
 filebrowser_port: 8080
 filebrowser_firewall_zone: FedoraServer
-filebrowser_root_dir: /srv/filebrowser
+filebrowser_root_dir: /srv/disks
 
 # User credentials
 adguard_users:
