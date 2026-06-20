@@ -1,0 +1,52 @@
+---
+# On-demand update playbook.
+#
+# Pulls newer images for the rootless Podman containers (Immich, Kavita,
+# Home Assistant, OrcaSlicer, ...) that are labelled `AutoUpdate=registry`
+# in their Quadlet units, and restarts only the units whose image changed.
+#
+# Native binaries (FileBrowser, AdGuard Home) already self-update to the
+# newest release on a normal `site.yml` run, so they are intentionally not
+# repeated here.
+#
+# Usage:
+#   ansible-playbook playbooks/update.yml -l ndelucca-server
+#   ansible-playbook playbooks/update.yml -l ndelucca-server --check   # dry-run
+#
+# WARNING: Immich runs irreversible DB migrations on start. Back up its
+# database before a big jump (see README).
+
+- name: Update rootless container images
+  hosts: homeservers
+  gather_facts: true
+
+  vars:
+    # uid of the user that owns the rootless containers (ndelucca = 1000)
+    podman_user_uid: "{{ ansible_user_uid | default(1000) }}"
+
+  tasks:
+    - name: Show which images have updates available (dry-run)
+      ansible.builtin.command: podman auto-update --dry-run
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ podman_user_uid }}"
+        DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ podman_user_uid }}/bus"
+      register: podman_auto_update_dryrun
+      changed_when: false
+
+    - name: Report pending image updates
+      ansible.builtin.debug:
+        var: podman_auto_update_dryrun.stdout_lines
+
+    - name: Pull newer images and restart changed units
+      ansible.builtin.command: podman auto-update
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ podman_user_uid }}"
+        DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ podman_user_uid }}/bus"
+      register: podman_auto_update
+      changed_when: "'true' in podman_auto_update.stdout"
+      when: not ansible_check_mode
+
+    - name: Report applied image updates
+      ansible.builtin.debug:
+        var: podman_auto_update.stdout_lines
+      when: not ansible_check_mode

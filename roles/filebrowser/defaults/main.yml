@@ -3,9 +3,11 @@
 # Only essential installation and service configuration
 
 # Installation configuration
-filebrowser_version: latest  # Or pin to specific version like "v2.27.0"
+# 'latest' auto-resolves the newest GitHub release on every run; or pin to an
+# exact tag like "v2.63.15" to freeze the version.
+filebrowser_version: latest
 filebrowser_arch: amd64
-filebrowser_download_url: "https://github.com/filebrowser/filebrowser/releases/latest/download/linux-{{ filebrowser_arch }}-filebrowser.tar.gz"
+filebrowser_github_repo: filebrowser/filebrowser
 filebrowser_install_dir: /usr/local/bin
 filebrowser_working_dir: /opt/filebrowser
 filebrowser_user: ndelucca

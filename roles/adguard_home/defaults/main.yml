@@ -4,8 +4,10 @@
 # Application config values are hardcoded in template
 
 # Installation configuration
+# 'latest' auto-resolves the newest stable GitHub release on every run (betas
+# are pre-releases and skipped); or pin to an exact tag like "v0.107.74".
 adguard_version: latest
-adguard_download_url: https://static.adguard.com/adguardhome/release/AdGuardHome_linux_amd64.tar.gz
+adguard_github_repo: AdguardTeam/AdGuardHome
 adguard_install_dir: /usr/local/bin
 adguard_working_dir: /opt/AdGuardHome
 adguard_user: ndelucca

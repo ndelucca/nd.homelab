@@ -1,34 +1,82 @@
 ---
-# Install FileBrowser binary
+# Install / update the FileBrowser binary.
+# Version-aware and idempotent:
+#   - filebrowser_version: latest  -> resolves the newest GitHub release and
+#     (re)installs only when it differs from the installed binary.
+#   - filebrowser_version: vX.Y.Z  -> pins to that exact release.
 
 - name: Check if FileBrowser is already installed
   ansible.builtin.stat:
     path: "{{ filebrowser_install_dir }}/filebrowser"
   register: filebrowser_binary
 
+- name: Get installed FileBrowser version
+  ansible.builtin.command: "{{ filebrowser_install_dir }}/filebrowser version"
+  register: filebrowser_installed_raw
+  changed_when: false
+  failed_when: false
+  when: filebrowser_binary.stat.exists
+
+- name: Resolve latest FileBrowser release from GitHub
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ filebrowser_github_repo }}/releases/latest"
+    headers:
+      Accept: application/vnd.github+json
+  register: filebrowser_release_api
+  failed_when: false
+  when: filebrowser_version == 'latest'
+
+- name: Determine requested FileBrowser version string
+  ansible.builtin.set_fact:
+    filebrowser_requested_version: "{{ filebrowser_version if filebrowser_version != 'latest' else (filebrowser_release_api.json.tag_name | default('')) }}"
+
+- name: Normalize target and installed FileBrowser versions
+  ansible.builtin.set_fact:
+    filebrowser_target_version: '{{ (filebrowser_requested_version | regex_search("[0-9]+\.[0-9]+\.[0-9]+")) | default("", true) }}'
+    filebrowser_current_version: '{{ (filebrowser_installed_raw.stdout | default("") | regex_search("[0-9]+\.[0-9]+\.[0-9]+")) | default("", true) }}'
+
+- name: Fail when no version could be resolved and nothing is installed
+  ansible.builtin.fail:
+    msg: >-
+      Could not resolve a FileBrowser version (GitHub API unreachable?) and no
+      existing binary to fall back to.
+  when:
+    - filebrowser_target_version | length == 0
+    - not filebrowser_binary.stat.exists
+
+- name: Decide whether FileBrowser needs (re)install
+  ansible.builtin.set_fact:
+    filebrowser_needs_install: "{{ (not filebrowser_binary.stat.exists) or (filebrowser_target_version | length > 0 and filebrowser_target_version != filebrowser_current_version) }}"
+
+- name: Report FileBrowser version decision
+  ansible.builtin.debug:
+    msg: >-
+      FileBrowser installed={{ filebrowser_current_version | default('none') }}
+      target={{ filebrowser_target_version | default('unknown') }}
+      -> {{ 'installing/updating' if filebrowser_needs_install else 'up to date' }}
+
 - name: Create temporary download directory
   ansible.builtin.tempfile:
     state: directory
     suffix: _filebrowser_download
   register: download_dir
-  when: not filebrowser_binary.stat.exists or filebrowser_version != 'latest'
+  when: filebrowser_needs_install
 
 - name: Download FileBrowser archive
   ansible.builtin.get_url:
-    url: "{{ filebrowser_download_url }}"
+    url: "https://github.com/{{ filebrowser_github_repo }}/releases/download/v{{ filebrowser_target_version }}/linux-{{ filebrowser_arch }}-filebrowser.tar.gz"
     dest: "{{ download_dir.path }}/filebrowser.tar.gz"
     mode: '0644'
-  register: download_result
-  when: not filebrowser_binary.stat.exists or filebrowser_version != 'latest'
+  when: filebrowser_needs_install
 
 - name: Extract FileBrowser archive
   ansible.builtin.unarchive:
     src: "{{ download_dir.path }}/filebrowser.tar.gz"
     dest: "{{ download_dir.path }}"
     remote_src: true
-  when: not filebrowser_binary.stat.exists or filebrowser_version != 'latest'
+  when: filebrowser_needs_install
 
-- name: Copy binary to installation directory
+- name: Install FileBrowser binary
   ansible.builtin.copy:
     src: "{{ download_dir.path }}/filebrowser"
     dest: "{{ filebrowser_install_dir }}/filebrowser"
@@ -38,7 +86,7 @@
     mode: '0755'
   become: true
   notify: restart filebrowser
-  when: not filebrowser_binary.stat.exists or filebrowser_version != 'latest'
+  when: filebrowser_needs_install
 
 - name: Clean up temporary download directory
   ansible.builtin.file:
