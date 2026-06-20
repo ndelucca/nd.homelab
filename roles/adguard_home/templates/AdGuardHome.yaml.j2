@@ -2,8 +2,15 @@ http:
   pprof:
     port: 6060
     enabled: false
+  doh:
+    routes:
+      - GET /dns-query
+      - POST /dns-query
+      - GET /dns-query/{ClientID}
+      - POST /dns-query/{ClientID}
+    insecure_enabled: false
   address: {{ adguard_bind_host }}:{{ adguard_admin_port }}
-  session_ttl: 720h
+  session_ttl: 30d
 users:
 {% for user in adguard_users %}
   - name: {{ user.name }}

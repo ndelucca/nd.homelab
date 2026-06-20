@@ -117,4 +117,4 @@ adguard_rewrites_enabled: true
 adguard_protection_enabled: true
 
 # Schema version
-adguard_schema_version: 32
+adguard_schema_version: 34

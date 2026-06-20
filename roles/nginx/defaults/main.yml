@@ -19,6 +19,7 @@ nginx_immich_port: 2283
 nginx_kavita_port: 5000
 nginx_orcaslicer_port: 3001
 nginx_home_assistant_port: 8123
+nginx_ndmarket_port: 28310
 
 # Firewall configuration
 nginx_firewall_enabled: true

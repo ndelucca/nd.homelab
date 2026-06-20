@@ -1,0 +1,75 @@
+# ========================================
+# ND.MARKET SUBDOMAIN
+# ========================================
+# Reverse proxy para nd.markets (app en 127.0.0.1:{{ nginx_ndmarket_port }}).
+# La app expone Server-Sent Events en /stream/{symbol}: requiere
+# proxy_buffering off y read timeout largo, si no los precios no llegan en vivo.
+
+# HTTP
+server {
+    listen 80;
+    server_name market.{{ nginx_domain }};
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+    add_header X-XSS-Protection "1; mode=block";
+
+    # Compresion (gzip alcanza para los assets estaticos).
+    gzip            on;
+    gzip_types      text/css application/javascript application/json;
+    gzip_min_length 1024;
+
+    location / {
+        proxy_pass         http://127.0.0.1:{{ nginx_ndmarket_port }};
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-Forwarded-Host  $host;
+        proxy_set_header   Connection        "";
+
+        # Server-Sent Events: sin buffering y con timeout largo.
+        proxy_buffering    off;
+        proxy_cache        off;
+        proxy_read_timeout 1h;
+    }
+}
+
+# HTTPS
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name market.{{ nginx_domain }};
+
+    ssl_certificate {{ nginx_ssl_certificate }};
+    ssl_certificate_key {{ nginx_ssl_certificate_key }};
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+    add_header X-XSS-Protection "1; mode=block";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Compresion (gzip alcanza para los assets estaticos).
+    gzip            on;
+    gzip_types      text/css application/javascript application/json;
+    gzip_min_length 1024;
+
+    location / {
+        proxy_pass         http://127.0.0.1:{{ nginx_ndmarket_port }};
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-Forwarded-Host  $host;
+        proxy_set_header   Connection        "";
+
+        # Server-Sent Events: sin buffering y con timeout largo.
+        proxy_buffering    off;
+        proxy_cache        off;
+        proxy_read_timeout 1h;
+    }
+}
