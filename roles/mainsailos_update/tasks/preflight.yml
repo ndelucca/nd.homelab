@@ -1,0 +1,41 @@
+---
+# Safety gates that must pass before any update runs.
+
+- name: Assert the target is a Debian host (never run on the Fedora server)
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == "Debian"
+    fail_msg: >-
+      mainsailos_update only supports Debian/MainsailOS hosts, but this host is
+      {{ ansible_distribution }} ({{ ansible_os_family }}). Refusing to run.
+    success_msg: "Host is {{ ansible_distribution }} {{ ansible_distribution_version }} - OK."
+
+- name: Query Moonraker for the current print state
+  ansible.builtin.uri:
+    url: "{{ mainsailos_moonraker_url }}/printer/objects/query?print_stats"
+    method: GET
+    headers: "{{ mainsailos_api_headers }}"
+    status_code: [200]
+  become: false
+  register: mainsailos_print_state
+  failed_when: false
+  changed_when: false
+  check_mode: false
+
+- name: Abort if a print is in progress
+  ansible.builtin.fail:
+    msg: >-
+      The printer is currently {{ mainsailos_print_state.json.result.status.print_stats.state }}.
+      Refusing to update mid-print. Wait until the print finishes (or is cancelled)
+      and run again.
+  when:
+    - mainsailos_print_state.status | default(0) == 200
+    - mainsailos_print_state.json.result.status.print_stats.state | default('') == 'printing'
+
+- name: Warn if Moonraker could not be reached for the print-state check
+  ansible.builtin.debug:
+    msg: >-
+      Could not query Moonraker print state (HTTP
+      {{ mainsailos_print_state.status | default('n/a') }}). Continuing, but make
+      sure the printer is idle.
+  when: mainsailos_print_state.status | default(0) != 200

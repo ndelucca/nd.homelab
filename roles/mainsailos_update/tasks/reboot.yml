@@ -1,0 +1,45 @@
+---
+# Reboot only when the OS says one is needed (new kernel / rpi firmware), and
+# only when allowed by the toggle. Then wait for SSH and Moonraker to come back.
+
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: mainsailos_reboot_required
+  become: true
+
+- name: Reboot the printer to apply kernel/firmware updates
+  ansible.builtin.reboot:
+    msg: "Rebooting to apply OS updates (mainsailos_update)"
+    reboot_timeout: 600
+    post_reboot_delay: 20
+    test_command: systemctl is-system-running --wait || true
+  become: true
+  when:
+    - mainsailos_reboot_required.stat.exists
+    - mainsailos_reboot_if_required | bool
+    - not ansible_check_mode
+
+- name: Wait for Moonraker to answer again after reboot
+  ansible.builtin.uri:
+    url: "{{ mainsailos_moonraker_url }}/server/info"
+    headers: "{{ mainsailos_api_headers }}"
+  register: mainsailos_post_reboot
+  until: mainsailos_post_reboot.status | default(0) == 200
+  retries: 20
+  delay: 6
+  changed_when: false
+  become: false
+  when:
+    - mainsailos_reboot_required.stat.exists
+    - mainsailos_reboot_if_required | bool
+    - not ansible_check_mode
+
+- name: Warn that a reboot is pending but was not performed
+  ansible.builtin.debug:
+    msg: >-
+      REBOOT REQUIRED but mainsailos_reboot_if_required is false. Reboot the Pi
+      manually, or re-run with -e mainsailos_reboot_if_required=true.
+  when:
+    - mainsailos_reboot_required.stat.exists
+    - not (mainsailos_reboot_if_required | bool)

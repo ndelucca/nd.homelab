@@ -1,0 +1,36 @@
+---
+# Entry point for the mainsailos_update role.
+# Thin orchestration over the native update mechanisms (Moonraker update API +
+# apt). Order matters: back up BEFORE any change so everything is reversible.
+
+- name: Run preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['mainsailos', 'preflight']
+
+- name: Back up printer data before updating
+  ansible.builtin.import_tasks: backup.yml
+  tags: ['mainsailos', 'backup']
+  when: mainsailos_backup_enabled | bool
+
+- name: Update the Klipper stack via Moonraker
+  ansible.builtin.import_tasks: klipper_stack.yml
+  tags: ['mainsailos', 'klipper']
+  when: mainsailos_update_klipper_stack | bool
+
+- name: Check host/MCU firmware version drift
+  ansible.builtin.import_tasks: mcu_check.yml
+  tags: ['mainsailos', 'mcu']
+  when: mainsailos_update_klipper_stack | bool
+
+- name: Upgrade OS packages
+  ansible.builtin.import_tasks: apt.yml
+  tags: ['mainsailos', 'apt']
+  when: mainsailos_apt_upgrade | bool
+
+- name: Reboot if the OS requires it
+  ansible.builtin.import_tasks: reboot.yml
+  tags: ['mainsailos', 'reboot']
+
+- name: Verify services and report versions
+  ansible.builtin.import_tasks: verify.yml
+  tags: ['mainsailos', 'verify']

@@ -1,0 +1,104 @@
+---
+# Non-destructive, reversible backup taken BEFORE any update.
+# Archives the precious printer_data subdirs plus a rollback manifest of git
+# SHAs, then prunes old archives. Runs as the printer user (become: false).
+
+- name: Ensure the backup directory exists
+  ansible.builtin.file:
+    path: "{{ mainsailos_backup_dir }}"
+    state: directory
+    mode: "0755"
+  become: false
+
+- name: Capture git SHA of each managed repo (for rollback)
+  ansible.builtin.command: "git -C {{ item }} rev-parse HEAD"
+  loop: "{{ mainsailos_managed_repos }}"
+  register: mainsailos_repo_shas
+  changed_when: false
+  failed_when: false
+  become: false
+
+- name: Read the installed Mainsail web client version
+  ansible.builtin.slurp:
+    src: "{{ mainsailos_mainsail_version_file }}"
+  register: mainsailos_mainsail_version_raw
+  failed_when: false
+  become: false
+
+- name: Snapshot the current Moonraker update status (for the record)
+  ansible.builtin.uri:
+    url: "{{ mainsailos_moonraker_url }}/machine/update/status?refresh=false"
+    headers: "{{ mainsailos_api_headers }}"
+  register: mainsailos_status_pre
+  failed_when: false
+  changed_when: false
+  check_mode: false
+  become: false
+
+- name: Render the rollback manifest into printer_data
+  ansible.builtin.copy:
+    dest: "{{ mainsailos_printer_data_dir }}/repo-shas.txt"
+    mode: "0644"
+    content: |
+      MainsailOS backup manifest
+      generated: {{ ansible_date_time.iso8601 }}
+      host: {{ inventory_hostname }}
+      mainsail (web): {{ (mainsailos_mainsail_version_raw.content | b64decode | trim)
+                          if mainsailos_mainsail_version_raw.content is defined
+                          else 'unknown' }}
+
+      # repo git HEADs (use `git -C <repo> reset --hard <sha>` to roll back)
+      {% for r in mainsailos_repo_shas.results %}
+      {{ r.item }}: {{ r.stdout | default('MISSING') }}
+      {% endfor %}
+  become: false
+
+- name: Build the list of paths to archive
+  ansible.builtin.set_fact:
+    mainsailos_archive_paths: >-
+      {{ (mainsailos_backup_paths
+          + (['gcodes'] if mainsailos_backup_include_gcodes | bool else []))
+         | map('regex_replace', '^', mainsailos_printer_data_dir + '/')
+         | list
+         + [mainsailos_printer_data_dir + '/repo-shas.txt'] }}
+
+- name: Create the timestamped backup archive
+  community.general.archive:
+    path: "{{ mainsailos_archive_paths }}"
+    dest: "{{ mainsailos_backup_dir }}/mainsailos-backup-{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+    format: gz
+    mode: "0644"
+  become: false
+  register: mainsailos_backup_archive
+  when: not ansible_check_mode
+
+- name: Report the backup archive location
+  ansible.builtin.debug:
+    msg: "Backup written to {{ mainsailos_backup_archive.dest | default('(skipped in check mode)') }}"
+
+- name: List existing backup archives
+  ansible.builtin.find:
+    paths: "{{ mainsailos_backup_dir }}"
+    patterns: "mainsailos-backup-*.tar.gz"
+  register: mainsailos_backup_files
+  become: false
+
+- name: Prune backups beyond the retention limit
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  become: false
+  loop: "{{ (mainsailos_backup_files.files | sort(attribute='mtime', reverse=true))[mainsailos_backup_retention | int:] }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Fetch the backup archive to the controller (off-box copy)
+  ansible.builtin.fetch:
+    src: "{{ mainsailos_backup_archive.dest }}"
+    dest: "{{ mainsailos_backup_fetch_dest }}"
+    flat: true
+  become: false
+  when:
+    - mainsailos_backup_remote_fetch | bool
+    - not ansible_check_mode
+    - mainsailos_backup_archive.dest is defined

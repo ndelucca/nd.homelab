@@ -1,0 +1,95 @@
+---
+# Update the Klipper ecosystem through Moonraker's update API - exactly what the
+# Mainsail "Update" button does. Moonraker handles git pulls, venv rebuilds,
+# system deps and service restarts in the correct order. Runs as the printer
+# user (become: false); 127.0.0.1 keeps requests on Moonraker's loopback trust.
+
+# refresh=false uses Moonraker's already-populated cache (instant); refresh=true
+# forces a synchronous GitHub query for every component and routinely exceeds the
+# HTTP timeout. The actual POST /machine/update/full refreshes on its own anyway.
+- name: Fetch the pre-update status
+  ansible.builtin.uri:
+    url: "{{ mainsailos_moonraker_url }}/machine/update/status?refresh=false"
+    headers: "{{ mainsailos_api_headers }}"
+    timeout: 60
+    status_code: [200, 401]
+  register: mainsailos_klipper_pre
+  changed_when: false
+  check_mode: false
+  become: false
+
+- name: Fail clearly if Moonraker rejected the request (auth required)
+  ansible.builtin.fail:
+    msg: >-
+      Moonraker returned 401 Unauthorized. The loopback trust may be disabled.
+      Set mainsailos_moonraker_api_key (e.g. via -e or host_vars) to a valid key
+      from the Pi's ~/printer_data/moonraker.secrets and re-run.
+  when: mainsailos_klipper_pre.status | default(200) == 401
+
+- name: Report components that have updates available
+  ansible.builtin.debug:
+    msg: >-
+      {{ item.key }}: {{ item.value.version | default('?') }}
+      -> {{ item.value.remote_version | default(item.value.version | default('?')) }}
+  loop: "{{ (mainsailos_klipper_pre.json.result.version_info | default({})) | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Build the list of Moonraker update endpoints
+  ansible.builtin.set_fact:
+    mainsailos_update_endpoints: >-
+      {{ [mainsailos_moonraker_url + '/machine/update/full']
+         if mainsailos_moonraker_update_target == 'full'
+         else (
+           (mainsailos_components
+              | map('regex_replace', '^', mainsailos_moonraker_url + '/machine/update/')
+              | list)
+           + (mainsailos_web_clients
+              | map('regex_replace', '^(.*)$',
+                    mainsailos_moonraker_url + '/machine/update/client?name=\\1')
+              | list)
+         ) }}
+
+- name: Trigger the Moonraker update(s)
+  ansible.builtin.uri:
+    url: "{{ item }}"
+    method: POST
+    headers: "{{ mainsailos_api_headers }}"
+    timeout: "{{ mainsailos_update_timeout }}"
+    status_code: [200]
+  loop: "{{ mainsailos_update_endpoints }}"
+  loop_control:
+    label: "{{ item }}"
+  register: mainsailos_update_results
+  become: false
+  when: not ansible_check_mode
+
+- name: Wait until Moonraker is no longer busy updating
+  ansible.builtin.uri:
+    url: "{{ mainsailos_moonraker_url }}/machine/update/status?refresh=false"
+    headers: "{{ mainsailos_api_headers }}"
+  register: mainsailos_poll
+  until: not (mainsailos_poll.json.result.busy | default(true))
+  retries: "{{ mainsailos_update_poll_retries }}"
+  delay: "{{ mainsailos_update_poll_delay }}"
+  changed_when: false
+  become: false
+  when: not ansible_check_mode
+
+- name: Fetch the post-update status
+  ansible.builtin.uri:
+    url: "{{ mainsailos_moonraker_url }}/machine/update/status?refresh=false"
+    headers: "{{ mainsailos_api_headers }}"
+    timeout: 60
+  register: mainsailos_klipper_post
+  changed_when: false
+  become: false
+  when: not ansible_check_mode
+
+- name: Report installed versions after the Klipper stack update
+  ansible.builtin.debug:
+    msg: "{{ item.key }}: now at {{ item.value.version | default('?') }}"
+  loop: "{{ (mainsailos_klipper_post.json.result.version_info | default({})) | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: not ansible_check_mode

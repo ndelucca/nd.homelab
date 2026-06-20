@@ -1,0 +1,23 @@
+---
+# Upgrade Debian OS packages. 'safe' upgrade by default (never removes packages).
+
+- name: Update the apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: "{{ mainsailos_apt_cache_valid_time }}"
+  become: true
+
+- name: Upgrade installed packages ({{ mainsailos_apt_upgrade_type }})
+  ansible.builtin.apt:
+    upgrade: "{{ mainsailos_apt_upgrade_type }}"
+  become: true
+  register: mainsailos_apt_result
+  when: not ansible_check_mode
+
+- name: Remove unused packages
+  ansible.builtin.apt:
+    autoremove: true
+  become: true
+  when:
+    - mainsailos_apt_autoremove | bool
+    - not ansible_check_mode

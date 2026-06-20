@@ -1,0 +1,28 @@
+---
+# Metadata for MainsailOS update role
+
+galaxy_info:
+  author: Naza
+  description: >-
+    Safely update a MainsailOS 3D-printer host (Klipper stack via the Moonraker
+    update API + Debian OS packages), without reinstalling or losing data.
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+  galaxy_tags:
+    - mainsailos
+    - klipper
+    - moonraker
+    - raspberrypi
+    - update
+
+dependencies: []
+
+collections:
+  - ansible.builtin
+  - community.general

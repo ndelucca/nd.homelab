@@ -1,0 +1,62 @@
+---
+# Default variables for the mainsailos_update role.
+# Override per-host in inventory/host_vars or with -e on the command line.
+
+# --- Master toggles -------------------------------------------------------
+mainsailos_backup_enabled: true          # always back up before changing anything
+mainsailos_update_klipper_stack: true    # klipper/moonraker/mainsail/crowsnest via Moonraker
+mainsailos_apt_upgrade: true             # Debian OS package upgrade
+mainsailos_reboot_if_required: true      # auto-reboot when the OS requests one
+mainsailos_fail_on_mcu_mismatch: false   # warn-only by default (do not flash MCU)
+
+# --- Moonraker update API -------------------------------------------------
+# 127.0.0.1 (literal) keeps requests on the loopback trust path, so no API key
+# is needed unless [authorization] was hardened on the Pi.
+mainsailos_moonraker_url: "http://127.0.0.1:7125"
+mainsailos_moonraker_update_target: full   # full | per-component
+mainsailos_moonraker_api_key: ""           # X-Api-Key header if loopback trust is disabled
+# Sent on every Moonraker request; empty dict when no API key is configured.
+mainsailos_api_headers: >-
+  {{ {'X-Api-Key': mainsailos_moonraker_api_key}
+     if (mainsailos_moonraker_api_key | length > 0) else {} }}
+mainsailos_update_timeout: 1800            # per-POST HTTP timeout (the big jumps are slow on a Pi 3B+)
+mainsailos_update_poll_retries: 120        # 120 * 15s = up to 30 min for the big jumps
+mainsailos_update_poll_delay: 15
+# Used only when mainsailos_moonraker_update_target != 'full'
+mainsailos_components:
+  - klipper
+  - moonraker
+mainsailos_web_clients:
+  - mainsail
+
+# --- Backup ---------------------------------------------------------------
+mainsailos_printer_data_dir: "/home/{{ ansible_user }}/printer_data"
+mainsailos_backup_dir: "/home/{{ ansible_user }}/printer_data_backups"
+mainsailos_backup_paths:                 # subdirs of printer_data to archive
+  - config
+  - database
+  - certs
+mainsailos_backup_include_gcodes: false  # gcodes are large and non-critical
+mainsailos_backup_retention: 5           # keep the N newest archives
+mainsailos_backup_remote_fetch: false    # also pull the tar back to the controller
+mainsailos_backup_fetch_dest: "./backups/mainsailos/"
+mainsailos_managed_repos:                # captured into the rollback manifest
+  - "/home/{{ ansible_user }}/klipper"
+  - "/home/{{ ansible_user }}/moonraker"
+  - "/home/{{ ansible_user }}/crowsnest"
+  - "/home/{{ ansible_user }}/mainsail-config"
+  - "/home/{{ ansible_user }}/moonraker-timelapse"
+  - "/home/{{ ansible_user }}/klipper-conf"
+mainsailos_mainsail_version_file: "/home/{{ ansible_user }}/mainsail/.version"
+
+# --- APT ------------------------------------------------------------------
+mainsailos_apt_upgrade_type: safe        # safe | dist | full
+mainsailos_apt_autoremove: true
+mainsailos_apt_cache_valid_time: 3600
+
+# --- Verify ---------------------------------------------------------------
+mainsailos_services:
+  - klipper
+  - moonraker
+  - crowsnest
+  - nginx

@@ -1,0 +1,51 @@
+---
+# After a Klipper host update the MCU firmware may lag behind and need a manual
+# re-flash. We never flash from Ansible (board-specific, can brick hardware) -
+# we only detect a version mismatch and warn.
+
+- name: Get the Klipper host software version
+  ansible.builtin.uri:
+    url: "{{ mainsailos_moonraker_url }}/printer/info"
+    headers: "{{ mainsailos_api_headers }}"
+  register: mainsailos_printer_info
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  become: false
+
+- name: Get the primary MCU firmware version
+  ansible.builtin.uri:
+    url: "{{ mainsailos_moonraker_url }}/printer/objects/query?mcu"
+    headers: "{{ mainsailos_api_headers }}"
+  register: mainsailos_mcu_info
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  become: false
+
+- name: Determine host vs MCU firmware versions
+  ansible.builtin.set_fact:
+    mainsailos_host_version: "{{ mainsailos_printer_info.json.result.software_version | default('unknown') }}"
+    mainsailos_mcu_version: "{{ mainsailos_mcu_info.json.result.status.mcu.mcu_version | default('unknown') }}"
+
+- name: Warn loudly if the MCU firmware does not match the host
+  ansible.builtin.debug:
+    msg:
+      - "MCU FIRMWARE MISMATCH"
+      - "Klipper host:  {{ mainsailos_host_version }}"
+      - "MCU firmware:  {{ mainsailos_mcu_version }}"
+      - "Flash the MCU manually (e.g. `make flash`) before the next print -"
+      - "mismatched versions can cause Klipper shutdowns."
+  when:
+    - mainsailos_host_version != 'unknown'
+    - mainsailos_mcu_version != 'unknown'
+    - mainsailos_host_version != mainsailos_mcu_version
+
+- name: Fail on MCU mismatch (only when explicitly requested)
+  ansible.builtin.fail:
+    msg: "MCU firmware ({{ mainsailos_mcu_version }}) != host ({{ mainsailos_host_version }}). Flash the MCU and re-run."
+  when:
+    - mainsailos_fail_on_mcu_mismatch | bool
+    - mainsailos_host_version != 'unknown'
+    - mainsailos_mcu_version != 'unknown'
+    - mainsailos_host_version != mainsailos_mcu_version

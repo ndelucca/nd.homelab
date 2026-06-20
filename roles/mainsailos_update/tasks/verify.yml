@@ -1,0 +1,39 @@
+---
+# Confirm the printer came back healthy and print a final version report.
+
+- name: Check that the key services are active
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+  register: mainsailos_service_state
+  loop: "{{ mainsailos_services }}"
+  loop_control:
+    label: "{{ item }}"
+  become: true
+
+- name: Assert all key services are running
+  ansible.builtin.assert:
+    that:
+      - item.status.ActiveState == "active"
+    fail_msg: "Service {{ item.item }} is {{ item.status.ActiveState }} (expected active)."
+    success_msg: "{{ item.item }} is active."
+  loop: "{{ mainsailos_service_state.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Fetch the final update status
+  ansible.builtin.uri:
+    url: "{{ mainsailos_moonraker_url }}/machine/update/status?refresh=false"
+    headers: "{{ mainsailos_api_headers }}"
+  register: mainsailos_final_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  become: false
+
+- name: Final version report
+  ansible.builtin.debug:
+    msg: "{{ item.key }}: {{ item.value.version | default('?') }}"
+  loop: "{{ (mainsailos_final_status.json.result.version_info | default({})) | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: mainsailos_final_status.status | default(0) == 200
