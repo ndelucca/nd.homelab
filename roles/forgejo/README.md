@@ -49,7 +49,7 @@ subdomain and an AdGuard DNS rewrite.
 
 ## Tags
 
-`forgejo`, `preflight`, `install`, `quadlet`, `service`, `admin`, `selinux`
+`forgejo`, `preflight`, `install`, `quadlet`, `service`, `admin`, `mirror`, `selinux`
 
 ## Usage
 
@@ -68,30 +68,70 @@ on the host as port `2222`. The system `sshd` on port `22` (your normal shell
 access to the server) is completely independent and is never reconfigured or
 restarted by this role. Firewalld only *adds* a rule for `2222`.
 
-## Seeding the `home-server` repo (run once, manually)
+## Mirroring GitHub repositories (pull mirrors)
 
-After the role has deployed Forgejo and created the admin user, mirror this very
-repository into Forgejo so it appears identical there.
+The home-server is local and **not reachable from GitHub**, but GitHub is always
+reachable **from** the server. So syncing is done with **pull mirrors**: Forgejo
+reaches out to GitHub and fetches changes periodically. In this model **GitHub is
+the source of truth** and the Forgejo repos are **read-only mirrors** — they are
+overwritten on every sync, so you push to GitHub, not to Forgejo.
 
-```bash
-# 1) Create an empty 'home-server' repo (Web UI -> + New Repository, no
-#    README/license, owner: ndelucca), or via the API:
-curl -k -u ndelucca:<password> -H 'Content-Type: application/json' \
-  -d '{"name":"home-server","private":true,"auto_init":false}' \
-  https://git.ndelucca-server.com/api/v1/user/repos
+The role enumerates all of the user's GitHub repositories (including private,
+forks and archived) and creates each one in Forgejo as a pull mirror via the
+`POST /api/v1/repos/migrate` API (`mirror: true`). It is idempotent: repos that
+already exist are skipped (HTTP 409).
 
-# 2) Push this repo identically (mirror) over SSH (recommended — no cert hassle).
-#    First add your public key in Forgejo: Settings -> SSH Keys.
-git remote add forgejo ssh://git@git.ndelucca-server.com:2222/ndelucca/home-server.git
-git push forgejo --mirror
+> **Push mirror vs. pull mirror are mutually exclusive on a repo.** A pull-mirror
+> repo is managed by Forgejo and cannot be pushed to. That is why a repo that was
+> created normally (e.g. an early manual `git push`) must be **deleted and
+> recreated** as a mirror — list it in `forgejo_mirror_force_recreate` for a
+> single run.
 
-#    Alternative over HTTPS (self-signed cert -> disable verification):
-git -c http.sslVerify=false push \
-  https://git.ndelucca-server.com/ndelucca/home-server.git --mirror
-```
+### Setup
 
-Verify in the Web UI that all branches and commit history are present, then
-optionally `git clone` it back to a temp dir and run `git log` to confirm parity.
+1. **Create a GitHub PAT.** Classic token with the `repo` scope (reads and clones
+   private repos), or a fine-grained token with **Contents: Read** +
+   **Metadata: Read** over all repositories.
+
+2. **Encrypt it into host_vars** with the repo's vault password file:
+
+   ```bash
+   ansible-vault encrypt_string --name forgejo_github_token '<PAT>'
+   ```
+
+   Paste the resulting `!vault |` block into
+   `inventory/host_vars/ndelucca-server.yml` and set:
+
+   ```yaml
+   forgejo_pull_mirror_enabled: true
+   forgejo_mirror_force_recreate:
+     - environment        # one-time, then empty it
+   ```
+
+3. **Deploy:**
+
+   ```bash
+   ansible-playbook playbooks/forgejo.yml -l ndelucca-server --tags forgejo,mirror
+   ```
+
+4. **Empty `forgejo_mirror_force_recreate`** after the first successful run (it is
+   destructive — it deletes the named Forgejo repos before recreating them).
+
+### Relevant variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `forgejo_pull_mirror_enabled` | `false` | Master switch for GitHub mirroring |
+| `forgejo_github_token` | `""` | **Required** GitHub PAT (set via Vault) |
+| `forgejo_mirror_interval` | `8h0m0s` | Periodic fetch interval (≥ `MIN_INTERVAL`) |
+| `forgejo_mirror_include_forks` | `true` | Mirror forks |
+| `forgejo_mirror_include_archived` | `true` | Mirror archived repos |
+| `forgejo_mirror_max_pages` | `5` | Pagination cap (100/page); fails if exceeded |
+| `forgejo_mirror_force_recreate` | `[]` | Repos to delete+recreate as mirrors (one-time) |
+
+Verify in the Web UI (`https://git.ndelucca-server.com/ndelucca`) that the repos
+appear with the **mirror** badge; use "Synchronize Now" on a repo to confirm a
+GitHub commit lands in Forgejo.
 
 ## Author
 

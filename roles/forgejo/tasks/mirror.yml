@@ -1,0 +1,97 @@
+---
+# Configure pull mirrors: Forgejo mirrors all of the user's GitHub repositories
+# and keeps them up to date with periodic fetches. The home-server is not
+# reachable from GitHub, but GitHub is always reachable from the server, so the
+# sync is outbound (Forgejo pulls). GitHub is the source of truth; these repos
+# are read-only mirrors in Forgejo (overwritten on each sync).
+
+- name: Configure GitHub pull mirrors
+  when: forgejo_pull_mirror_enabled | bool
+  block:
+    - name: Ensure the GitHub token is set for pull mirrors
+      ansible.builtin.assert:
+        that:
+          - forgejo_github_token | length > 0
+        fail_msg: >-
+          forgejo_github_token must be set (use Ansible Vault) when
+          forgejo_pull_mirror_enabled is true
+
+    - name: Enumerate GitHub repositories (paginated)
+      ansible.builtin.uri:
+        url: "https://api.github.com/user/repos?affiliation=owner&per_page=100&page={{ item }}"
+        method: GET
+        headers:
+          Authorization: "token {{ forgejo_github_token }}"
+          Accept: application/vnd.github+json
+        status_code: [200]
+      loop: "{{ range(1, forgejo_mirror_max_pages + 1) | list }}"
+      loop_control:
+        label: "page {{ item }}"
+      register: forgejo_github_pages
+      changed_when: false
+      no_log: true
+
+    - name: Warn if GitHub repository pagination may be truncated
+      ansible.builtin.fail:
+        msg: >-
+          The last GitHub page returned a full 100 entries; there may be more
+          repositories than forgejo_mirror_max_pages
+          ({{ forgejo_mirror_max_pages }}) can fetch. Increase it and re-run.
+      when: (forgejo_github_pages.results[-1].json | length) == 100
+
+    - name: Build the list of GitHub repositories
+      ansible.builtin.set_fact:
+        forgejo_github_repos: >-
+          {{ forgejo_github_pages.results | map(attribute='json') | flatten }}
+
+    - name: Drop forks unless configured to include them
+      ansible.builtin.set_fact:
+        forgejo_github_repos: >-
+          {{ forgejo_github_repos | rejectattr('fork', 'equalto', true) | list }}
+      when: not forgejo_mirror_include_forks
+
+    - name: Drop archived repositories unless configured to include them
+      ansible.builtin.set_fact:
+        forgejo_github_repos: >-
+          {{ forgejo_github_repos | rejectattr('archived', 'equalto', true) | list }}
+      when: not forgejo_mirror_include_archived
+
+    - name: Delete repositories flagged for recreation as mirrors (destructive)
+      ansible.builtin.uri:
+        url: "http://{{ forgejo_host }}:{{ forgejo_port }}/api/v1/repos/{{ forgejo_mirror_owner }}/{{ item }}"
+        method: DELETE
+        url_username: "{{ forgejo_admin_user }}"
+        url_password: "{{ forgejo_admin_password }}"
+        force_basic_auth: true
+        status_code: [204, 404]
+      loop: "{{ forgejo_mirror_force_recreate }}"
+      loop_control:
+        label: "{{ forgejo_mirror_owner }}/{{ item }}"
+      register: forgejo_mirror_deleted
+      changed_when: forgejo_mirror_deleted.status == 204
+      no_log: true
+
+    - name: Pull-mirror GitHub repositories into Forgejo
+      ansible.builtin.uri:
+        url: "http://{{ forgejo_host }}:{{ forgejo_port }}/api/v1/repos/migrate"
+        method: POST
+        url_username: "{{ forgejo_admin_user }}"
+        url_password: "{{ forgejo_admin_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          clone_addr: "{{ item.clone_url }}"
+          repo_name: "{{ item.name }}"
+          repo_owner: "{{ forgejo_mirror_owner }}"
+          service: git
+          auth_token: "{{ forgejo_github_token }}"
+          mirror: true
+          mirror_interval: "{{ forgejo_mirror_interval }}"
+          private: "{{ item.private }}"
+        status_code: [201, 409]
+      loop: "{{ forgejo_github_repos }}"
+      loop_control:
+        label: "{{ item.full_name }}"
+      register: forgejo_migrate
+      changed_when: forgejo_migrate.status == 201
+      no_log: true

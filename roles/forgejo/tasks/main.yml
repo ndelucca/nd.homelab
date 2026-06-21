@@ -21,6 +21,10 @@
   ansible.builtin.import_tasks: admin.yml
   tags: ['forgejo', 'admin']
 
+- name: Configure pull mirrors from GitHub
+  ansible.builtin.import_tasks: mirror.yml
+  tags: ['forgejo', 'mirror']
+
 - name: Configure SELinux
   ansible.builtin.import_tasks: selinux.yml
   tags: ['forgejo', 'selinux']

@@ -46,3 +46,20 @@ forgejo_firewall_enabled: true  # true: the git SSH port must be opened
 
 # SELinux configuration
 forgejo_manage_selinux: true
+
+# Pull mirrors: Forgejo mirrors remote repos (GitHub) with periodic fetch.
+# The home-server is not reachable from GitHub, but GitHub is always reachable
+# from the server, so syncing is outbound (Forgejo pulls). GitHub is the source
+# of truth; the Forgejo repos are read-only mirrors (overwritten on each sync).
+forgejo_pull_mirror_enabled: false                  # master switch (turn on in host_vars)
+forgejo_mirror_interval: "8h0m0s"                   # >= [mirror].MIN_INTERVAL (10m)
+forgejo_github_user: "{{ forgejo_admin_user }}"     # whose GitHub repos to enumerate
+forgejo_mirror_owner: "{{ forgejo_admin_user }}"    # owner of the mirrors inside Forgejo
+forgejo_mirror_include_forks: true
+forgejo_mirror_include_archived: true
+forgejo_mirror_max_pages: 5                          # pagination cap (5*100=500 repos); warns if full
+forgejo_mirror_force_recreate: []                   # repos to delete+recreate as mirror (destructive, one-time)
+
+# GitHub Personal Access Token (classic: scope 'repo'; or fine-grained: Contents
+# Read + Metadata Read). REQUIRED when forgejo_pull_mirror_enabled — set via vault.
+forgejo_github_token: ""
