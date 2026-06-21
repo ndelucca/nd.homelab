@@ -20,17 +20,11 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ immich_uid }}"
 
-- name: apply selinux context immich upload
-  ansible.builtin.command: "restorecon -Rv {{ immich_upload_location }}"
+- name: apply selinux context
+  ansible.builtin.command: "restorecon -Rv {{ item }}"
   become: true
   changed_when: false
-
-- name: apply selinux context immich database
-  ansible.builtin.command: "restorecon -Rv {{ immich_db_data_location }}"
-  become: true
-  changed_when: false
-
-- name: apply selinux context immich cache
-  ansible.builtin.command: "restorecon -Rv {{ immich_model_cache }}"
-  become: true
-  changed_when: false
+  loop:
+    - "{{ immich_upload_location }}"
+    - "{{ immich_db_data_location }}"
+    - "{{ immich_model_cache }}"

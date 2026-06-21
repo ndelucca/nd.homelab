@@ -19,32 +19,18 @@
   become: true
   when: selinux_status.stdout == "Enforcing"
 
-- name: Set SELinux context for Immich upload directory
+- name: Set SELinux file contexts for Immich directories
   community.general.sefcontext:
-    target: "{{ immich_upload_location }}(/.*)?"
+    target: "{{ item }}(/.*)?"
     setype: container_file_t
     state: present
   become: true
+  loop:
+    - "{{ immich_upload_location }}"
+    - "{{ immich_db_data_location }}"
+    - "{{ immich_model_cache }}"
   when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context immich upload
-
-- name: Set SELinux context for Immich database directory
-  community.general.sefcontext:
-    target: "{{ immich_db_data_location }}(/.*)?"
-    setype: container_file_t
-    state: present
-  become: true
-  when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context immich database
-
-- name: Set SELinux context for Immich model cache
-  community.general.sefcontext:
-    target: "{{ immich_model_cache }}(/.*)?"
-    setype: container_file_t
-    state: present
-  become: true
-  when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context immich cache
+  notify: apply selinux context
 
 - name: Enable SELinux boolean for container port binding
   ansible.posix.seboolean:

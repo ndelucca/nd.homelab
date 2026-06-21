@@ -18,50 +18,22 @@
   become: true
   when: selinux_status.stdout == "Enforcing"
 
-- name: Set SELinux context for Jellyfin data directory
+- name: Set SELinux file contexts for Jellyfin directories
   community.general.sefcontext:
-    target: "{{ jellyfin_data_dir }}(/.*)?"
-    setype: var_lib_t
+    target: "{{ item.target }}(/.*)?"
+    setype: "{{ item.setype }}"
     state: present
   become: true
+  loop:
+    - { target: "{{ jellyfin_data_dir }}", setype: var_lib_t }
+    - { target: "{{ jellyfin_config_dir }}", setype: var_lib_t }
+    - { target: "{{ jellyfin_cache_dir }}", setype: var_lib_t }
+    - { target: "{{ jellyfin_log_dir }}", setype: var_log_t }
+    - { target: "{{ jellyfin_media_dir }}", setype: public_content_rw_t }
+  loop_control:
+    label: "{{ item.target }}"
   when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context jellyfin data
-
-- name: Set SELinux context for Jellyfin config directory
-  community.general.sefcontext:
-    target: "{{ jellyfin_config_dir }}(/.*)?"
-    setype: var_lib_t
-    state: present
-  become: true
-  when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context jellyfin config
-
-- name: Set SELinux context for Jellyfin cache directory
-  community.general.sefcontext:
-    target: "{{ jellyfin_cache_dir }}(/.*)?"
-    setype: var_lib_t
-    state: present
-  become: true
-  when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context jellyfin cache
-
-- name: Set SELinux context for Jellyfin log directory
-  community.general.sefcontext:
-    target: "{{ jellyfin_log_dir }}(/.*)?"
-    setype: var_log_t
-    state: present
-  become: true
-  when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context jellyfin log
-
-- name: Set SELinux context for media directory
-  community.general.sefcontext:
-    target: "{{ jellyfin_media_dir }}(/.*)?"
-    setype: public_content_rw_t
-    state: present
-  become: true
-  when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context jellyfin media
+  notify: apply selinux context
 
 - name: Allow Jellyfin to bind to custom HTTP port
   community.general.seport:
