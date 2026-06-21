@@ -1,0 +1,48 @@
+---
+# Preflight checks for the backup role.
+
+- name: Verify running on Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role is designed for Fedora systems"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Get user UID for rootless backup
+  ansible.builtin.command: id -u {{ backup_user }}
+  register: backup_user_uid_result
+  changed_when: false
+
+- name: Set backup_uid fact
+  ansible.builtin.set_fact:
+    backup_uid: "{{ backup_user_uid_result.stdout }}"
+
+- name: Assert the backup disk is mounted
+  ansible.builtin.command: findmnt --target {{ storage_backup_disk }}
+  register: backup_disk_mount
+  changed_when: false
+  failed_when: backup_disk_mount.rc != 0 or storage_backup_disk not in backup_disk_mount.stdout
+
+- name: Create restic repository directory on the backup disk
+  ansible.builtin.file:
+    path: "{{ backup_repo }}"
+    state: directory
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0700'
+  become: true
+
+- name: Ensure database dump directories exist
+  ansible.builtin.file:
+    path: "{{ app_data_root }}/{{ item }}/dumps"
+    state: directory
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0750'
+  become: true
+  loop:
+    - immich
+    - jellyfin
+    - forgejo
+    - kavita
+    - filebrowser

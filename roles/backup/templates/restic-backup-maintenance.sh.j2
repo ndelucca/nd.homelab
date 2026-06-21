@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Weekly maintenance: prune unreferenced data and verify repository integrity.
+# Prune is expensive and locks the repo, so it runs off-peak, separate from the
+# daily backup.
+set -euo pipefail
+
+export RESTIC_REPOSITORY="{{ backup_repo }}"
+export RESTIC_PASSWORD_FILE="{{ backup_password_file }}"
+
+log() { echo "[backup-maint] $*"; }
+die() { echo "[backup-maint][ERROR] $*" >&2; exit 1; }
+
+mountpoint -q "{{ storage_backup_disk }}" || die "backup disk {{ storage_backup_disk }} is not mounted"
+
+log "pruning unreferenced data"
+restic prune
+
+log "checking repository integrity"
+restic check
+
+log "done"

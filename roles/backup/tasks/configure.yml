@@ -1,0 +1,107 @@
+---
+# Configure the restic password, excludes, helper scripts and systemd user units,
+# then initialise the repository (idempotently).
+
+- name: Ensure restic config directory exists
+  ansible.builtin.file:
+    path: "{{ backup_config_dir }}"
+    state: directory
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0700'
+  become: true
+
+- name: Ensure user bin directory exists
+  ansible.builtin.file:
+    path: "{{ backup_bin_dir }}"
+    state: directory
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0755'
+  become: true
+
+- name: Ensure systemd user unit directory exists
+  ansible.builtin.file:
+    path: "{{ backup_user_unit_dir }}"
+    state: directory
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0755'
+  become: true
+
+- name: Deploy restic password file
+  ansible.builtin.template:
+    src: restic-password.j2
+    dest: "{{ backup_password_file }}"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0600'
+  become: true
+  no_log: true
+
+- name: Deploy restic excludes file
+  ansible.builtin.template:
+    src: restic-excludes.txt.j2
+    dest: "{{ backup_excludes_file }}"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0644'
+  become: true
+
+- name: Deploy backup run script
+  ansible.builtin.template:
+    src: restic-backup-run.sh.j2
+    dest: "{{ backup_run_script }}"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0750'
+  become: true
+
+- name: Deploy backup maintenance script
+  ansible.builtin.template:
+    src: restic-backup-maintenance.sh.j2
+    dest: "{{ backup_maintenance_script }}"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0750'
+  become: true
+
+- name: Deploy systemd user units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ backup_user_unit_dir }}/{{ item }}"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0644'
+  become: true
+  loop:
+    - backup.service
+    - backup.timer
+    - backup-maintenance.service
+    - backup-maintenance.timer
+  notify: backup daemon-reload-user
+
+- name: Check whether the restic repository is initialised
+  ansible.builtin.command: restic snapshots --no-lock
+  environment:
+    RESTIC_REPOSITORY: "{{ backup_repo }}"
+    RESTIC_PASSWORD_FILE: "{{ backup_password_file }}"
+  become: true
+  become_user: "{{ backup_user }}"
+  register: backup_repo_check
+  changed_when: false
+  failed_when: false
+
+- name: Initialise the restic repository
+  ansible.builtin.command: restic init
+  environment:
+    RESTIC_REPOSITORY: "{{ backup_repo }}"
+    RESTIC_PASSWORD_FILE: "{{ backup_password_file }}"
+  become: true
+  become_user: "{{ backup_user }}"
+  register: backup_repo_init
+  changed_when: "'created restic repository' in backup_repo_init.stdout"
+  when: backup_repo_check.rc != 0
+
+- name: Flush handlers so the user manager sees the new units
+  ansible.builtin.meta: flush_handlers

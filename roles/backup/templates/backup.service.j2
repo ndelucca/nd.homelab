@@ -1,0 +1,13 @@
+[Unit]
+# {{ ansible_managed }}
+Description=restic backup of irreplaceable data to {{ storage_backup_disk }}
+# Best-effort mount dependency; the script also guards the mounts explicitly
+# because RequiresMountsFor is unreliable for user units.
+RequiresMountsFor={{ storage_backup_disk }} {{ storage_appdata_disk }}
+
+[Service]
+Type=oneshot
+ExecStart={{ backup_run_script }}
+# Be gentle: backups should never starve the apps.
+Nice=10
+IOSchedulingClass=idle

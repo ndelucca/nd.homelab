@@ -1,0 +1,11 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Daily restic backup timer
+
+[Timer]
+OnCalendar={{ backup_schedule_daily }}
+# Run on next boot if the machine was off at the scheduled time.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

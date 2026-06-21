@@ -43,6 +43,9 @@
     - role: forgejo
       tags: ['forgejo', 'git', 'vcs']
 
+    - role: backup
+      tags: ['backup', 'restic']
+
     - role: service_maintenance
       tags: ['service_maintenance', 'watchdog']
 

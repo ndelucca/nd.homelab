@@ -1,0 +1,15 @@
+---
+# Handlers for the backup role.
+
+# Explicit `systemctl --user daemon-reload`: the systemd module's user-scope
+# daemon_reload does not reliably regenerate units, whereas the command does.
+# The handler name is unique per role so it never collides with other roles'
+# reload handlers (a duplicate name silently suppresses one of them).
+- name: backup daemon-reload-user  # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: systemctl --user daemon-reload
+  become: true
+  become_user: "{{ backup_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ backup_uid }}"
+  changed_when: false

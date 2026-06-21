@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Daily backup: consistent DB dumps -> restic backup -> restic forget.
+# Runs as {{ backup_user }} (rootless) via the backup.service user unit.
+set -euo pipefail
+
+export RESTIC_REPOSITORY="{{ backup_repo }}"
+export RESTIC_PASSWORD_FILE="{{ backup_password_file }}"
+
+log() { echo "[backup] $*"; }
+die() { echo "[backup][ERROR] $*" >&2; exit 1; }
+
+# --- Mount guards -----------------------------------------------------------
+# RequiresMountsFor is unreliable for user units (system mounts aren't visible
+# to the user manager), so verify the mounts explicitly before touching them.
+mountpoint -q "{{ storage_backup_disk }}" || die "backup disk {{ storage_backup_disk }} is not mounted"
+mountpoint -q "{{ storage_appdata_disk }}" || die "appdata disk {{ storage_appdata_disk }} is not mounted"
+
+# --- Consistent database dumps ---------------------------------------------
+{% if backup_immich_enabled %}
+# Immich PostgreSQL — logical dump from the running container (online, consistent).
+IMMICH_DUMP="{{ app_data_root }}/immich/dumps/immich.sql.gz"
+if podman ps --format '{% raw %}{{.Names}}{% endraw %}' | grep -qx "{{ backup_immich_container }}"; then
+  log "dumping Immich Postgres -> ${IMMICH_DUMP}"
+  if podman exec "{{ backup_immich_container }}" \
+        pg_dump -U "{{ backup_immich_db_user }}" -d "{{ backup_immich_db_name }}" --clean --if-exists \
+        | gzip -c > "${IMMICH_DUMP}.tmp"; then
+    [ -s "${IMMICH_DUMP}.tmp" ] || die "Immich dump is empty"
+    mv -f "${IMMICH_DUMP}.tmp" "${IMMICH_DUMP}"
+  else
+    rm -f "${IMMICH_DUMP}.tmp"
+    die "pg_dump failed for Immich"
+  fi
+else
+  die "Immich container {{ backup_immich_container }} not running — cannot dump Postgres"
+fi
+{% endif %}
+
+# SQLite databases — online .backup (safe while the app is running).
+{% for db in backup_sqlite_dbs %}
+SRC="{{ db.path }}"
+DEST="{{ app_data_root }}/{{ db.app }}/dumps/{{ db.app }}.db"
+if [ -f "${SRC}" ]; then
+  log "backing up {{ db.app }} SQLite -> ${DEST}"
+  sqlite3 "${SRC}" ".backup '${DEST}.tmp'" || die ".backup failed for {{ db.app }}"
+  [ -s "${DEST}.tmp" ] || die "{{ db.app }} SQLite backup is empty"
+  mv -f "${DEST}.tmp" "${DEST}"
+else
+  log "WARNING: {{ db.app }} DB not found at ${SRC} — skipping"
+fi
+{% endfor %}
+
+# BoltDB / single-file databases — consistent file copy (Bolt is transactional).
+{% for db in backup_copy_dbs %}
+SRC="{{ db.path }}"
+DEST="{{ app_data_root }}/{{ db.app }}/dumps/{{ db.app }}.db"
+if [ -f "${SRC}" ]; then
+  log "copying {{ db.app }} DB -> ${DEST}"
+  cp -p "${SRC}" "${DEST}.tmp" || die "copy failed for {{ db.app }}"
+  [ -s "${DEST}.tmp" ] || die "{{ db.app }} DB copy is empty"
+  mv -f "${DEST}.tmp" "${DEST}"
+else
+  log "WARNING: {{ db.app }} DB not found at ${SRC} — skipping"
+fi
+{% endfor %}
+
+# --- Snapshot ---------------------------------------------------------------
+log "running restic backup"
+set +e
+restic backup \
+  --verbose \
+  --tag automated \
+  --exclude-file "{{ backup_excludes_file }}" \
+{% for path in backup_paths %}
+  "{{ path }}"{% if not loop.last %} \{% endif %}
+
+{% endfor %}
+rc=$?
+set -e
+# restic exit codes: 0 = ok, 3 = some source files could not be read (warning).
+if [ "${rc}" -eq 0 ]; then
+  log "backup completed"
+elif [ "${rc}" -eq 3 ]; then
+  log "WARNING: backup completed with unreadable files (rc=3)"
+else
+  die "restic backup failed (rc=${rc})"
+fi
+
+# --- Retention (forget only; prune runs weekly in maintenance) --------------
+log "applying retention policy"
+restic forget \
+  --keep-daily {{ backup_keep_daily }} \
+  --keep-weekly {{ backup_keep_weekly }} \
+  --keep-monthly {{ backup_keep_monthly }}
+
+log "done"

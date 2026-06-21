@@ -1,0 +1,24 @@
+---
+# Install restic and the tools the backup script relies on.
+
+- name: Install restic and SQLite client
+  ansible.builtin.dnf:
+    name:
+      - restic    # backup engine (dedup + snapshots + retention)
+      - sqlite    # sqlite3 CLI for consistent online .backup of app DBs
+    state: present
+  become: true
+
+- name: Verify restic installation
+  ansible.builtin.command: restic version
+  register: backup_restic_version
+  changed_when: false
+
+- name: Display restic version
+  ansible.builtin.debug:
+    msg: "Installed {{ backup_restic_version.stdout }}"
+
+- name: Enable lingering for user (allows user timers without an active login)
+  ansible.builtin.command: loginctl enable-linger {{ backup_user }}
+  become: true
+  changed_when: false

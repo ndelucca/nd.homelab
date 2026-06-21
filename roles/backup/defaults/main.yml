@@ -1,0 +1,86 @@
+---
+# Default variables for the backup role.
+#
+# Local disk-to-disk backups to D-Ursa using restic. Runs entirely as the
+# rootless service user (ndelucca): it can read all of appdata/media/D-Leo
+# (owned ndelucca:ndelucca) and `podman exec` the Immich Postgres over the user
+# socket. A daily systemd *user* timer runs the backup; a weekly one prunes.
+
+# Service user — reuse the central storage user (rootless, uid 1000).
+backup_user: "{{ app_storage_user }}"
+backup_group: "{{ app_storage_group }}"
+backup_uid: "{{ app_storage_uid }}"
+
+# restic repository on the backup disk (D-Ursa).
+backup_repo: "{{ storage_backup_disk }}/restic"
+
+# Password handling. restic ALWAYS encrypts; there is no plaintext mode. To keep
+# disaster recovery friction-free (no secret to memorise) the password lives in
+# the vault AND is written to a 0600 file on the box — re-running the playbook
+# recreates the file, so a restore needs nothing remembered. The encryption is an
+# internal detail, not a secret to guard (the disk is local to the same machine).
+# MUST be set via vault in host_vars.
+backup_password: ""
+backup_config_dir: "/home/{{ backup_user }}/.config/restic"
+backup_password_file: "{{ backup_config_dir }}/password"
+backup_excludes_file: "{{ backup_config_dir }}/excludes.txt"
+
+# Where the helper scripts and systemd user units land.
+backup_bin_dir: "/home/{{ backup_user }}/.local/bin"
+backup_run_script: "{{ backup_bin_dir }}/restic-backup-run.sh"
+backup_maintenance_script: "{{ backup_bin_dir }}/restic-backup-maintenance.sh"
+backup_user_unit_dir: "/home/{{ backup_user }}/.config/systemd/user"
+
+# What to back up — only the irreplaceable data.
+backup_paths:
+  - "{{ app_data_root }}"               # app STATE: DBs + config (incl. dumps/)
+  - "{{ app_media_root }}/Gallery"      # Immich photo library (irreplaceable)
+  - "{{ app_media_root }}/Books"        # small, not trivially re-sourced
+  - "{{ storage_personal_disk }}"       # D-Leo personal archive
+
+# What NOT to back up — regenerable or inconsistent-at-rest.
+backup_excludes:
+  - "{{ app_media_root }}/Movies"               # re-downloadable
+  - "{{ app_media_root }}/Series"               # re-downloadable
+  - "{{ app_data_root }}/immich/postgres"       # live PG data: backed up via pg_dump
+  - "{{ app_data_root }}/jellyfin/cache"        # regenerable
+  - "{{ app_data_root }}/jellyfin/data/data/transcodes"
+  - "{{ app_data_root }}/immich/model-cache"    # ML models, re-downloaded
+  - "*.migrated"                                # phase-1 migration leftovers
+  - "lost+found"
+
+# Retention applied by `restic forget` (daily) — prune happens weekly.
+backup_keep_daily: 7
+backup_keep_weekly: 4
+backup_keep_monthly: 12
+
+# Schedules (systemd OnCalendar). Daily backup off-peak; weekly prune later.
+backup_schedule_daily: "*-*-* 03:00:00"
+backup_schedule_maintenance: "Sun *-*-* 04:30:00"
+
+# --- Database dumps (consistent, no service downtime) -----------------------
+# Each app's dump is written under {{ app_data_root }}/<app>/dumps/ so the restic
+# snapshot captures a consistent copy. The dump is the authoritative restore
+# source; the live DB file is also captured but secondary.
+
+# Immich PostgreSQL (running in the rootless `immich-database` container).
+backup_immich_enabled: true
+backup_immich_container: immich-database
+backup_immich_db_user: immich
+backup_immich_db_name: immich
+
+# SQLite databases (online `.backup`, safe while the app is running).
+backup_sqlite_dbs:
+  - app: jellyfin
+    path: "{{ app_data_root }}/jellyfin/data/data/jellyfin.db"
+  - app: forgejo
+    path: "{{ app_data_root }}/forgejo/data/data/gitea.db"
+  - app: kavita
+    path: "{{ app_data_root }}/kavita/config/kavita.db"
+
+# Non-SQLite single-file databases backed up by copy. Filebrowser uses BoltDB,
+# which is transactional/crash-consistent on disk, so a plain copy is a valid
+# snapshot (and it only writes on user/share config changes).
+backup_copy_dbs:
+  - app: filebrowser
+    path: "{{ app_data_root }}/filebrowser/filebrowser.db"

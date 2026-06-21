@@ -1,0 +1,18 @@
+---
+# Main entry point for the backup role.
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['backup', 'preflight']
+
+- name: Install restic and dependencies
+  ansible.builtin.import_tasks: install.yml
+  tags: ['backup', 'install']
+
+- name: Configure restic repository, scripts and units
+  ansible.builtin.import_tasks: configure.yml
+  tags: ['backup', 'configure']
+
+- name: Enable backup timers
+  ansible.builtin.import_tasks: service.yml
+  tags: ['backup', 'service']
