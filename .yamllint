@@ -1,0 +1,27 @@
+---
+# yamllint configuration for the home-server Ansible project.
+extends: default
+
+rules:
+  # Ansible files are often wide (long module args, vault blocks).
+  line-length:
+    max: 160
+    level: warning
+  # Allow inline comments closer to content than the strict default.
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  # Ansible booleans are true/false; don't fight yes/no edge cases hard.
+  truthy:
+    allowed-values: ['true', 'false']
+    check-keys: false
+  # Files start with `---`; keep that required.
+  document-start:
+    present: true
+  # Allow the idiomatic Ansible inline-map style: `{ key: value }`.
+  braces:
+    max-spaces-inside: 1
+
+ignore: |
+  .ansible/
+  *.j2

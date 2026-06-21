@@ -1,0 +1,26 @@
+---
+# ansible-lint configuration for the home-server project.
+# Start at the "moderate" profile; tighten to "production" once the
+# backlog (see plan: version pins, changed_when guards) is cleared.
+profile: moderate
+
+exclude_paths:
+  - .ansible/
+  - .github/
+
+# Rules intentionally relaxed for a single-maintainer home-lab. Remove
+# entries as the corresponding cleanups land.
+skip_list:
+  - yaml[line-length]  # handled by .yamllint as a warning
+
+# Treat these as warnings rather than hard failures for now. These are
+# stylistic/large-churn cleanups tracked as backlog (see remediation plan):
+#  - var-naming[no-role-prefix]: registers/set_facts not prefixed with role name
+#  - name[casing]: handler/task names not capitalised (touches notify refs)
+#  - command-instead-of-module: legit `rpm -q` queries and `git` on the printer
+warn_list:
+  - command-instead-of-shell
+  - no-changed-when
+  - var-naming[no-role-prefix]
+  - name[casing]
+  - command-instead-of-module

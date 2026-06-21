@@ -17,7 +17,7 @@
   ansible.builtin.set_fact:
     immich_uid: "{{ immich_user_uid_result.stdout }}"
 
-- name: Check if port {{ immich_port }} is available
+- name: Check availability of port {{ immich_port }}
   ansible.builtin.shell: |
     ss -tulnp | grep -q ":{{ immich_port }}\s" && echo "occupied" || echo "available"
   register: port_check

@@ -88,7 +88,7 @@
     path: "{{ item.path }}"
     state: absent
   become: false
-  loop: "{{ (mainsailos_backup_files.files | sort(attribute='mtime', reverse=true))[mainsailos_backup_retention | int:] }}"
+  loop: "{{ (mainsailos_backup_files.files | sort(attribute='mtime', reverse=true))[mainsailos_backup_retention | int :] }}"
   loop_control:
     label: "{{ item.path }}"
 

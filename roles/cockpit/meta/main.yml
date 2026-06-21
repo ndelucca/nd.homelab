@@ -2,7 +2,7 @@
 # Metadata for Cockpit role
 
 galaxy_info:
-  author: Your Name
+  author: Naza
   description: Installs and configures Cockpit web console for Fedora
   license: MIT
   min_ansible_version: "2.14"
@@ -10,10 +10,7 @@ galaxy_info:
   platforms:
     - name: Fedora
       versions:
-        - 38
-        - 39
-        - 40
-        - 41
+        - all
 
   galaxy_tags:
     - cockpit

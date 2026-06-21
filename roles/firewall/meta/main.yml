@@ -10,12 +10,7 @@ galaxy_info:
   platforms:
     - name: Fedora
       versions:
-        - 38
-        - 39
-        - 40
-        - 41
-        - 42
-        - 43
+        - all
 
   galaxy_tags:
     - firewall

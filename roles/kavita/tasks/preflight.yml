@@ -17,7 +17,7 @@
   ansible.builtin.set_fact:
     kavita_uid: "{{ kavita_user_uid_result.stdout }}"
 
-- name: Check if port {{ kavita_port }} is available
+- name: Check availability of port {{ kavita_port }}
   ansible.builtin.shell: |
     ss -tulnp | grep -q ":{{ kavita_port }}\s" && echo "occupied" || echo "available"
   register: port_check

@@ -13,7 +13,7 @@
     path: "{{ cloud_torrent_install_dir }}/cloud-torrent"
   register: cloud_torrent_installed
 
-- name: Check if port {{ cloud_torrent_port }} is available
+- name: Check availability of port {{ cloud_torrent_port }}
   ansible.builtin.wait_for:
     port: "{{ cloud_torrent_port }}"
     state: stopped
