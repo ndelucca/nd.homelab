@@ -19,5 +19,5 @@
     mode: '0644'
   become: true
   notify:
-    - daemon-reload-user
+    - home_assistant daemon-reload-user
     - restart home_assistant

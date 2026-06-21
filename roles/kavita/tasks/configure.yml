@@ -9,5 +9,5 @@
     group: "{{ kavita_group }}"
     mode: '0644'
   notify:
-    - daemon-reload-user
+    - kavita daemon-reload-user
     - restart kavita-pod

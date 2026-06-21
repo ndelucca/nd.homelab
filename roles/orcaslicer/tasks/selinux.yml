@@ -27,7 +27,7 @@
     state: present
   become: true
   when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context
+  notify: orcaslicer apply selinux context
 
 - name: Apply SELinux context immediately
   ansible.builtin.command: "restorecon -Rv {{ orcaslicer_config_dir }}"

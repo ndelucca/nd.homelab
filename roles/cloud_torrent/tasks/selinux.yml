@@ -13,7 +13,7 @@
     - { target: "{{ cloud_torrent_downloads_dir }}(/.*)?", setype: public_content_rw_t }
   loop_control:
     label: "{{ item.target }}"
-  notify: apply selinux context
+  notify: cloud_torrent apply selinux context
 
 - name: Configure SELinux port for Cloud Torrent
   community.general.seport:

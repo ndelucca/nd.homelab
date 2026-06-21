@@ -10,7 +10,7 @@
     mode: '0644'
   become: true
   notify:
-    - daemon-reload-user
+    - immich daemon-reload-user
     - restart immich-pod
 
 - name: Flush handlers to reload systemd

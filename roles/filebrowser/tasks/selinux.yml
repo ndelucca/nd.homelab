@@ -27,7 +27,7 @@
   loop_control:
     label: "{{ item.target }}"
   when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context
+  notify: filebrowser apply selinux context
 
 - name: Allow FileBrowser to bind to custom port
   community.general.seport:

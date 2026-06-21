@@ -12,7 +12,7 @@
     state: restarted
   become: true
 
-- name: apply selinux context
+- name: filebrowser apply selinux context
   ansible.builtin.command: "restorecon -Rv {{ item }}"
   become: true
   loop:

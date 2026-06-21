@@ -24,7 +24,7 @@
     state: present
   become: true
   when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context
+  notify: home_assistant apply selinux context
 
 - name: Apply SELinux context immediately
   ansible.builtin.command: "restorecon -Rv {{ home_assistant_config_dir }}"

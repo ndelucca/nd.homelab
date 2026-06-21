@@ -19,5 +19,5 @@
     mode: '0644'
   become: true
   notify:
-    - daemon-reload-user
+    - orcaslicer daemon-reload-user
     - restart orcaslicer

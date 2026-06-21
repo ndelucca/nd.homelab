@@ -19,5 +19,5 @@
     mode: '0644'
   become: true
   notify:
-    - daemon-reload-user
+    - forgejo daemon-reload-user
     - restart forgejo

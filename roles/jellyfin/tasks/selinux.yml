@@ -33,7 +33,7 @@
   loop_control:
     label: "{{ item.target }}"
   when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context
+  notify: jellyfin apply selinux context
 
 - name: Allow Jellyfin to bind to custom HTTP port
   community.general.seport:

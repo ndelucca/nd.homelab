@@ -30,7 +30,7 @@
     - "{{ immich_db_data_location }}"
     - "{{ immich_model_cache }}"
   when: selinux_status.stdout == "Enforcing"
-  notify: apply selinux context
+  notify: immich apply selinux context
 
 - name: Enable SELinux boolean for container port binding
   ansible.posix.seboolean:

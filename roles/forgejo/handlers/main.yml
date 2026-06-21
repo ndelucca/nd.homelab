@@ -1,14 +1,17 @@
 ---
 # Handlers for Forgejo rootless Podman role
 
-- name: daemon-reload-user
-  ansible.builtin.systemd:
-    daemon_reload: true
-    scope: user
+# Explicit `systemctl --user daemon-reload`: the systemd module's user-scope
+# daemon_reload does not reliably regenerate Quadlet units (the generated unit
+# keeps stale paths), whereas the command does.
+- name: forgejo daemon-reload-user  # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: systemctl --user daemon-reload
   become: true
   become_user: "{{ forgejo_user }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forgejo_uid }}"
+  changed_when: false
 
 - name: restart forgejo
   ansible.builtin.systemd:
@@ -20,7 +23,7 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forgejo_uid }}"
 
-- name: apply selinux context
+- name: forgejo apply selinux context
   ansible.builtin.command: "restorecon -Rv {{ item }}"
   become: true
   loop:
