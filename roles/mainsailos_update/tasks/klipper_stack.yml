@@ -50,6 +50,11 @@
               | list)
          ) }}
 
+# The POST blocks until the whole update finishes - which on a Pi 3B+ can take
+# well over an hour for a big jump (venv rebuilds compile wheels in swap). A
+# client-side HTTP timeout does NOT cancel the work: Moonraker runs the update in
+# its own task and keeps going after we disconnect. So we treat a timeout here as
+# non-fatal and let the busy-poll below be the authoritative wait.
 - name: Trigger the Moonraker update(s)
   ansible.builtin.uri:
     url: "{{ item }}"
@@ -62,17 +67,23 @@
     label: "{{ item }}"
   register: mainsailos_update_results
   become: false
+  failed_when: false
   when: not ansible_check_mode
 
-- name: Wait until Moonraker is no longer busy updating
+- name: Wait until Moonraker is no longer busy updating (authoritative)
   ansible.builtin.uri:
     url: "{{ mainsailos_moonraker_url }}/machine/update/status?refresh=false"
     headers: "{{ mainsailos_api_headers }}"
+    timeout: 30
+    status_code: [200]
   register: mainsailos_poll
-  until: not (mainsailos_poll.json.result.busy | default(true))
+  # Moonraker restarts itself mid-update, so the endpoint is briefly unreachable
+  # (status -1) - keep retrying until it answers 200 AND reports not busy.
+  until: (mainsailos_poll.status | default(-1)) == 200 and not (mainsailos_poll.json.result.busy | default(true))
   retries: "{{ mainsailos_update_poll_retries }}"
   delay: "{{ mainsailos_update_poll_delay }}"
   changed_when: false
+  failed_when: false
   become: false
   when: not ansible_check_mode
 
@@ -93,3 +104,18 @@
   loop_control:
     label: "{{ item.key }}"
   when: not ansible_check_mode
+
+- name: Warn about any component still behind its remote version
+  ansible.builtin.debug:
+    msg: >-
+      {{ item.key }} did not reach the latest version
+      ({{ item.value.version | default('?') }} != {{ item.value.remote_version | default('?') }}).
+      Re-run the playbook or check the Mainsail update panel.
+  loop: "{{ (mainsailos_klipper_post.json.result.version_info | default({})) | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when:
+    - not ansible_check_mode
+    - item.value.remote_version is defined
+    - item.value.version is defined
+    - item.value.version != item.value.remote_version

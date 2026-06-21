@@ -19,9 +19,12 @@ mainsailos_moonraker_api_key: ""           # X-Api-Key header if loopback trust 
 mainsailos_api_headers: >-
   {{ {'X-Api-Key': mainsailos_moonraker_api_key}
      if (mainsailos_moonraker_api_key | length > 0) else {} }}
-mainsailos_update_timeout: 1800            # per-POST HTTP timeout (the big jumps are slow on a Pi 3B+)
-mainsailos_update_poll_retries: 120        # 120 * 15s = up to 30 min for the big jumps
-mainsailos_update_poll_delay: 15
+# Per-POST HTTP timeout. A timeout here is non-fatal (the update keeps running
+# server-side); a smaller value just drops us into the authoritative busy-poll
+# sooner. The poll budget below is what actually bounds how long we wait.
+mainsailos_update_timeout: 600
+mainsailos_update_poll_retries: 180        # 180 * 30s = up to 90 min for the big jumps
+mainsailos_update_poll_delay: 30
 # Used only when mainsailos_moonraker_update_target != 'full'
 mainsailos_components:
   - klipper
