@@ -30,3 +30,20 @@
     - "'user already exists' not in forgejo_admin_create.stderr"
     - "'name is already used' not in forgejo_admin_create.stderr"
   no_log: true
+
+# `admin user create` is skipped once the user exists, so the password can drift
+# from the vault value. Enforce it on every deploy so the API (basic auth) works.
+- name: Enforce Forgejo admin password
+  ansible.builtin.command: >
+    podman exec {{ forgejo_container_name }}
+    forgejo admin user change-password
+    --username {{ forgejo_admin_user }}
+    --password {{ forgejo_admin_password }}
+    --must-change-password=false
+  become: true
+  become_user: "{{ forgejo_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ forgejo_uid }}"
+  register: forgejo_admin_password_set
+  changed_when: "'successfully updated' in forgejo_admin_password_set.stdout"
+  no_log: true

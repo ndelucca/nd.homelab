@@ -151,8 +151,8 @@ forgejo_admin_password: !vault |
 #   ansible-vault encrypt_string --name forgejo_github_token '<PAT>'
 # then paste the resulting block below and flip forgejo_pull_mirror_enabled to true.
 forgejo_pull_mirror_enabled: true
-forgejo_mirror_force_recreate:
-  - environment        # one-time: delete the normal repo and recreate as a mirror
+# Add repo names here for a one-time delete+recreate as a mirror, then empty it.
+forgejo_mirror_force_recreate: []
 forgejo_github_token: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   39363065663939633837316536386431383631326461626465333061313435383936626339306138
