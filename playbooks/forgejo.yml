@@ -1,0 +1,10 @@
+---
+# Forgejo git forge playbook
+# Usage: ansible-playbook playbooks/forgejo.yml
+
+- name: Install and configure Forgejo
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - forgejo

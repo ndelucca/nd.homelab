@@ -1,0 +1,47 @@
+[Unit]
+Description=Forgejo Git Forge Container
+Documentation=https://forgejo.org/docs/
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ forgejo_image }}
+ContainerName={{ forgejo_container_name }}
+
+# Rootless mapping: map the host service user (uid {{ forgejo_uid }}) to the
+# container's git user so it owns the mounted volumes. The -rootless image runs
+# directly as git (no s6/root privilege drop), so keep-id works cleanly here.
+UserNS=keep-id:uid={{ forgejo_uid }},gid={{ forgejo_uid }}
+
+# HTTP served via NGINX (localhost only); git SSH exposed on the LAN.
+# This is the container's own SSH server, independent of the host sshd (port 22).
+PublishPort={{ forgejo_host }}:{{ forgejo_port }}:3000
+PublishPort={{ forgejo_ssh_port }}:2222
+
+# Persistent storage (rootless image layout)
+Volume={{ forgejo_data_dir }}:/var/lib/gitea:Z
+Volume={{ forgejo_config_dir }}:/etc/gitea:Z
+
+Environment=TZ={{ forgejo_timezone }}
+
+# Application configuration (written to /etc/gitea/app.ini, persists)
+Environment=FORGEJO__server__DOMAIN={{ forgejo_domain }}
+Environment=FORGEJO__server__ROOT_URL={{ forgejo_root_url }}
+Environment=FORGEJO__server__SSH_DOMAIN={{ forgejo_domain }}
+Environment=FORGEJO__server__SSH_PORT={{ forgejo_ssh_port }}
+Environment=FORGEJO__server__SSH_LISTEN_PORT=2222
+Environment=FORGEJO__server__HTTP_PORT=3000
+Environment=FORGEJO__database__DB_TYPE=sqlite3
+Environment=FORGEJO__service__DISABLE_REGISTRATION={{ forgejo_disable_registration | string | lower }}
+Environment=FORGEJO__security__INSTALL_LOCK=true
+
+# Auto-update from registry
+AutoUpdate=registry
+
+[Service]
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target default.target

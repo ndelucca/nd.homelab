@@ -1,0 +1,48 @@
+---
+# Default variables for Forgejo role
+
+# Service user configuration
+forgejo_user: ndelucca
+forgejo_group: ndelucca
+forgejo_uid: 1000  # Obtained dynamically via getent in preflight
+
+# Directory configuration
+forgejo_base_dir: /srv/forgejo
+forgejo_data_dir: "{{ forgejo_base_dir }}/data"      # -> /var/lib/gitea
+forgejo_config_dir: "{{ forgejo_base_dir }}/config"  # -> /etc/gitea (app.ini)
+
+# Podman/Quadlet configuration
+forgejo_quadlet_dir: /etc/containers/systemd/users  # System-managed user containers
+forgejo_container_name: forgejo
+
+# Network configuration
+forgejo_port: 3000          # HTTP, bound to localhost, served via NGINX
+forgejo_host: 127.0.0.1
+forgejo_ssh_port: 2222      # git over SSH, exposed on the LAN (container's own sshd)
+
+# Application configuration
+# The -rootless image variant runs directly as the git user (no s6/root drop),
+# which is the supported way to run under rootless Podman with UserNS=keep-id.
+forgejo_version: "11.0.1-rootless"   # Pinned image tag
+forgejo_image: "codeberg.org/forgejo/forgejo:{{ forgejo_version }}"
+forgejo_domain: git.ndelucca-server.com
+forgejo_root_url: "https://{{ forgejo_domain }}/"
+forgejo_timezone: America/Los_Angeles
+forgejo_disable_registration: true
+
+# Admin user (created post-deploy). Password MUST be set via vault in host_vars.
+forgejo_admin_user: ndelucca
+forgejo_admin_email: ndelucca@protonmail.com
+forgejo_admin_password: ""
+
+# Service configuration
+forgejo_service_name: forgejo  # unit forgejo.container -> forgejo.service
+forgejo_service_enabled: true
+forgejo_service_state: started
+
+# Firewall settings
+forgejo_firewall_zone: FedoraServer
+forgejo_firewall_enabled: true  # true: the git SSH port must be opened
+
+# SELinux configuration
+forgejo_manage_selinux: true

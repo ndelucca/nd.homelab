@@ -1,0 +1,27 @@
+---
+# Main entry point for Forgejo role
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['forgejo', 'preflight']
+
+- name: Install Podman and dependencies
+  ansible.builtin.import_tasks: install.yml
+  tags: ['forgejo', 'install']
+
+- name: Deploy Quadlet configuration
+  ansible.builtin.import_tasks: quadlet.yml
+  tags: ['forgejo', 'quadlet']
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['forgejo', 'service']
+
+- name: Create admin user
+  ansible.builtin.import_tasks: admin.yml
+  tags: ['forgejo', 'admin']
+
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['forgejo', 'selinux']
+  when: forgejo_manage_selinux | bool

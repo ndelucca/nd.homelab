@@ -1,0 +1,32 @@
+---
+# Create the initial Forgejo admin user (idempotent)
+# Runs `forgejo admin user create` inside the running container as the
+# rootless service user. Tolerates re-runs: an already-existing user is
+# reported but not treated as a failure.
+
+- name: Ensure admin password is set
+  ansible.builtin.assert:
+    that:
+      - forgejo_admin_password | length > 0
+    fail_msg: "forgejo_admin_password must be set (use Ansible Vault in host_vars)"
+
+- name: Create Forgejo admin user
+  ansible.builtin.command: >
+    podman exec {{ forgejo_container_name }}
+    forgejo admin user create
+    --admin
+    --username {{ forgejo_admin_user }}
+    --password {{ forgejo_admin_password }}
+    --email {{ forgejo_admin_email }}
+    --must-change-password=false
+  become: true
+  become_user: "{{ forgejo_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ forgejo_uid }}"
+  register: forgejo_admin_create
+  changed_when: "'has been successfully created' in forgejo_admin_create.stdout"
+  failed_when:
+    - forgejo_admin_create.rc != 0
+    - "'user already exists' not in forgejo_admin_create.stderr"
+    - "'name is already used' not in forgejo_admin_create.stderr"
+  no_log: true

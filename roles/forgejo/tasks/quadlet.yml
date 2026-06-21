@@ -1,0 +1,23 @@
+---
+# Deploy Podman Quadlet configuration for Forgejo
+
+- name: Ensure systemd user directory exists
+  ansible.builtin.file:
+    path: "{{ forgejo_quadlet_dir }}/{{ forgejo_uid }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Deploy Forgejo Quadlet .container unit
+  ansible.builtin.template:
+    src: forgejo.container.j2
+    dest: "{{ forgejo_quadlet_dir }}/{{ forgejo_uid }}/{{ forgejo_service_name }}.container"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - daemon-reload-user
+    - restart forgejo

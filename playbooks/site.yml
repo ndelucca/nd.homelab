@@ -37,6 +37,9 @@
     - role: home_assistant
       tags: ['home_assistant', 'automation', 'smart-home']
 
+    - role: forgejo
+      tags: ['forgejo', 'git', 'vcs']
+
     - role: service_maintenance
       tags: ['service_maintenance', 'watchdog']
 

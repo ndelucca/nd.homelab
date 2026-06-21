@@ -1,0 +1,56 @@
+---
+# Preflight checks and directory setup for Forgejo
+
+- name: Verify Fedora operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role only supports Fedora"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Get user UID dynamically
+  ansible.builtin.command: "getent passwd {{ forgejo_user }}"
+  register: getent_output
+  changed_when: false
+
+- name: Extract UID from getent
+  ansible.builtin.set_fact:
+    forgejo_uid: "{{ getent_output.stdout.split(':')[2] }}"
+
+- name: Display user UID
+  ansible.builtin.debug:
+    msg: "Using UID {{ forgejo_uid }} for user {{ forgejo_user }}"
+
+- name: Ensure base directory exists
+  ansible.builtin.file:
+    path: "{{ forgejo_base_dir }}"
+    state: directory
+    owner: "{{ forgejo_user }}"
+    group: "{{ forgejo_group }}"
+    mode: '0755'
+  become: true
+
+- name: Ensure data and config directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ forgejo_user }}"
+    group: "{{ forgejo_group }}"
+    mode: '0750'
+  become: true
+  loop:
+    - "{{ forgejo_data_dir }}"
+    - "{{ forgejo_config_dir }}"
+
+- name: Check if HTTP port is available
+  ansible.builtin.wait_for:
+    port: "{{ forgejo_port }}"
+    host: "{{ forgejo_host }}"
+    state: stopped
+    timeout: 1
+  ignore_errors: true
+  register: port_check
+
+- name: Display port availability
+  ansible.builtin.debug:
+    msg: "Port {{ forgejo_port }} is {{ 'available' if port_check is not failed else 'in use (may be existing Forgejo)' }}"

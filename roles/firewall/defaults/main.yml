@@ -31,3 +31,8 @@ filebrowser_port: 8080
 cloud_torrent_firewall_enabled: true
 cloud_torrent_firewall_zone: FedoraServer
 cloud_torrent_port: 9091
+
+# Forgejo firewall settings (opens the git SSH port; HTTP stays behind NGINX)
+forgejo_firewall_enabled: true
+forgejo_firewall_zone: FedoraServer
+forgejo_ssh_port: 2222

@@ -41,6 +41,7 @@
     - orcaslicer.conf.j2
     - home-assistant.conf.j2
     - ndmarket.conf.j2
+    - forgejo.conf.j2
   register: nginx_service_configs
 
 - name: Validate complete NGINX configuration

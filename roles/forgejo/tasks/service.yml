@@ -1,0 +1,39 @@
+---
+# Configure systemd user service for Forgejo
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start Forgejo service
+  ansible.builtin.systemd:
+    name: "{{ forgejo_service_name }}"
+    enabled: "{{ forgejo_service_enabled }}"
+    state: "{{ forgejo_service_state }}"
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ forgejo_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ forgejo_uid }}"
+
+- name: Wait for Forgejo to be available
+  ansible.builtin.wait_for:
+    host: "{{ forgejo_host }}"
+    port: "{{ forgejo_port }}"
+    delay: 10
+    timeout: 180
+  when: forgejo_service_state == 'started'
+
+- name: Display Forgejo access information
+  ansible.builtin.debug:
+    msg: |
+      Forgejo is now running!
+      - Web (via NGINX): {{ forgejo_root_url }}
+      - Direct HTTP: http://{{ forgejo_host }}:{{ forgejo_port }}
+      - Git over SSH: ssh://git@{{ forgejo_domain }}:{{ forgejo_ssh_port }}/<owner>/<repo>.git
+      - Data location: {{ forgejo_data_dir }}
+
+      Manage service:
+      - Status: systemctl --user -M {{ forgejo_user }}@ status {{ forgejo_service_name }}
+      - Logs: journalctl --user -M {{ forgejo_user }}@ -u {{ forgejo_service_name }}
+      - Restart: systemctl --user -M {{ forgejo_user }}@ restart {{ forgejo_service_name }}
