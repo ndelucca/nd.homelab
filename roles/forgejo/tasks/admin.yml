@@ -45,5 +45,7 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forgejo_uid }}"
   register: forgejo_admin_password_set
-  changed_when: "'successfully updated' in forgejo_admin_password_set.stdout"
+  # Forgejo reports success whether or not the password actually differed, so we
+  # cannot detect a real change; treat this as an idempotent state-enforcing step.
+  changed_when: false
   no_log: true
