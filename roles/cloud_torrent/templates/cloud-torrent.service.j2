@@ -2,6 +2,8 @@
 Description=Cloud Torrent - Web-based torrent client
 Documentation=https://github.com/jpillora/cloud-torrent
 After=network.target
+# Do not start unless the appdata disk (state + downloads) is mounted.
+RequiresMountsFor={{ storage_appdata_disk }}
 
 [Service]
 Type=simple

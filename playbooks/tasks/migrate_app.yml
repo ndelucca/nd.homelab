@@ -1,0 +1,52 @@
+---
+# Migrate one app's state directory from its old location to the appdata disk.
+# Included per item from migrate_storage.yml with `migrate` as the loop var:
+#   migrate = { name, src, dest, service, scope }
+#
+# Idempotent: once moved, the source is renamed to "<src>.migrated", so a second
+# run finds no source and skips. Data is copied with rsync -aHAX so permissions,
+# ACLs and SELinux/xattrs are preserved.
+
+- name: "Stat source for {{ migrate.name }}"
+  ansible.builtin.stat:
+    path: "{{ migrate.src }}"
+  register: _migrate_src
+
+- name: "Migrate state to the appdata disk for {{ migrate.name }}"
+  when:
+    - _migrate_src.stat.exists
+    - _migrate_src.stat.isdir | default(false)
+  block:
+    - name: "Stop system service for {{ migrate.name }}"
+      ansible.builtin.systemd:
+        name: "{{ migrate.service }}"
+        state: stopped
+      become: true
+      failed_when: false
+      when: migrate.scope == 'system'
+
+    - name: "Stop rootless user service for {{ migrate.name }}"
+      ansible.builtin.systemd:
+        name: "{{ migrate.service }}"
+        scope: user
+        state: stopped
+      become: true
+      become_user: "{{ app_storage_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ app_storage_uid }}"
+      failed_when: false
+      when: migrate.scope == 'user'
+
+    # rsync (not the synchronize module) because we need -X to carry SELinux
+    # labels/xattrs and -A for ACLs on a same-host move; synchronize is push/pull.
+    - name: "Copy state to the appdata disk for {{ migrate.name }}"  # noqa: command-instead-of-module
+      ansible.builtin.command:
+        cmd: "rsync -aHAX --numeric-ids {{ migrate.src }}/ {{ migrate.dest }}/"
+      become: true
+      changed_when: true
+
+    - name: "Rename migrated source for {{ migrate.name }}"
+      ansible.builtin.command:
+        cmd: "mv {{ migrate.src }} {{ migrate.src }}.migrated"
+      become: true
+      changed_when: true

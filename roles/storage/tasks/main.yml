@@ -1,0 +1,54 @@
+---
+# Storage role: pin the service user, mount the data disks by UUID, and lay out
+# the app-data skeleton. Runs first in site.yml so every mountpoint and base dir
+# exists before any app role deploys.
+
+# --- Service user identity (DR-critical) ------------------------------------
+# Rootless Podman (UserNS=keep-id) and the ownership of every file on the data
+# disk assume this exact uid/gid. Pinning them keeps the data valid after an OS
+# reinstall.
+- name: Ensure service group has the fixed gid
+  ansible.builtin.group:
+    name: "{{ app_storage_group }}"
+    gid: "{{ app_storage_gid }}"
+    state: present
+  become: true
+
+- name: Ensure service user has the fixed uid/gid
+  ansible.builtin.user:
+    name: "{{ app_storage_user }}"
+    uid: "{{ app_storage_uid }}"
+    group: "{{ app_storage_group }}"
+    state: present
+  become: true
+
+# --- Mounts (the source of truth for /etc/fstab) ----------------------------
+# By UUID so the mounts survive a board/OS swap. nofail keeps the box bootable
+# if a disk is missing; the mountpoint dir is created root-owned, which is also
+# the "missing mount" guard: if a disk fails to mount, the (root-owned) empty
+# mountpoint is not writable by the service user, so rootless apps fail to write
+# there instead of silently shadowing data onto the root filesystem.
+- name: Mount data disks by UUID (managed fstab)
+  ansible.posix.mount:
+    path: "{{ item.mount }}"
+    src: "UUID={{ item.uuid }}"
+    fstype: "{{ item.fstype }}"
+    opts: "{{ storage_mount_opts }}"
+    state: mounted
+  become: true
+  loop: "{{ storage_disks }}"
+  loop_control:
+    label: "{{ item.name }} -> {{ item.mount }}"
+
+# --- App-data skeleton ------------------------------------------------------
+# Created after mounting so they land on the appdata disk, owned by the service
+# user. Each app role creates its own subdir under these.
+- name: Create appdata/media roots on the data disk
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_storage_user }}"
+    group: "{{ app_storage_group }}"
+    mode: '0755'
+  become: true
+  loop: "{{ storage_appdata_skeleton }}"

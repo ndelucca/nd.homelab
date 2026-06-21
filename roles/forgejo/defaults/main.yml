@@ -6,8 +6,9 @@ forgejo_user: ndelucca
 forgejo_group: ndelucca
 forgejo_uid: 1000  # Obtained dynamically via getent in preflight
 
-# Directory configuration
-forgejo_base_dir: /srv/forgejo
+# Directory configuration — state on the appdata disk (app_data_root, defined in
+# group_vars/homeservers.yml).
+forgejo_base_dir: "{{ app_data_root }}/forgejo"
 forgejo_data_dir: "{{ forgejo_base_dir }}/data"      # -> /var/lib/gitea
 forgejo_config_dir: "{{ forgejo_base_dir }}/config"  # -> /etc/gitea (app.ini)
 

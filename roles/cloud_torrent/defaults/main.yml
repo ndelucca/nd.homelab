@@ -6,7 +6,9 @@ cloud_torrent_version: "0.9.4"
 cloud_torrent_arch: amd64
 cloud_torrent_download_url: "https://github.com/jpillora/cloud-torrent/releases/download/v{{ cloud_torrent_version }}/cloud-torrent_{{ cloud_torrent_version }}_linux_{{ cloud_torrent_arch }}.gz"
 cloud_torrent_install_dir: /usr/local/bin
-cloud_torrent_working_dir: /opt/cloud-torrent
+# State (config + torrent metadata) lives on the appdata disk (app_data_root,
+# defined in group_vars/homeservers.yml).
+cloud_torrent_working_dir: "{{ app_data_root }}/cloud-torrent"
 
 # Service configuration
 cloud_torrent_user: ndelucca
@@ -21,7 +23,7 @@ cloud_torrent_host: 127.0.0.1
 
 # Application configuration
 cloud_torrent_title: "Cloud Torrent"
-cloud_torrent_downloads_dir: /srv/disks/D-Draco/media
+cloud_torrent_downloads_dir: "{{ app_media_root }}"
 cloud_torrent_config_path: "{{ cloud_torrent_working_dir }}/cloud-torrent.json"
 
 # Authentication (disabled per user request)

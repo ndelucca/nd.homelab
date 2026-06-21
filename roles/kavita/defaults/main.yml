@@ -6,8 +6,9 @@ kavita_user: ndelucca
 kavita_group: ndelucca
 kavita_uid: 1000  # Obtained dynamically via getent in preflight
 
-# Directory configuration
-kavita_base_dir: /srv/kavita
+# Directory configuration — state on the appdata disk (app_data_root, defined in
+# group_vars/homeservers.yml).
+kavita_base_dir: "{{ app_data_root }}/kavita"
 kavita_config_dir: "{{ kavita_base_dir }}/config"
 kavita_library_dir: "{{ kavita_base_dir }}/library"
 

@@ -9,7 +9,9 @@ filebrowser_version: latest
 filebrowser_arch: amd64
 filebrowser_github_repo: filebrowser/filebrowser
 filebrowser_install_dir: /usr/local/bin
-filebrowser_working_dir: /opt/filebrowser
+# State (SQLite DB + config) lives on the appdata disk (app_data_root, defined in
+# group_vars/homeservers.yml).
+filebrowser_working_dir: "{{ app_data_root }}/filebrowser"
 filebrowser_user: ndelucca
 filebrowser_group: ndelucca
 
@@ -25,8 +27,9 @@ filebrowser_port: 8080
 # Firewall settings (used by firewall role)
 filebrowser_firewall_zone: public
 
-# Root directory to serve (simple value, can override in inventory)
-filebrowser_root_dir: /srv/filebrowser
+# Root directory to serve — the disks mount root, so all disks are browsable
+# directly (no per-disk symlinks). Can override in inventory.
+filebrowser_root_dir: /srv/disks
 
 # Database location
 filebrowser_database: "{{ filebrowser_working_dir }}/filebrowser.db"

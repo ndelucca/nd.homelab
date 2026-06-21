@@ -110,7 +110,7 @@ nginx_firewall_zone: FedoraServer
 nginx_domain: ndelucca-server.com
 
 # Immich configuration
-immich_upload_location: /srv/disks/D-Draco/media/Gallery
+immich_upload_location: "{{ app_media_root }}/Gallery"
 # Pinned to the DB password the running Postgres already uses, so re-runs stop
 # regenerating it (the role default did, which would break auth on pod recreate).
 immich_db_password: !vault |
@@ -125,7 +125,7 @@ immich_db_password: !vault |
 # Kavita configuration
 kavita_extra_libraries:
   - name: books
-    path: /srv/disks/D-Draco/media/Books
+    path: "{{ app_media_root }}/Books"
 
 # OrcaSlicer configuration
 orcaslicer_password: !vault |

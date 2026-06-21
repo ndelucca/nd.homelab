@@ -10,14 +10,18 @@ jellyfin_rpmfusion_nonfree_enabled: false
 jellyfin_user: ndelucca
 jellyfin_group: ndelucca
 
-# Directory configuration
-jellyfin_data_dir: /srv/jellyfin/data
-jellyfin_config_dir: /srv/jellyfin/config
-jellyfin_cache_dir: /srv/jellyfin/cache
-jellyfin_log_dir: /srv/jellyfin/log
+# Directory configuration — app state lives on the appdata disk (app_data_root,
+# defined in group_vars/homeservers.yml).
+jellyfin_base_dir: "{{ app_data_root }}/jellyfin"
+jellyfin_data_dir: "{{ jellyfin_base_dir }}/data"
+jellyfin_config_dir: "{{ jellyfin_base_dir }}/config"
+jellyfin_cache_dir: "{{ jellyfin_base_dir }}/cache"
+jellyfin_log_dir: "{{ jellyfin_base_dir }}/log"
 
-# Media directory (where you put your movies, TV shows, music, etc.)
-jellyfin_media_dir: /srv/jellyfin/media
+# Media directory (movies, TV shows, etc.). Points straight at the shared app
+# media root on the data disk — no symlink. Jellyfin's own library paths
+# (.mblink) already reference these real paths.
+jellyfin_media_dir: "{{ app_media_root }}"
 
 # Service configuration
 jellyfin_service_name: jellyfin

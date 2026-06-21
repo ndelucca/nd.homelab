@@ -6,8 +6,9 @@ orcaslicer_user: ndelucca
 orcaslicer_group: ndelucca
 orcaslicer_uid: 1000
 
-# Directory configuration
-orcaslicer_base_dir: /srv/orcaslicer
+# Directory configuration — state on the appdata disk (app_data_root, defined in
+# group_vars/homeservers.yml).
+orcaslicer_base_dir: "{{ app_data_root }}/orcaslicer"
 orcaslicer_config_dir: "{{ orcaslicer_base_dir }}/config"
 
 # Podman/Quadlet configuration

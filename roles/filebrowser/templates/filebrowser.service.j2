@@ -2,6 +2,8 @@
 Description=FileBrowser - Web File Browser
 Documentation=https://filebrowser.org
 After=network.target
+# Do not start unless the appdata disk (where the SQLite DB lives) is mounted.
+RequiresMountsFor={{ storage_appdata_disk }}
 
 [Service]
 Type=simple

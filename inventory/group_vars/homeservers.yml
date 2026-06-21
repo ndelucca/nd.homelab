@@ -1,0 +1,58 @@
+---
+# ============================================================================
+# Centralized storage configuration — single source of truth for the disks.
+# ----------------------------------------------------------------------------
+# Philosophy:
+#   * root (xfs) holds ONLY the OS. It is reproducible 100% from this playbook,
+#     so a root/motherboard failure is recovered by reinstalling Fedora and
+#     re-running the playbook.
+#   * D-Draco (NVMe) is THE app-data disk: every app's STATE (databases, configs,
+#     caches) lives under {{ app_data_root }} and its MEDIA under {{ app_media_root }}.
+#     Because the irreplaceable data lives here (not on root), it survives an OS
+#     reinstall — re-running the playbook brings the apps back with their data.
+#   * D-Leo holds the personal archive (browsed via Filebrowser only; no app
+#     writes to it).
+#   * D-Ursa is the backup target (see the backup design, phase 2).
+#
+# Disks are addressed by FILESYSTEM UUID, which lives in the disk superblock and
+# therefore survives a motherboard/OS swap. Never address them by /dev/sdX —
+# those names are unstable across hardware and boots.
+#
+# Exception: AdGuard Home (DNS/DHCP for the whole LAN) deliberately stays on root
+# (/opt/AdGuardHome). Its config is fully reproducible from this playbook, and
+# keeping it off the data disk means LAN DNS survives a D-Draco mount failure.
+# ============================================================================
+
+storage_disks:
+  - name: D-Draco
+    uuid: be7615af-92fe-40e7-9989-4b58c0ab4e1f
+    mount: /srv/disks/D-Draco
+    fstype: ext4
+    role: appdata
+  - name: D-Leo
+    uuid: ced8adab-8745-4c2f-b1b5-2a02ed02c12e
+    mount: /srv/disks/D-Leo
+    fstype: ext4
+    role: personal
+  - name: D-Ursa
+    uuid: aabf1b5e-2bf1-41f4-ab93-bc27d508fc05
+    mount: /srv/disks/D-Ursa
+    fstype: ext4
+    role: backup
+
+# Semantic disk roles — roles reference THESE, never raw mount paths or /dev.
+storage_appdata_disk: /srv/disks/D-Draco
+storage_personal_disk: /srv/disks/D-Leo
+storage_backup_disk: /srv/disks/D-Ursa
+
+# Base dirs every app builds on (both live on the appdata disk).
+app_data_root: "{{ storage_appdata_disk }}/appdata"   # app STATE: DBs, configs, caches
+app_media_root: "{{ storage_appdata_disk }}/media"    # app MEDIA: Movies, Series, Gallery, Books
+
+# Ownership for everything under the appdata disk (the rootless/service user).
+# The uid/gid are pinned so rootless Podman (UserNS=keep-id) and file ownership
+# stay valid across an OS reinstall.
+app_storage_user: ndelucca
+app_storage_group: ndelucca
+app_storage_uid: 1000
+app_storage_gid: 1000

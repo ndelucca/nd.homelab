@@ -7,6 +7,9 @@
   gather_facts: true
 
   roles:
+    - role: storage
+      tags: ['storage', 'disks']
+
     - role: cockpit
       tags: ['cockpit', 'monitoring']
 

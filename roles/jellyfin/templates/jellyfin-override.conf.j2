@@ -1,3 +1,8 @@
+[Unit]
+# Do not start unless the appdata disk is mounted: if D-Draco is missing, fail
+# cleanly instead of writing onto the bare mountpoint on root.
+RequiresMountsFor={{ storage_appdata_disk }}
+
 [Service]
 # Override user and group
 User={{ jellyfin_user }}
@@ -21,7 +26,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/srv/jellyfin {{ jellyfin_data_dir }} {{ jellyfin_config_dir }} {{ jellyfin_cache_dir }} {{ jellyfin_log_dir }} {{ jellyfin_media_dir }}
+ReadWritePaths={{ jellyfin_base_dir }} {{ jellyfin_data_dir }} {{ jellyfin_config_dir }} {{ jellyfin_cache_dir }} {{ jellyfin_log_dir }} {{ jellyfin_media_dir }}
 
 # Restart configuration
 Restart=on-failure

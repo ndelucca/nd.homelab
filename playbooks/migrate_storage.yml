@@ -1,0 +1,88 @@
+---
+# One-shot migration: move every app's STATE from root (/srv/<app>, /opt/<app>)
+# to the appdata disk ({{ app_data_root }}), and drop the legacy symlinks.
+#
+# This is a one-time EVENT, not desired state, so it lives outside site.yml.
+# Run it once, during a maintenance window, then run site.yml to bring the apps
+# back up pointing at the new locations:
+#
+#   ansible-playbook playbooks/migrate_storage.yml -l ndelucca-server
+#   ansible-playbook playbooks/site.yml            -l ndelucca-server
+#
+# It is idempotent: migrated sources are renamed to "<src>.migrated", so re-runs
+# skip them. After verifying the apps, delete the "*.migrated" dirs by hand.
+#
+# AdGuard Home is intentionally NOT migrated (stays in /opt/AdGuardHome on root).
+
+- name: Migrate app state from root to the appdata disk (one-shot)
+  hosts: homeservers
+  gather_facts: true
+
+  vars:
+    # Legacy manual symlinks (the "tricks") to remove.
+    storage_legacy_symlinks:
+      - /srv/jellyfin/media
+      - /srv/filebrowser/D-Leo
+      - /srv/filebrowser/D-Draco
+      - /srv/filebrowser/D-Ursa
+
+    # name | old location | new location | service unit | systemd scope
+    storage_migrations:
+      - { name: jellyfin, src: /srv/jellyfin, dest: "{{ app_data_root }}/jellyfin", service: jellyfin, scope: system }
+      - { name: filebrowser, src: /opt/filebrowser, dest: "{{ app_data_root }}/filebrowser", service: filebrowser, scope: system }
+      - { name: cloud-torrent, src: /opt/cloud-torrent, dest: "{{ app_data_root }}/cloud-torrent", service: cloud-torrent, scope: system }
+      - { name: immich, src: /srv/immich, dest: "{{ app_data_root }}/immich", service: immich-pod, scope: user }
+      - { name: kavita, src: /srv/kavita, dest: "{{ app_data_root }}/kavita", service: kavita-pod, scope: user }
+      - { name: forgejo, src: /srv/forgejo, dest: "{{ app_data_root }}/forgejo", service: forgejo, scope: user }
+      - { name: home_assistant, src: /srv/home_assistant, dest: "{{ app_data_root }}/home_assistant", service: home_assistant, scope: user }
+      - { name: orcaslicer, src: /srv/orcaslicer, dest: "{{ app_data_root }}/orcaslicer", service: orcaslicer, scope: user }
+
+  pre_tasks:
+    - name: Ensure disks are mounted and the appdata skeleton exists
+      ansible.builtin.import_role:
+        name: storage
+
+    - name: Ensure rsync is present
+      ansible.builtin.dnf:
+        name: rsync
+        state: present
+      become: true
+
+  tasks:
+    # --- Drop the legacy symlinks (only if they really are symlinks) --------
+    - name: Stat legacy symlinks
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: _legacy_links
+      loop: "{{ storage_legacy_symlinks }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Remove legacy symlinks
+      ansible.builtin.file:
+        path: "{{ item.item }}"
+        state: absent
+      become: true
+      loop: "{{ _legacy_links.results }}"
+      when:
+        - item.stat.exists | default(false)
+        - item.stat.islnk | default(false)
+      loop_control:
+        label: "{{ item.item }}"
+
+    # --- Move each app's state to the appdata disk --------------------------
+    - name: Migrate each app's state
+      ansible.builtin.include_tasks: tasks/migrate_app.yml
+      loop: "{{ storage_migrations }}"
+      loop_control:
+        loop_var: migrate
+        label: "{{ migrate.name }}"
+
+  post_tasks:
+    - name: Next steps
+      ansible.builtin.debug:
+        msg:
+          - "State moved to {{ app_data_root }}. Old locations renamed to '*.migrated'."
+          - "1) Bring apps back up: ansible-playbook playbooks/site.yml -l ndelucca-server"
+          - "2) Verify each app serves its data and works."
+          - "3) Then delete the '*.migrated' dirs (e.g. /srv/jellyfin.migrated, /opt/filebrowser.migrated, ...)."

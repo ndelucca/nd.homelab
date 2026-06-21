@@ -1,0 +1,13 @@
+---
+# Default variables for the storage role
+
+# Mount options for the data disks.
+#   nofail                    -> the box still boots if a disk is absent
+#   x-systemd.device-timeout  -> bound how long boot waits for the device
+storage_mount_opts: "defaults,nofail,x-systemd.device-timeout=10"
+
+# Roots to pre-create on the appdata disk so apps land on the disk and not on a
+# bare mountpoint. Created owned by the service user AFTER the disk is mounted.
+storage_appdata_skeleton:
+  - "{{ app_data_root }}"
+  - "{{ app_media_root }}"
