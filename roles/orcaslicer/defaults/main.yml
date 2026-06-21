@@ -12,7 +12,9 @@ orcaslicer_config_dir: "{{ orcaslicer_base_dir }}/config"
 
 # Podman/Quadlet configuration
 orcaslicer_quadlet_dir: /etc/containers/systemd/users
-orcaslicer_image: lscr.io/linuxserver/orcaslicer:latest
+# Pinned tag for reproducible deploys (was ':latest').
+# Newer releases: https://hub.docker.com/r/linuxserver/orcaslicer/tags
+orcaslicer_image: lscr.io/linuxserver/orcaslicer:2.4.0
 
 # Network configuration
 orcaslicer_port: 3001

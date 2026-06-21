@@ -1,8 +1,9 @@
 ---
 # Default variables for NGINX reverse proxy role
 
-# Domain configuration
-nginx_domain: ndelucca-server.com
+# Domain configuration — host-specific, set the real value in host_vars.
+# This neutral default is only a fallback for the self-signed cert CN.
+nginx_domain: localhost
 
 # SSL/TLS configuration
 nginx_ssl_certificate: /etc/pki/nginx/server.crt
