@@ -116,9 +116,46 @@ critical.
 
 ---
 
+## 3. Exposing services to the internet (future option, not done)
+
+Today everything is **LAN-only** and that is deliberate. If you ever want a
+subdomain reachable from outside, note that **AdGuard is not where you do it** —
+AdGuard only answers for clients on your LAN, it is not authoritative on the
+public internet. Public resolution lives at **deSEC**.
+
+This is **split-horizon DNS** and the two resolvers complement each other:
+
+| Who asks | Resolves via | Points to |
+|----------|--------------|-----------|
+| A client on your LAN | AdGuard rewrite | `192.168.10.10` (private — never hairpins through the router) |
+| A client on the internet | deSEC A record | your public IP |
+
+What exposing would actually require (it is more than DNS):
+
+1. **deSEC:** create an **A record** (the apex or just the subdomains you want
+   public) → your public IP. If your home IP is **dynamic**, this is where
+   `update.dedyn.io` (deSEC dynDNS) finally matters — run an updater on the
+   **router** or a small `curl` timer on the server, **not** in AdGuard.
+2. **Router:** port-forward **443** (and 80 for the redirect) to `192.168.10.10`.
+3. **Server firewall:** open 443 inbound (it is LAN-scoped today).
+4. **AdGuard:** leave it **as-is** — the internal rewrite keeps LAN traffic on
+   the private IP.
+
+The good part: **the certificate needs no change.** Because we use DNS-01, the
+wildcard already works identically inside and outside (HTTP-01 would have needed
+port 80 open; DNS-01 does not).
+
+The caveat: exposing widens the attack surface. If you do it, expose the minimum,
+and put an auth layer in front (e.g. Authelia / oauth2-proxy on NGINX) plus
+fail2ban. This could be wired into Ansible as a reversible per-subdomain
+`expose: true/false` (create/delete the deSEC A record via the same token + open
+the firewall) while keeping the split-horizon — to be designed if/when wanted.
+
+---
+
 ## What was implemented vs. documented
 
 - **Implemented:** real Let's Encrypt certs via DNS-01 (this section 1, roles
   `acme` + `mainsail_tls`); monitoring (Uptime-Kuma); backup failure/disk alerts.
-- **Documented only (this file):** the secondary-DNS resilience change, because
-  it needs a filtering-vs-uptime decision.
+- **Documented only (this file):** the secondary-DNS resilience change (needs a
+  filtering-vs-uptime decision) and internet exposure (section 3).
