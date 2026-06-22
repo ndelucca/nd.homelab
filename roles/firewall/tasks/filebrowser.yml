@@ -1,7 +1,7 @@
 ---
 # Configure firewall for FileBrowser
 # FileBrowser is now behind NGINX reverse proxy
-# Access via files.ndelucca-server.com on ports 80/443 (handled by NGINX firewall rules)
+# Access via the service subdomain on ports 80/443 (handled by NGINX firewall rules)
 
 - name: Remove old direct FileBrowser port from firewall
   ansible.posix.firewalld:

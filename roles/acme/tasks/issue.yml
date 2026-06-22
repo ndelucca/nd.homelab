@@ -1,0 +1,53 @@
+---
+# Issue any certificate that does not yet exist. Renewals are handled by the
+# systemd timer (see service.yml), so this stays idempotent: on re-runs every
+# cert already exists and nothing happens here.
+
+- name: Ensure the lego data directory exists
+  ansible.builtin.file:
+    path: "{{ acme_data_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  become: true
+
+- name: Check which certificates already exist
+  ansible.builtin.stat:
+    path: "{{ acme_data_dir }}/certificates/{{ item.name }}.crt"
+  loop: "{{ acme_certificates }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: acme_cert_stat
+
+# argv (list) form avoids any shell quoting issues with the '*' in wildcards.
+# lego v5: a single `run` command obtains (and can renew) certs; the subcommand
+# must come first, with all flags after it.
+- name: Issue missing certificates via lego (DNS-01 / {{ acme_dns_provider }})
+  ansible.builtin.command:
+    argv: >-
+      {{ [acme_lego_bin, 'run', '--accept-tos', '--email', acme_email, '--dns', acme_dns_provider]
+         + (['--dns.resolvers', acme_dns_resolvers] if acme_dns_resolvers else [])
+         + (['--dns.propagation.disable-rns'] if acme_dns_disable_rns else [])
+         + (['--server', 'https://acme-staging-v02.api.letsencrypt.org/directory'] if acme_staging else [])
+         + ['--path', acme_data_dir]
+         + (['--domains'] | product(item.item.domains) | flatten | list) }}
+  environment:
+    DESEC_TOKEN: "{{ acme_desec_token }}"
+  become: true
+  no_log: true
+  loop: "{{ acme_cert_stat.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: not item.stat.exists
+  register: acme_issue
+  notify: reload acme service
+
+- name: Restore SELinux labels on the certificate directory
+  ansible.builtin.command: restorecon -R {{ acme_data_dir }}
+  become: true
+  changed_when: false
+  when:
+    - acme_manage_selinux | bool
+    - ansible_selinux.status | default('disabled') == 'enabled'
+    - acme_issue.changed | default(false)

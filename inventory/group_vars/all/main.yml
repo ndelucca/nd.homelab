@@ -1,0 +1,11 @@
+---
+# ============================================================================
+# Cross-host non-secret configuration.
+# ----------------------------------------------------------------------------
+# Single source of truth for the public domain. Change it here and everything
+# derives from it: nginx_domain (server vhosts + wildcard cert), the AdGuard
+# rewrites, forgejo_domain, the printer's cert (printer.<base_domain>), etc.
+# ============================================================================
+
+# Real public domain hosted at deSEC, resolved internally to the LAN by AdGuard.
+base_domain: ndelucca.dedyn.io

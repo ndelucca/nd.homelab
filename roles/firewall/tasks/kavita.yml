@@ -1,7 +1,7 @@
 ---
 # Firewall configuration for Kavita
 # Kavita is behind NGINX reverse proxy
-# Access via books.ndelucca-server.com on ports 80/443
+# Access via the service subdomain on ports 80/443
 
 - name: Ensure Kavita port is NOT exposed externally (behind NGINX)
   ansible.posix.firewalld:

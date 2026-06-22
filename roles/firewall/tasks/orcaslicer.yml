@@ -1,6 +1,6 @@
 ---
 # OrcaSlicer is behind NGINX reverse proxy
-# Access via slicer.ndelucca-server.com on ports 80/443 (handled by NGINX)
+# Access via the service subdomain on ports 80/443 (handled by NGINX)
 
 - name: Ensure OrcaSlicer port not directly exposed
   ansible.posix.firewalld:

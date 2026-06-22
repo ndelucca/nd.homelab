@@ -1,0 +1,51 @@
+---
+# Default variables for the reusable ACME (lego) role.
+# Issues real, publicly-trusted TLS certificates using the ACME DNS-01 challenge
+# against deSEC. DNS-01 only creates a TXT record via the deSEC API, so the CA
+# never connects to this host -> no inbound ports, nothing exposed to internet.
+
+acme_enabled: true
+
+# ACME account contact (Let's Encrypt expiry notices). Override in group_vars.
+acme_email: "ndelucca@protonmail.com"
+
+# DNS provider for the DNS-01 challenge. 'desec' is lego's provider id; it reads
+# the API token from the DESEC_TOKEN environment variable.
+acme_dns_provider: desec
+# acme_desec_token: supplied via vault, mapped in group_vars (vault_desec_token).
+
+# Resolvers lego uses for apex/zone determination. A clean public resolver, NOT
+# the local AdGuard (127.0.0.1:53), which answers for the zone / negative-caches.
+acme_dns_resolvers: "1.1.1.1:53,8.8.8.8:53"
+
+# Skip lego's *recursive*-resolver propagation wait. That check polls public
+# resolvers (1.1.1.1, ...) which cache the _acme-challenge TXT for the record TTL
+# and return stale values — slow (2 min/domain) and flaky. The authoritative
+# check against deSEC's own nameservers stays on and is fresh instantly, so
+# issuance is both correct and fast. This is the right setting for deSEC.
+acme_dns_disable_rns: true
+
+# lego binary install. Version-aware and idempotent like the adguard role:
+#   acme_version: latest    -> newest stable GitHub release (pre-releases skipped)
+#   acme_version: vX.Y.Z     -> pin to an exact release.
+acme_version: latest
+acme_github_repo: go-acme/lego
+acme_install_dir: /usr/local/bin
+acme_lego_bin: "{{ acme_install_dir }}/lego"
+
+# Where lego keeps its account state and certificates (override per group).
+# Certs land in {{ acme_data_dir }}/certificates/<name>.crt (+ .key).
+acme_data_dir: /etc/ssl/lego
+
+# Certificates this host should manage. Each item:
+#   name    -> first/primary domain; lego names files <name>.crt / <name>.key
+#   domains -> full SAN list (e.g. apex + wildcard, or a single name)
+acme_certificates: []
+
+# Renewal behaviour.
+acme_renew_days: 30                  # renew when fewer than N days remain
+acme_staging: false                  # true -> Let's Encrypt staging CA (untrusted, no rate limits)
+acme_reload_service: nginx           # service reloaded after issuance/renewal
+
+# SELinux (Fedora). Automatically skipped where SELinux is not enabled (e.g. the Pi).
+acme_manage_selinux: true

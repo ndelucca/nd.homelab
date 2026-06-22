@@ -108,6 +108,6 @@ restic dump <snapshot-id> /srv/disks/D-Draco/appdata/forgejo/dumps/forgejo.db > 
 
 - [ ] `restic check` clean
 - [ ] Ownership is `1000:1000` under `D-Draco/appdata` and `D-Draco/media`
-- [ ] Immich: `curl -k https://gallery.ndelucca-server.com` and photos visible
+- [ ] Immich: `curl -k https://gallery.ndelucca.dedyn.io` and photos visible
 - [ ] Forgejo/Jellyfin/Kavita reachable on their subdomains, data present
 - [ ] `journalctl --user -M ndelucca@ -u backup.service` shows the next run OK

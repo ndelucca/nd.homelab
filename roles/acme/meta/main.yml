@@ -1,0 +1,31 @@
+---
+# Metadata for the ACME (lego) role
+
+galaxy_info:
+  author: Naza
+  description: >-
+    Issues and renews real, publicly-trusted TLS certificates via the ACME
+    DNS-01 challenge (lego + deSEC), without exposing the host to the internet.
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+
+  galaxy_tags:
+    - acme
+    - tls
+    - letsencrypt
+    - lego
+    - certificates
+
+dependencies: []
+
+collections:
+  - ansible.posix
+  - community.general

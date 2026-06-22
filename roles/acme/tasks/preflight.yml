@@ -1,0 +1,21 @@
+---
+# Fail early with a clear message if the role is misconfigured.
+
+- name: Assert the deSEC API token is provided
+  ansible.builtin.assert:
+    that:
+      - acme_desec_token is defined
+      - acme_desec_token | length > 0
+    fail_msg: >-
+      acme_desec_token is not set. Add 'vault_desec_token' to the vault and map
+      'acme_desec_token: "{{ '{{' }} vault_desec_token {{ '}}' }}"' in group_vars.
+    quiet: true
+
+- name: Assert at least one certificate is requested
+  ansible.builtin.assert:
+    that:
+      - acme_certificates | length > 0
+    fail_msg: >-
+      acme_certificates is empty. Define the certificates this host should
+      manage (name + domains) in its group_vars.
+    quiet: true

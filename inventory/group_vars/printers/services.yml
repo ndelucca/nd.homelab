@@ -1,0 +1,28 @@
+---
+# ============================================================================
+# Non-secret configuration for the printers group (MainsailOS Raspberry Pi).
+# ----------------------------------------------------------------------------
+# The Pi issues and serves its OWN real TLS cert via DNS-01 (roles/acme +
+# roles/mainsail_tls). DNS-01 needs no inbound access and no help from the
+# server, so the Pi self-renews independently. The deSEC token is shared and
+# lives in group_vars/all/vault.yml.
+# ============================================================================
+
+# Public hostname for the printer UI (resolved to .12 internally by AdGuard,
+# matching the single-name cert issued below). Derived from base_domain.
+printer_tls_domain: "printer.{{ base_domain }}"
+
+# --- ACME / Let's Encrypt (roles/acme) --------------------------------------
+acme_enabled: true
+acme_email: ndelucca@protonmail.com
+acme_desec_token: "{{ vault_desec_token }}"
+acme_data_dir: /etc/ssl/mainsail
+acme_reload_service: nginx
+acme_manage_selinux: false       # Debian (MainsailOS) has no SELinux
+acme_certificates:
+  - name: "{{ printer_tls_domain }}"
+    domains:
+      - "{{ printer_tls_domain }}"
+
+# --- Mainsail HTTPS (roles/mainsail_tls) ------------------------------------
+mainsail_tls_domain: "{{ printer_tls_domain }}"

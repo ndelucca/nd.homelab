@@ -13,6 +13,12 @@
     - role: cockpit
       tags: ['cockpit', 'monitoring']
 
+    # Issue the real wildcard cert BEFORE nginx: `nginx -t` validates the vhosts
+    # and requires the configured ssl_certificate file to already exist on disk.
+    - role: acme
+      tags: ['acme', 'tls']
+      when: acme_enabled | default(false) | bool
+
     - role: nginx
       tags: ['nginx', 'proxy']
 

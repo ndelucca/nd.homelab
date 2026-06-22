@@ -1,0 +1,19 @@
+---
+# ============================================================================
+# Shared secrets for ALL hosts (Ansible Vault, AES256).
+# ----------------------------------------------------------------------------
+# vault_desec_token is the deSEC API token used by roles/acme for the ACME
+# DNS-01 challenge. Both the Fedora server and the MainsailOS printer issue
+# their own certs with it, so it lives here rather than in a single group.
+# Re-encrypt with:
+#   ansible-vault encrypt_string --name vault_desec_token '<token>'
+# Hardening option: replace this with a deSEC token scoped to only the
+# subdomains each host needs (see docs/TLS-AND-DNS.md).
+# ============================================================================
+vault_desec_token: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          31383938356266346538633034623463383162626437643261626264633565323630303234666431
+          3535626265363439393466353337613761383465316636610a626363373865303261613736373931
+          62336461366233316339333966646538393233303465393138323735373566313465343135306634
+          3763323838346433340a323038666663393564643762376238353730636133626337646365393062
+          32333834313261386338383233336533326238626439333463363864396131613134

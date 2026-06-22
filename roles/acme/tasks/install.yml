@@ -1,0 +1,123 @@
+---
+# Install / update the lego binary. Version-aware and idempotent:
+#   acme_version: latest  -> newest stable GitHub release (pre-releases skipped),
+#                            (re)installed only when it differs from the binary.
+#   acme_version: vX.Y.Z   -> pins to that exact release.
+# Portable across architectures (amd64 server, arm64/armv7 Raspberry Pi).
+
+- name: Map host architecture to a lego release arch
+  ansible.builtin.set_fact:
+    acme_lego_arch: "{{ acme_lego_arch_map[ansible_architecture] | default('amd64') }}"
+  vars:
+    acme_lego_arch_map:
+      x86_64: amd64
+      amd64: amd64
+      aarch64: arm64
+      arm64: arm64
+      armv7l: armv7
+      armv6l: armv6
+
+- name: Check for an installed lego binary
+  ansible.builtin.stat:
+    path: "{{ acme_lego_bin }}"
+  register: acme_lego_stat
+
+- name: Get installed lego version
+  ansible.builtin.command: "{{ acme_lego_bin }} --version"
+  register: acme_lego_installed_raw
+  changed_when: false
+  failed_when: false
+  check_mode: false  # read-only; must run so the version check works in --check
+  when: acme_lego_stat.stat.exists
+
+- name: Resolve latest lego release from GitHub
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ acme_github_repo }}/releases/latest"
+    headers:
+      Accept: application/vnd.github+json
+  register: acme_lego_release_api
+  failed_when: false
+  when: acme_version == 'latest'
+
+- name: Determine requested lego version string
+  ansible.builtin.set_fact:
+    acme_lego_requested: "{{ acme_version if acme_version != 'latest' else (acme_lego_release_api.json.tag_name | default('')) }}"
+
+- name: Normalize target and installed lego versions
+  ansible.builtin.set_fact:
+    acme_lego_target: '{{ (acme_lego_requested | regex_search("[0-9]+\.[0-9]+\.[0-9]+")) | default("", true) }}'
+    acme_lego_current: '{{ (acme_lego_installed_raw.stdout | default("") | regex_search("[0-9]+\.[0-9]+\.[0-9]+")) | default("", true) }}'
+
+- name: Fail when no lego version could be resolved and none is installed
+  ansible.builtin.fail:
+    msg: >-
+      Could not resolve a lego version (GitHub API unreachable?) and no existing
+      binary to fall back to.
+  when:
+    - acme_lego_target | length == 0
+    - not acme_lego_stat.stat.exists
+
+- name: Decide whether lego needs (re)install
+  ansible.builtin.set_fact:
+    acme_lego_needs_install: "{{ (not acme_lego_stat.stat.exists) or (acme_lego_target | length > 0 and acme_lego_target != acme_lego_current) }}"
+
+- name: Report lego version decision
+  ansible.builtin.debug:
+    msg: >-
+      lego installed={{ acme_lego_current | default('none') }}
+      target={{ acme_lego_target | default('unknown') }} ({{ acme_lego_arch }})
+      -> {{ 'installing/updating' if acme_lego_needs_install else 'up to date' }}
+
+- name: Create temporary download directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: _lego_download
+  register: acme_lego_tmp
+  when: acme_lego_needs_install
+
+- name: Fetch lego release checksums
+  ansible.builtin.uri:
+    url: "https://github.com/{{ acme_github_repo }}/releases/download/v{{ acme_lego_target }}/lego_{{ acme_lego_target }}_checksums.txt"
+    return_content: true
+  register: acme_lego_checksums
+  when: acme_lego_needs_install
+
+- name: Extract expected SHA256 for the lego archive
+  ansible.builtin.set_fact:
+    acme_lego_sha256: >-
+      {{ (acme_lego_checksums.content.splitlines()
+          | select('search', 'lego_v' ~ acme_lego_target ~ '_linux_' ~ acme_lego_arch ~ '\.tar\.gz$')
+          | first).split() | first }}
+  when: acme_lego_needs_install
+
+- name: Download lego archive
+  ansible.builtin.get_url:
+    url: "https://github.com/{{ acme_github_repo }}/releases/download/v{{ acme_lego_target }}/lego_v{{ acme_lego_target }}_linux_{{ acme_lego_arch }}.tar.gz"
+    dest: "{{ acme_lego_tmp.path }}/lego.tar.gz"
+    checksum: "sha256:{{ acme_lego_sha256 }}"
+    mode: '0644'
+  when: acme_lego_needs_install
+
+- name: Extract lego archive
+  ansible.builtin.unarchive:
+    src: "{{ acme_lego_tmp.path }}/lego.tar.gz"
+    dest: "{{ acme_lego_tmp.path }}"
+    remote_src: true
+  when: acme_lego_needs_install
+
+- name: Install lego binary
+  ansible.builtin.copy:
+    src: "{{ acme_lego_tmp.path }}/lego"
+    dest: "{{ acme_lego_bin }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  when: acme_lego_needs_install
+
+- name: Clean up temporary download directory
+  ansible.builtin.file:
+    path: "{{ acme_lego_tmp.path }}"
+    state: absent
+  when: acme_lego_tmp is defined and acme_lego_tmp.path is defined

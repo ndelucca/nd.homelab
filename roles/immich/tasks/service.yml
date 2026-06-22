@@ -27,7 +27,7 @@
       Immich has been deployed successfully!
 
       Access via: http://{{ ansible_default_ipv4.address }}:{{ immich_port }}
-      Or via NGINX: https://gallery.{{ nginx_domain | default('ndelucca-server.com') }}
+      Or via NGINX: https://gallery.{{ nginx_domain }}
 
       Upload location: {{ immich_upload_location }}
       Database location: {{ immich_db_data_location }}

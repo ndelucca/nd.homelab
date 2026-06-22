@@ -1,0 +1,18 @@
+---
+# Main entry point for the ACME (lego) role
+
+- name: Preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['acme', 'tls', 'preflight']
+
+- name: Install lego binary
+  ansible.builtin.import_tasks: install.yml
+  tags: ['acme', 'tls', 'install']
+
+- name: Issue certificates
+  ansible.builtin.import_tasks: issue.yml
+  tags: ['acme', 'tls', 'issue']
+
+- name: Configure automatic renewal
+  ansible.builtin.import_tasks: service.yml
+  tags: ['acme', 'tls', 'service']

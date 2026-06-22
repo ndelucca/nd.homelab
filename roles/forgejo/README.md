@@ -12,7 +12,7 @@ subdomain and an AdGuard DNS rewrite.
 
 - Rootless Podman container via systemd Quadlet (`.container` unit)
 - SQLite backend (single container, no external database)
-- HTTP served behind NGINX at `https://git.ndelucca-server.com`
+- HTTP served behind NGINX at `https://git.ndelucca.dedyn.io`
 - Git over SSH on a dedicated port (`2222`) using the container's **own** SSH
   server — the host `sshd` (port 22) is never touched
 - Idempotent admin-user creation
@@ -38,7 +38,7 @@ subdomain and an AdGuard DNS rewrite.
 | `forgejo_ssh_port` | `2222` | Git SSH port exposed on the LAN |
 | `forgejo_version` | `11.0.1` | Pinned image tag |
 | `forgejo_image` | `codeberg.org/forgejo/forgejo:{{ forgejo_version }}` | Container image |
-| `forgejo_domain` | `git.ndelucca-server.com` | Public domain |
+| `forgejo_domain` | `git.ndelucca.dedyn.io` | Public domain |
 | `forgejo_root_url` | `https://{{ forgejo_domain }}/` | External root URL |
 | `forgejo_admin_user` | `ndelucca` | Initial admin username |
 | `forgejo_admin_email` | `ndelucca@protonmail.com` | Initial admin email |
@@ -129,7 +129,7 @@ already exist are skipped (HTTP 409).
 | `forgejo_mirror_max_pages` | `5` | Pagination cap (100/page); fails if exceeded |
 | `forgejo_mirror_force_recreate` | `[]` | Repos to delete+recreate as mirrors (one-time) |
 
-Verify in the Web UI (`https://git.ndelucca-server.com/ndelucca`) that the repos
+Verify in the Web UI (`https://git.ndelucca.dedyn.io/ndelucca`) that the repos
 appear with the **mirror** badge; use "Synchronize Now" on a repo to confirm a
 GitHub commit lands in Forgejo.
 

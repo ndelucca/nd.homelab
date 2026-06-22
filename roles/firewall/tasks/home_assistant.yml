@@ -1,7 +1,7 @@
 ---
 # Configure firewall for Home Assistant
 # Home Assistant is behind NGINX reverse proxy
-# Access via home.ndelucca-server.com on ports 80/443 (handled by NGINX firewall rules)
+# Access via the service subdomain on ports 80/443 (handled by NGINX firewall rules)
 
 - name: Remove direct Home Assistant port from firewall (if exists)
   ansible.posix.firewalld:

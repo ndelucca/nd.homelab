@@ -1,7 +1,7 @@
 ---
 # Firewall configuration for Uptime-Kuma (monitoring)
 # Uptime-Kuma is behind the NGINX reverse proxy.
-# Access via status.ndelucca-server.com on ports 80/443.
+# Access via the service subdomain on ports 80/443.
 
 - name: Ensure Uptime-Kuma port is NOT exposed externally (behind NGINX)
   ansible.posix.firewalld:

@@ -1,0 +1,45 @@
+---
+# Configure the MainsailOS nginx to serve the UI over HTTPS with a real cert.
+# The acme role runs first and must have issued mainsail_tls_domain.
+
+- name: Check the printer TLS certificate exists
+  ansible.builtin.stat:
+    path: "{{ mainsail_tls_cert }}"
+  register: mainsail_tls_cert_stat
+
+- name: Require the certificate before touching nginx
+  ansible.builtin.assert:
+    that:
+      - mainsail_tls_cert_stat.stat.exists
+    fail_msg: >-
+      {{ mainsail_tls_cert }} not found. Run the acme role first so it issues
+      {{ mainsail_tls_domain }} (ansible-playbook playbooks/printers.yml
+      -l ndelucca-raspberry-printer --tags acme).
+    quiet: true
+
+- name: Back up the stock MainsailOS site config (once)
+  ansible.builtin.copy:
+    src: "{{ mainsail_tls_site_path }}"
+    dest: "{{ mainsail_tls_site_path }}.orig"
+    remote_src: true
+    force: false
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+- name: Deploy TLS-enabled Mainsail site config
+  ansible.builtin.template:
+    src: mainsail.conf.j2
+    dest: "{{ mainsail_tls_site_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  register: mainsail_tls_site
+  notify: reload nginx
+
+- name: Validate the complete nginx configuration
+  ansible.builtin.command: nginx -t
+  become: true
+  changed_when: false
