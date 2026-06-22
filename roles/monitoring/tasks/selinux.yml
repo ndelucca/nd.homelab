@@ -1,0 +1,38 @@
+---
+# Configure SELinux for the Uptime-Kuma container.
+
+- name: Check current SELinux status
+  ansible.builtin.command: getenforce
+  register: selinux_status
+  changed_when: false
+
+- name: Display SELinux status
+  ansible.builtin.debug:
+    msg: "SELinux is {{ selinux_status.stdout }}"
+
+- name: Install SELinux policy packages
+  ansible.builtin.dnf:
+    name:
+      - policycoreutils-python-utils
+      - container-selinux
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+
+- name: Set SELinux file contexts for Uptime-Kuma data
+  community.general.sefcontext:
+    target: "{{ monitoring_data_dir }}(/.*)?"
+    setype: container_file_t
+    state: present
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  notify: monitoring apply selinux context
+
+- name: Enable SELinux boolean for container port binding
+  ansible.posix.seboolean:
+    name: container_use_devices
+    state: true
+    persistent: true
+  become: true
+  when: selinux_status.stdout == "Enforcing"
+  failed_when: false

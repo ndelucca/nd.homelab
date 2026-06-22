@@ -43,6 +43,9 @@
     - role: forgejo
       tags: ['forgejo', 'git', 'vcs']
 
+    - role: monitoring
+      tags: ['monitoring', 'uptime-kuma']
+
     - role: backup
       tags: ['backup', 'restic']
 

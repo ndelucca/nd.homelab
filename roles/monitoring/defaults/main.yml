@@ -1,0 +1,43 @@
+---
+# Default variables for the monitoring role.
+#
+# Uptime-Kuma watches that every service (and the host) is actually up, from the
+# outside, and alerts when one goes down. It fits the rootless model cleanly: it
+# only makes outbound HTTP/TCP/DNS/ping checks, so it needs no host namespaces or
+# elevated privileges — unlike host-metric agents. System/disk metrics on demand
+# stay in Cockpit; the backup disk has its own usage alert in the backup role.
+
+# Service user configuration.
+monitoring_user: ndelucca
+monitoring_group: ndelucca
+monitoring_uid: 1000  # Resolved dynamically via getent in preflight
+
+# Directory configuration — state on the appdata disk (app_data_root, defined in
+# group_vars/homeservers/storage.yml).
+monitoring_base_dir: "{{ app_data_root }}/uptime-kuma"
+monitoring_data_dir: "{{ monitoring_base_dir }}/data"
+
+# Podman configuration.
+monitoring_pod_name: uptime-kuma
+monitoring_quadlet_dir: /etc/containers/systemd/users  # System-managed user containers
+
+# Network configuration — localhost only; NGINX handles external access.
+monitoring_port: 3011        # host port (3011 is free; 3001 is OrcaSlicer)
+monitoring_container_port: 3001
+monitoring_host: 127.0.0.1
+
+# Application configuration.
+monitoring_version: "1"      # Uptime-Kuma v1 stable tag
+monitoring_image: "docker.io/louislam/uptime-kuma:{{ monitoring_version }}"
+
+# Service configuration.
+monitoring_service_name: uptime-kuma-pod
+monitoring_service_enabled: true
+monitoring_service_state: started
+
+# Firewall settings — closed; reachable only via NGINX.
+monitoring_firewall_zone: FedoraServer
+monitoring_firewall_enabled: false
+
+# SELinux configuration.
+monitoring_manage_selinux: true
