@@ -1,0 +1,136 @@
+---
+# ============================================================================
+# Non-secret configuration for the homeservers group.
+# ----------------------------------------------------------------------------
+# Everything here is group-level config for the home server (network, DNS/DHCP,
+# reverse proxy and per-app settings). Secrets live next to this file in
+# vault.yml; the disk layout lives in storage.yml.
+# ============================================================================
+
+# --- Firewall ---------------------------------------------------------------
+firewall_enabled: true
+firewall_default_zone: public
+
+# --- AdGuard Home (DNS + DHCP for the LAN) ----------------------------------
+adguard_configure_app: true
+adguard_firewall_zone: FedoraServer
+
+# Allowed domains (whitelist rules).
+adguard_user_rules:
+  - "@@||events.launchdarkly.com^"
+  - "@@||clientstream.launchdarkly.com^"
+  - "@@||analytics.google.com^"
+  - "@@||www.google-analytics.com^"
+  - "@@||api.amplitude.com^"
+
+# DHCP configuration.
+adguard_dhcp_enabled: true
+adguard_dhcp_interface_name: enp6s0
+adguard_dhcp_local_domain: lan
+adguard_dhcp_gateway_ip: 192.168.10.1
+adguard_dhcp_subnet_mask: 255.255.255.0
+adguard_dhcp_range_start: 192.168.10.100
+adguard_dhcp_range_end: 192.168.10.200
+adguard_dhcp_lease_duration: 86400
+
+# DHCP static leases.
+adguard_dhcp_static_leases:
+  - ip: 192.168.10.10
+    hostname: ndelucca-server
+    mac: "4c:cc:6a:d3:fc:a1"
+  - ip: 192.168.10.11
+    hostname: ndelucca-raspberry-printer
+    mac: "b8:27:eb:f1:af:50"
+  - ip: 192.168.10.12
+    hostname: ndelucca-raspberry-printer-wireless
+    mac: "b8:27:eb:a4:fa:05"
+  - ip: 192.168.10.13
+    hostname: ndelucca-acer
+    mac: "fa:da:6d:73:ff:15"
+  - ip: 192.168.10.20
+    hostname: ndelucca-tv-tcl
+    mac: "48:9e:9d:8f:65:20"
+  - ip: 192.168.10.21
+    hostname: ndelucca-pixel-8-5ghz
+    mac: "1e:9c:15:ee:48:26"
+  - ip: 192.168.10.22
+    hostname: ndelucca-pixel-8-2.4ghz
+    mac: "ca:61:9f:ce:53:ce"
+
+# Local DNS rewrites (service subdomains -> the server).
+adguard_dns_rewrites:
+  - domain: ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: adguard.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: torrent.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: files.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: jellyfin.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: cockpit.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: gallery.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: ndelucca-acer.com
+    answer: 192.168.10.13
+    enabled: true
+  - domain: ndelucca-raspberry-printer.com
+    answer: 192.168.10.12
+    enabled: true
+  - domain: books.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: slicer.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: home.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: market.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: git.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+  - domain: status.ndelucca-server.com
+    answer: 192.168.10.10
+    enabled: true
+
+# --- NGINX reverse proxy ----------------------------------------------------
+nginx_firewall_enabled: true
+nginx_firewall_zone: FedoraServer
+nginx_domain: ndelucca-server.com
+
+# --- FileBrowser ------------------------------------------------------------
+filebrowser_port: 8080
+filebrowser_firewall_zone: FedoraServer
+filebrowser_root_dir: /srv/disks
+
+# --- Immich -----------------------------------------------------------------
+immich_upload_location: "{{ app_media_root }}/Gallery"
+
+# --- Kavita -----------------------------------------------------------------
+kavita_extra_libraries:
+  - name: books
+    path: "{{ app_media_root }}/Books"
+
+# --- Forgejo pull mirrors ---------------------------------------------------
+# Forgejo mirrors all GitHub repos (GitHub = source of truth). The PAT lives in
+# vault.yml as forgejo_github_token. Add repo names below for a one-time
+# delete+recreate as a mirror, then empty the list again.
+forgejo_pull_mirror_enabled: true
+forgejo_mirror_force_recreate: []
+
+# --- Backup alerting --------------------------------------------------------
+# Optional ntfy topic to receive backup-failure / disk-full pushes. Leave empty
+# to rely on the journal alert only (journalctl -t restic-backup).
+# backup_notify_ntfy_url: "https://ntfy.sh/your-private-topic"

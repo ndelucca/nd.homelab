@@ -66,6 +66,25 @@
     mode: '0750'
   become: true
 
+- name: Deploy backup notify script
+  ansible.builtin.template:
+    src: restic-backup-notify.sh.j2
+    dest: "{{ backup_notify_script }}"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0750'
+  become: true
+
+- name: Deploy restore drill script
+  ansible.builtin.template:
+    src: restic-restore-drill.sh.j2
+    dest: "{{ backup_restore_drill_script }}"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_group }}"
+    mode: '0750'
+  become: true
+  when: backup_restore_drill_enabled
+
 - name: Deploy systemd user units
   ansible.builtin.template:
     src: "{{ item }}.j2"
@@ -74,11 +93,7 @@
     group: "{{ backup_group }}"
     mode: '0644'
   become: true
-  loop:
-    - backup.service
-    - backup.timer
-    - backup-maintenance.service
-    - backup-maintenance.timer
+  loop: "{{ backup_units + (backup_restore_drill_units if backup_restore_drill_enabled else []) }}"
   notify: backup daemon-reload-user
 
 - name: Check whether the restic repository is initialised

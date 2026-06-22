@@ -1,0 +1,29 @@
+---
+# Handlers for the monitoring role.
+
+# Explicit `systemctl --user daemon-reload`: the systemd module's user-scope
+# daemon_reload does not reliably regenerate Quadlet units (the generated unit
+# keeps stale paths), whereas the command does.
+- name: monitoring daemon-reload-user  # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: systemctl --user daemon-reload
+  become: true
+  become_user: "{{ monitoring_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_uid }}"
+  changed_when: false
+
+- name: restart uptime-kuma-pod
+  ansible.builtin.systemd:
+    name: "{{ monitoring_service_name }}"
+    state: restarted
+    scope: user
+  become: true
+  become_user: "{{ monitoring_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_uid }}"
+
+- name: monitoring apply selinux context
+  ansible.builtin.command: "restorecon -Rv {{ monitoring_data_dir }}"
+  become: true
+  changed_when: false

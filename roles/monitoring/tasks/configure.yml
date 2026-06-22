@@ -1,0 +1,13 @@
+---
+# Configure the Uptime-Kuma pod.
+
+- name: Deploy Uptime-Kuma pod YAML
+  ansible.builtin.template:
+    src: uptime-kuma-pod.yaml.j2
+    dest: "{{ monitoring_data_dir }}/uptime-kuma-pod.yaml"
+    owner: "{{ monitoring_user }}"
+    group: "{{ monitoring_group }}"
+    mode: '0644'
+  notify:
+    - monitoring daemon-reload-user
+    - restart uptime-kuma-pod

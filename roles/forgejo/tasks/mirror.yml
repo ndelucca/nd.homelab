@@ -30,6 +30,7 @@
       register: forgejo_github_pages
       changed_when: false
       no_log: true
+      check_mode: false  # read-only GET; must run so enumeration works in --check
 
     - name: Warn if GitHub repository pagination may be truncated
       ansible.builtin.fail:

@@ -10,7 +10,7 @@ filebrowser_arch: amd64
 filebrowser_github_repo: filebrowser/filebrowser
 filebrowser_install_dir: /usr/local/bin
 # State (SQLite DB + config) lives on the appdata disk (app_data_root, defined in
-# group_vars/homeservers.yml).
+# group_vars/homeservers/storage.yml).
 filebrowser_working_dir: "{{ app_data_root }}/filebrowser"
 filebrowser_user: ndelucca
 filebrowser_group: ndelucca

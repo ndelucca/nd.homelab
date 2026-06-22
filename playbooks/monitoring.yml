@@ -1,0 +1,10 @@
+---
+# Monitoring-specific playbook (Uptime-Kuma)
+# Usage: ansible-playbook playbooks/monitoring.yml -l ndelucca-server
+
+- name: Deploy Uptime-Kuma monitoring
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - monitoring

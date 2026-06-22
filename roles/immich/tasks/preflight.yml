@@ -12,6 +12,7 @@
   ansible.builtin.command: id -u {{ immich_user }}
   register: immich_user_uid_result
   changed_when: false
+  check_mode: false  # read-only; must run so the uid is set in --check
 
 - name: Set immich_uid fact
   ansible.builtin.set_fact:

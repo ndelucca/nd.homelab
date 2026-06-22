@@ -1,0 +1,17 @@
+---
+# Deploy Quadlet unit files.
+
+- name: Deploy Uptime-Kuma Quadlet .kube unit
+  ansible.builtin.template:
+    src: uptime-kuma.kube.j2
+    dest: "{{ monitoring_quadlet_dir }}/{{ monitoring_uid }}/{{ monitoring_service_name }}.kube"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - monitoring daemon-reload-user
+    - restart uptime-kuma-pod
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers

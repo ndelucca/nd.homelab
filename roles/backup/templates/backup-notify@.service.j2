@@ -1,0 +1,9 @@
+[Unit]
+# {{ ansible_managed }}
+# Triggered via OnFailure= from backup.service / backup-maintenance.service.
+# The instance name (%i) is the unit that failed.
+Description=Alert that %i failed
+
+[Service]
+Type=oneshot
+ExecStart={{ backup_notify_script }} "Backup unit %i failed on %H" "Inspect: journalctl --user -u %i -n 50"

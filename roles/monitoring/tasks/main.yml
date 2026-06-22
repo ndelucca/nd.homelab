@@ -1,0 +1,32 @@
+---
+# Main entry point for the monitoring role (Uptime-Kuma).
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['monitoring', 'preflight']
+
+- name: Install Podman and dependencies
+  ansible.builtin.import_tasks: install.yml
+  tags: ['monitoring', 'install']
+
+- name: Configure Uptime-Kuma pod
+  ansible.builtin.import_tasks: configure.yml
+  tags: ['monitoring', 'configure']
+
+- name: Deploy Quadlet unit files
+  ansible.builtin.import_tasks: quadlet.yml
+  tags: ['monitoring', 'quadlet']
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['monitoring', 'service']
+
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['monitoring', 'selinux']
+  when: monitoring_manage_selinux | bool
+
+- name: Seed monitors into Uptime-Kuma
+  ansible.builtin.import_tasks: monitors.yml
+  tags: ['monitoring', 'monitors']
+  when: monitoring_configure_monitors | bool

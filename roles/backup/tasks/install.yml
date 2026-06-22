@@ -20,5 +20,6 @@
 
 - name: Enable lingering for user (allows user timers without an active login)
   ansible.builtin.command: loginctl enable-linger {{ backup_user }}
+  args:
+    creates: /var/lib/systemd/linger/{{ backup_user }}
   become: true
-  changed_when: false

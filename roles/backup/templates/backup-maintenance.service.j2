@@ -2,6 +2,9 @@
 # {{ ansible_managed }}
 Description=restic repository maintenance (prune + check)
 RequiresMountsFor={{ storage_backup_disk }}
+{% if backup_notify_enabled %}
+OnFailure=backup-notify@%n.service
+{% endif %}
 
 [Service]
 Type=oneshot

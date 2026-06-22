@@ -17,6 +17,7 @@
   ansible.builtin.get_url:
     url: "{{ cloud_torrent_download_url }}"
     dest: "{{ download_dir.path }}/cloud-torrent.gz"
+    checksum: "sha256:{{ cloud_torrent_sha256 }}"
     mode: '0644'
   register: download_result
   when: not cloud_torrent_binary.stat.exists

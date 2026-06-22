@@ -5,9 +5,13 @@
 cloud_torrent_version: "0.9.4"
 cloud_torrent_arch: amd64
 cloud_torrent_download_url: "https://github.com/jpillora/cloud-torrent/releases/download/v{{ cloud_torrent_version }}/cloud-torrent_{{ cloud_torrent_version }}_linux_{{ cloud_torrent_arch }}.gz"
+# SHA256 of the pinned linux/amd64 archive, from the release checksums file
+# (cloud-torrent_{{ cloud_torrent_version }}_checksums.txt). Update if the
+# pinned version or arch changes.
+cloud_torrent_sha256: "ef8b5e21730d50a962af8cf7bbc46a6c46aa8ed3285ee39c1a9728ccee67f95a"
 cloud_torrent_install_dir: /usr/local/bin
 # State (config + torrent metadata) lives on the appdata disk (app_data_root,
-# defined in group_vars/homeservers.yml).
+# defined in group_vars/homeservers/storage.yml).
 cloud_torrent_working_dir: "{{ app_data_root }}/cloud-torrent"
 
 # Service configuration

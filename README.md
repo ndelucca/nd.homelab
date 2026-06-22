@@ -19,6 +19,12 @@ This project uses Ansible best practices with a role-based structure to:
 - **Tagged Tasks**: Run specific components independently
 - **Extensible**: Easy to add new roles and services
 
+## Documentation
+
+- **[docs/BOOTSTRAP.md](docs/BOOTSTRAP.md)** — rebuild the host from scratch (disaster recovery).
+- **[docs/RESTORE.md](docs/RESTORE.md)** — restore data from the D-Ursa restic backups.
+- **[docs/TLS-AND-DNS.md](docs/TLS-AND-DNS.md)** — Let's Encrypt and secondary-DNS options.
+
 ## Prerequisites
 
 ### Control Node (where you run Ansible)
@@ -210,24 +216,27 @@ ndelucca-server:
 ```
 
 #### Group Variables
-Edit `inventory/group_vars/homeservers.yml`:
+Group config lives in `inventory/group_vars/homeservers/`, split by concern:
+
+- `storage.yml` — disk layout (single source of truth, addressed by UUID)
+- `services.yml` — network / DNS / DHCP / reverse proxy / per-app settings
+- `vault.yml` — secrets (Ansible Vault)
+
+Edit non-secret settings in `services.yml`:
 ```yaml
 firewall_enabled: true
 firewall_default_zone: public
-selinux_state: enforcing
-timezone: America/New_York
+```
+
+Edit secrets with the vault tooling:
+```bash
+ansible-vault edit inventory/group_vars/homeservers/vault.yml
 ```
 
 #### Override Role Defaults
-Create `host_vars/ndelucca-server.yml`:
-```yaml
-# Change AdGuard Home ports
-adguard_bind_port: 8080
-adguard_dns_port: 5353
-
-# Disable certain features
-adguard_manage_selinux: false
-```
+Put host-specific overrides in `host_vars/<host>.yml` only when a host must
+differ from the group defaults. `ndelucca-server` is the sole member of the
+`homeservers` group, so its config lives in `group_vars/homeservers/`.
 
 ### Common Customizations
 
@@ -248,7 +257,7 @@ cockpit_packages:
 ```
 
 #### Customize Firewall Zones
-In `inventory/group_vars/homeservers.yml`:
+In `inventory/group_vars/homeservers/services.yml`:
 ```yaml
 firewall_default_zone: home  # Use 'home' zone instead of 'public'
 ```
@@ -359,9 +368,12 @@ home-server/
 ├── ansible.cfg                          # Project configuration
 ├── inventory/
 │   ├── hosts.yml                        # Server inventory
+│   ├── host_vars/                       # Per-host overrides (usually empty)
 │   └── group_vars/
-│       ├── all.yml                      # Global variables
-│       └── homeservers.yml              # Group variables
+│       └── homeservers/                 # homeservers group config
+│           ├── storage.yml              # disk layout (UUIDs, mounts)
+│           ├── services.yml             # network / DNS / proxy / apps
+│           └── vault.yml                # secrets (Ansible Vault)
 ├── playbooks/
 │   ├── site.yml                         # Main playbook
 │   ├── cockpit.yml                      # Cockpit playbook
@@ -395,7 +407,9 @@ home-server/
 | `cockpit` | All Cockpit tasks |
 | `adguard` | All AdGuard Home tasks |
 | `dns` | Same as adguard |
-| `monitoring` | Same as cockpit |
+| `monitoring` | Cockpit + Uptime-Kuma |
+| `uptime-kuma` | Uptime-Kuma monitoring only |
+| `backup` | restic backups, alerts and restore drill |
 | `preflight` | Pre-installation checks |
 | `systemd-resolved` | systemd-resolved configuration |
 | `install` | Binary installation |
@@ -487,6 +501,32 @@ scp your_username@server_ip:/tmp/adguard-backup.tar.gz ./backups/
 ansible homeservers -m fetch \
   -a "src=/opt/AdGuardHome/AdGuardHome.yaml dest=./backups/{{ inventory_hostname }}/" \
   --become
+```
+
+### Backups & Disaster Recovery
+
+The `backup` role takes encrypted restic snapshots of the irreplaceable data
+(app state + DB dumps, the Immich gallery, books, the D-Leo archive) to
+**D-Ursa**, on a daily systemd user timer. Weekly maintenance prunes and runs
+`restic check`; a **monthly restore drill** restores the latest DB dumps to a
+temp dir to prove the repo is actually restorable. Failures (and a filling
+backup disk) are surfaced via `OnFailure=` — to the journal always, and to ntfy
+if `backup_notify_ntfy_url` is set in `group_vars/homeservers/services.yml`.
+
+Runbooks:
+
+- **[docs/RESTORE.md](docs/RESTORE.md)** — restore data from D-Ursa (disk loss
+  or bad state change), including DB-dump restore per app.
+- **[docs/BOOTSTRAP.md](docs/BOOTSTRAP.md)** — rebuild the host from scratch
+  (fresh OS, disk UUIDs, vault password, then `site.yml`).
+
+```bash
+# Run a backup now / a restore drill now (as the service user):
+systemctl --user -M ndelucca@ start backup.service
+systemctl --user -M ndelucca@ start backup-restore-drill.service
+# List snapshots:
+sudo -u ndelucca env RESTIC_REPOSITORY=/srv/disks/D-Ursa/restic \
+  RESTIC_PASSWORD_FILE=/home/ndelucca/.config/restic/password restic snapshots
 ```
 
 ## License

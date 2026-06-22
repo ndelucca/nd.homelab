@@ -15,6 +15,7 @@
   ansible.builtin.command: podman --version
   register: podman_version
   changed_when: false
+  check_mode: false  # read-only; must run so the version assert works in --check
 
 - name: Display Podman version
   ansible.builtin.debug:
@@ -30,8 +31,9 @@
 
 - name: Enable lingering for user (allows user services without login)
   ansible.builtin.command: loginctl enable-linger {{ immich_user }}
+  args:
+    creates: /var/lib/systemd/linger/{{ immich_user }}
   become: true
-  changed_when: false
 
 - name: Install Node.js and npm for Immich CLI
   ansible.builtin.dnf:

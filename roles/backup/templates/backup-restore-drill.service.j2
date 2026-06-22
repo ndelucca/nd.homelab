@@ -1,0 +1,13 @@
+[Unit]
+# {{ ansible_managed }}
+Description=restic restore drill (prove the repo is restorable)
+RequiresMountsFor={{ storage_backup_disk }}
+{% if backup_notify_enabled %}
+OnFailure=backup-notify@%n.service
+{% endif %}
+
+[Service]
+Type=oneshot
+ExecStart={{ backup_restore_drill_script }}
+Nice=10
+IOSchedulingClass=idle

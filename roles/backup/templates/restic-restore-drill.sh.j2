@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Monthly restore drill. A backup you have never restored is a hypothesis, not a
+# backup — so this proves the repo is actually restorable by restoring the
+# (small, authoritative) DB dumps from the latest snapshot into a throwaway dir
+# and checking they came back non-empty. It restores ONLY the dumps, never the
+# live data, and touches nothing outside its temp dir.
+set -uo pipefail
+
+export RESTIC_REPOSITORY="{{ backup_repo }}"
+export RESTIC_PASSWORD_FILE="{{ backup_password_file }}"
+
+log() { echo "[restore-drill] $*"; }
+notify() {
+{% if backup_notify_enabled %}
+  "{{ backup_notify_script }}" "$1" "$2" || true
+{% else %}
+  echo "[restore-drill][ALERT] $1: $2" >&2
+{% endif %}
+}
+fail() { log "ERROR: $1"; notify "Restore drill failed" "$1"; exit 1; }
+
+mountpoint -q "{{ storage_backup_disk }}" || fail "backup disk {{ storage_backup_disk }} is not mounted"
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "${tmp}"' EXIT
+
+includes=(
+{% for app in (['immich'] if backup_immich_enabled else []) + (backup_sqlite_dbs | map(attribute='app') | list) + (backup_copy_dbs | map(attribute='app') | list) %}
+  --include "{{ app_data_root }}/{{ app }}/dumps"
+{% endfor %}
+)
+
+log "restoring latest snapshot dumps into ${tmp}"
+if ! restic restore latest --target "${tmp}" "${includes[@]}"; then
+  fail "restic restore returned an error"
+fi
+
+# Prove something real came back: at least one non-empty dump file.
+found="$(find "${tmp}" -type f -size +0c | wc -l)"
+if [ "${found}" -eq 0 ]; then
+  fail "no non-empty dump files were restored from the latest snapshot"
+fi
+
+log "restore drill OK: ${found} dump file(s) restored and non-empty"

@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: Naza
+  description: Deploy Uptime-Kuma uptime/health monitoring on Fedora (rootless Podman)
+  license: MIT
+  min_ansible_version: '2.13'
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+
+dependencies: []
+
+collections:
+  - community.general
+  - ansible.posix

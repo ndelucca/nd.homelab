@@ -1,0 +1,57 @@
+---
+# Preflight checks for the monitoring role.
+
+- name: Verify running on Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Fedora"
+    fail_msg: "This role is designed for Fedora systems"
+    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+
+- name: Get user UID for rootless Podman
+  ansible.builtin.command: id -u {{ monitoring_user }}
+  register: monitoring_user_uid_result
+  changed_when: false
+  check_mode: false  # read-only; must run so the uid is set in --check
+
+- name: Set monitoring_uid fact
+  ansible.builtin.set_fact:
+    monitoring_uid: "{{ monitoring_user_uid_result.stdout }}"
+
+- name: Check availability of port {{ monitoring_port }}
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":{{ monitoring_port }}\s" && echo "occupied" || echo "available"
+  register: port_check
+  changed_when: false
+  failed_when: false
+
+- name: Display port status
+  ansible.builtin.debug:
+    msg: "Port {{ monitoring_port }} is {{ port_check.stdout }}"
+
+- name: Create Uptime-Kuma base directory
+  ansible.builtin.file:
+    path: "{{ monitoring_base_dir }}"
+    state: directory
+    owner: "{{ monitoring_user }}"
+    group: "{{ monitoring_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Uptime-Kuma data directory
+  ansible.builtin.file:
+    path: "{{ monitoring_data_dir }}"
+    state: directory
+    owner: "{{ monitoring_user }}"
+    group: "{{ monitoring_group }}"
+    mode: '0755'
+  become: true
+
+- name: Create Quadlet directory for user
+  ansible.builtin.file:
+    path: "{{ monitoring_quadlet_dir }}/{{ monitoring_uid }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true

@@ -58,10 +58,26 @@
   register: download_dir
   when: adguard_needs_install
 
+- name: Fetch AdGuard Home release checksums
+  ansible.builtin.uri:
+    url: "https://github.com/{{ adguard_github_repo }}/releases/download/v{{ adguard_target_version }}/checksums.txt"
+    return_content: true
+  register: adguard_checksums
+  when: adguard_needs_install
+
+- name: Extract expected SHA256 for the AdGuard Home archive
+  ansible.builtin.set_fact:
+    adguard_archive_sha256: >-
+      {{ (adguard_checksums.content.splitlines()
+          | select('search', 'AdGuardHome_linux_amd64.tar.gz')
+          | first).split() | first }}
+  when: adguard_needs_install
+
 - name: Download AdGuard Home archive
   ansible.builtin.get_url:
     url: "https://github.com/{{ adguard_github_repo }}/releases/download/v{{ adguard_target_version }}/AdGuardHome_linux_amd64.tar.gz"
     dest: "{{ download_dir.path }}/AdGuardHome.tar.gz"
+    checksum: "sha256:{{ adguard_archive_sha256 }}"
     mode: '0644'
   when: adguard_needs_install
 
@@ -92,12 +108,26 @@
   notify: restart adguardhome
   when: adguard_needs_install
 
+- name: Read current capabilities on AdGuard Home binary
+  ansible.builtin.command: getcap {{ adguard_install_dir }}/AdGuardHome
+  register: adguard_current_caps
+  become: true
+  changed_when: false
+  failed_when: false
+  check_mode: false  # read-only; must run so the capability check works in --check
+  when: adguard_set_capabilities | bool
+
+# Idempotent: only (re)apply when a fresh binary was just installed or when the
+# desired capabilities are not already present (getcap reports them lowercased).
 - name: Set capabilities on AdGuard Home binary
   ansible.builtin.command: >
     setcap '{{ adguard_capabilities | map("regex_replace", "^(.*)$", "\1=+eip") | join(" ") }}'
     {{ adguard_install_dir }}/AdGuardHome
   become: true
-  when: adguard_set_capabilities | bool and adguard_needs_install
+  when:
+    - adguard_set_capabilities | bool
+    - adguard_needs_install or
+      (adguard_capabilities | map('lower') | reject('in', adguard_current_caps.stdout | default('')) | list | length > 0)
   changed_when: true
 
 - name: Install AdGuard Home as a systemd service
