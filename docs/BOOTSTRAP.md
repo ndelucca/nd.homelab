@@ -81,8 +81,8 @@ the DB dumps, fix ownership, then re-run `site.yml`.
 ## 6. Post-recovery checks
 
 - [ ] `ansible-playbook -l ndelucca-server playbooks/site.yml --check` → no changes
-- [ ] LAN DNS works: `dig @192.168.10.10 git.ndelucca-server.com`
-- [ ] Each subdomain responds: `curl -k https://<app>.ndelucca-server.com`
+- [ ] LAN DNS works: `dig @192.168.10.10 git.ndelucca.dedyn.io`
+- [ ] Each subdomain responds: `curl -k https://<app>.ndelucca.dedyn.io`
 - [ ] `systemctl --user -M ndelucca@ list-timers` shows backup + drill timers armed
 - [ ] Trigger a backup once and confirm a fresh snapshot:
       `systemctl --user -M ndelucca@ start backup.service && restic snapshots`

@@ -27,7 +27,7 @@
       Kavita has been deployed successfully!
 
       Access via: http://{{ ansible_default_ipv4.address }}:{{ kavita_port }}
-      Or via NGINX: https://books.{{ nginx_domain | default('ndelucca-server.com') }}
+      Or via NGINX: https://books.{{ nginx_domain }}
 
       Library location: {{ kavita_library_dir }}
       Config location: {{ kavita_config_dir }}

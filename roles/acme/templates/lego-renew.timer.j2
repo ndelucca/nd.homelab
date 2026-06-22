@@ -1,0 +1,13 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Daily lego certificate renewal check
+
+[Timer]
+OnCalendar=daily
+# Spread load and avoid hammering the ACME CA at the same instant every day.
+RandomizedDelaySec=3600
+# Catch up if the machine was off at the scheduled time.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

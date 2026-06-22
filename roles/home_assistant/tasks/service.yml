@@ -29,5 +29,5 @@
     msg: |
       Home Assistant is now running!
       - Direct access: http://{{ home_assistant_host }}:{{ home_assistant_port }}
-      - Via NGINX: https://home.ndelucca-server.com (after NGINX config)
+      - Via NGINX: https://home.{{ nginx_domain }} (after NGINX config)
       - Config location: {{ home_assistant_config_dir }}

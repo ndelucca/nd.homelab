@@ -1,0 +1,41 @@
+---
+# Automatic renewal: a daily systemd timer runs `lego renew` for every managed
+# certificate and reloads the consuming service via lego's --renew-hook.
+
+- name: Deploy deSEC credentials env file
+  ansible.builtin.template:
+    src: desec.env.j2
+    dest: "{{ acme_data_dir }}/desec.env"
+    owner: root
+    group: root
+    mode: '0600'
+  become: true
+  no_log: true
+
+- name: Deploy lego renewal service unit
+  ansible.builtin.template:
+    src: lego-renew.service.j2
+    dest: /etc/systemd/system/lego-renew.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  register: acme_renew_service_unit
+
+- name: Deploy lego renewal timer unit
+  ansible.builtin.template:
+    src: lego-renew.timer.j2
+    dest: /etc/systemd/system/lego-renew.timer
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  register: acme_renew_timer_unit
+
+- name: Enable and start the lego renewal timer
+  ansible.builtin.systemd:
+    name: lego-renew.timer
+    enabled: true
+    state: started
+    daemon_reload: "{{ (acme_renew_service_unit is changed) or (acme_renew_timer_unit is changed) }}"
+  become: true

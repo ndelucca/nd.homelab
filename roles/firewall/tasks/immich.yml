@@ -1,7 +1,7 @@
 ---
 # Configure firewall for Immich
 # Immich is behind NGINX reverse proxy
-# Access via gallery.ndelucca-server.com on ports 80/443 (handled by NGINX firewall rules)
+# Access via the service subdomain on ports 80/443 (handled by NGINX firewall rules)
 
 - name: Ensure Immich port is NOT exposed externally
   ansible.posix.firewalld:

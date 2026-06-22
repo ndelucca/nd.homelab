@@ -26,7 +26,7 @@
     msg: |
       Uptime-Kuma has been deployed successfully!
 
-      Access via NGINX: https://status.{{ nginx_domain | default('ndelucca-server.com') }}
+      Access via NGINX: https://status.{{ nginx_domain }}
       Monitors for every service are seeded automatically (see monitors.yml).
       First run: create the admin account in the UI. Optionally add a built-in
       notification (ntfy/Telegram/email) so downtime pings your phone.

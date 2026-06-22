@@ -29,5 +29,5 @@
     msg: |
       OrcaSlicer is now running!
       - Direct access: https://{{ orcaslicer_host }}:{{ orcaslicer_port }}
-      - Via NGINX: https://slicer.ndelucca-server.com (after NGINX config)
+      - Via NGINX: https://slicer.{{ nginx_domain }} (after NGINX config)
       - Config location: {{ orcaslicer_config_dir }}/.config/OrcaSlicer/

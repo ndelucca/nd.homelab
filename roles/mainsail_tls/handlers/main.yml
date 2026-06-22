@@ -1,0 +1,8 @@
+---
+# Handlers for the mainsail_tls role
+
+- name: reload nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+  become: true

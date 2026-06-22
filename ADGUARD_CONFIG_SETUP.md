@@ -68,7 +68,7 @@ Contains your current configuration:
 ### DNS Rewrites
 | Domain | IP Address |
 |--------|------------|
-| ndelucca-server.com | 192.168.10.10 |
+| ndelucca.dedyn.io | 192.168.10.10 |
 | ndelucca-acer.com | 192.168.10.13 |
 | ndelucca-raspberry-printer.com | 192.168.10.11 |
 

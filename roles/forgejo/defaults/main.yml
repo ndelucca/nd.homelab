@@ -26,7 +26,7 @@ forgejo_ssh_port: 2222      # git over SSH, exposed on the LAN (container's own 
 # which is the supported way to run under rootless Podman with UserNS=keep-id.
 forgejo_version: "11.0.1-rootless"   # Pinned image tag
 forgejo_image: "codeberg.org/forgejo/forgejo:{{ forgejo_version }}"
-forgejo_domain: git.ndelucca-server.com
+forgejo_domain: "git.{{ nginx_domain }}"
 forgejo_root_url: "https://{{ forgejo_domain }}/"
 forgejo_timezone: America/Los_Angeles
 forgejo_disable_registration: true

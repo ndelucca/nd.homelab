@@ -1,0 +1,21 @@
+---
+# Default variables for the mainsail_tls role.
+# Serves the MainsailOS web UI over HTTPS using a real cert issued on the Pi
+# itself by the acme role (DNS-01). Reuses MainsailOS's own upstreams
+# (apiserver / mjpgstreamerN, defined in /etc/nginx/conf.d/upstreams.conf) and
+# the $connection_upgrade map (/etc/nginx/conf.d/common_vars.conf).
+
+mainsail_tls_domain: "printer.{{ base_domain }}"
+
+# Certificate paths (issued by roles/acme into acme_data_dir on this host).
+mainsail_tls_cert: "{{ acme_data_dir }}/certificates/{{ mainsail_tls_domain }}.crt"
+mainsail_tls_key: "{{ acme_data_dir }}/certificates/{{ mainsail_tls_domain }}.key"
+
+# MainsailOS nginx site we manage (replaces the stock one; original kept as .orig).
+mainsail_tls_site_path: /etc/nginx/sites-available/mainsail
+
+# Static web root MainsailOS serves (matches the stock `root` directive).
+mainsail_tls_web_root: "/home/{{ ansible_user | default('ndelucca') }}/mainsail"
+
+# Redirect plain HTTP to HTTPS (set false to also serve the UI on port 80).
+mainsail_tls_redirect_http: true

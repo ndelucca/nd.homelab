@@ -1,7 +1,7 @@
 ---
 # Configure firewall for Jellyfin
 # Jellyfin is now behind NGINX reverse proxy
-# Access via jellyfin.ndelucca-server.com on ports 80/443 (handled by NGINX firewall rules)
+# Access via the service subdomain on ports 80/443 (handled by NGINX firewall rules)
 
 - name: Remove old direct Jellyfin HTTP port from firewall
   ansible.posix.firewalld:
