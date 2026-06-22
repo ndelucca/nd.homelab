@@ -65,9 +65,11 @@ backup_excludes:
   - "lost+found"
 
 # Retention applied by `restic forget` (daily) — prune happens weekly.
+# Capped at ~1 month: daily granularity for the last week, then weekly out to
+# ~4 weeks. No monthly snapshots, so nothing older than ~28 days survives.
 backup_keep_daily: 7
 backup_keep_weekly: 4
-backup_keep_monthly: 12
+backup_keep_monthly: 0
 
 # Schedules (systemd OnCalendar). Daily backup off-peak; weekly prune later;
 # monthly restore drill (1st of the month) to prove the repo is restorable.
