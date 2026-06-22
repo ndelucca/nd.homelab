@@ -12,6 +12,7 @@
   ansible.builtin.command: "getent passwd {{ forgejo_user }}"
   register: getent_output
   changed_when: false
+  check_mode: false  # read-only; must run so the uid is set in --check
 
 - name: Extract UID from getent
   ansible.builtin.set_fact:

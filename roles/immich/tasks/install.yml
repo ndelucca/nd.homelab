@@ -15,6 +15,7 @@
   ansible.builtin.command: podman --version
   register: podman_version
   changed_when: false
+  check_mode: false  # read-only; must run so the version assert works in --check
 
 - name: Display Podman version
   ansible.builtin.debug:

@@ -114,6 +114,7 @@
   become: true
   changed_when: false
   failed_when: false
+  check_mode: false  # read-only; must run so the capability check works in --check
   when: adguard_set_capabilities | bool
 
 # Idempotent: only (re)apply when a fresh binary was just installed or when the
