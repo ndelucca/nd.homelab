@@ -1,0 +1,10 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Monthly restic restore drill timer
+
+[Timer]
+OnCalendar={{ backup_schedule_restore_drill }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

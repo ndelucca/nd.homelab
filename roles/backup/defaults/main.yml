@@ -29,7 +29,22 @@ backup_excludes_file: "{{ backup_config_dir }}/excludes.txt"
 backup_bin_dir: "/home/{{ backup_user }}/.local/bin"
 backup_run_script: "{{ backup_bin_dir }}/restic-backup-run.sh"
 backup_maintenance_script: "{{ backup_bin_dir }}/restic-backup-maintenance.sh"
+backup_notify_script: "{{ backup_bin_dir }}/restic-backup-notify.sh"
+backup_restore_drill_script: "{{ backup_bin_dir }}/restic-restore-drill.sh"
 backup_user_unit_dir: "/home/{{ backup_user }}/.config/systemd/user"
+
+# --- Failure / disk alerting -----------------------------------------------
+# Surface backup or maintenance failures (and a filling backup disk) instead of
+# letting them fail silently. The notify script ALWAYS logs the alert to the
+# journal at error priority (so `journalctl -t restic-backup` and journald-based
+# alerting see it); if an ntfy topic URL is set it also pushes a phone alert.
+# Wired via systemd `OnFailure=backup-notify@%n.service` on both units.
+backup_notify_enabled: true
+# ntfy push target, e.g. https://ntfy.sh/<your-private-topic> or a self-hosted
+# URL. Leave empty to rely on the journal alert only.
+backup_notify_ntfy_url: ""
+# Warn when the backup disk crosses this usage percentage (checked weekly).
+backup_disk_usage_warn_percent: 85
 
 # What to back up — only the irreplaceable data.
 backup_paths:
@@ -54,9 +69,33 @@ backup_keep_daily: 7
 backup_keep_weekly: 4
 backup_keep_monthly: 12
 
-# Schedules (systemd OnCalendar). Daily backup off-peak; weekly prune later.
+# Schedules (systemd OnCalendar). Daily backup off-peak; weekly prune later;
+# monthly restore drill (1st of the month) to prove the repo is restorable.
 backup_schedule_daily: "*-*-* 03:00:00"
 backup_schedule_maintenance: "Sun *-*-* 04:30:00"
+backup_schedule_restore_drill: "*-*-01 05:30:00"
+
+# Monthly restore drill: restore the latest snapshot's DB dumps to a temp dir
+# and verify they come back non-empty. Cheap end-to-end proof of restorability.
+backup_restore_drill_enabled: true
+
+# systemd user units deployed by the role. The notify@ template backs the
+# OnFailure= alert; the restore-drill units are added only when enabled.
+backup_units:
+  - backup.service
+  - backup.timer
+  - backup-maintenance.service
+  - backup-maintenance.timer
+  - backup-notify@.service
+backup_restore_drill_units:
+  - backup-restore-drill.service
+  - backup-restore-drill.timer
+# Timers to enable (drill timer appended when the drill is enabled).
+backup_timers:
+  - backup.timer
+  - backup-maintenance.timer
+backup_restore_drill_timers:
+  - backup-restore-drill.timer
 
 # --- Database dumps (consistent, no service downtime) -----------------------
 # Each app's dump is written under {{ app_data_root }}/<app>/dumps/ so the restic

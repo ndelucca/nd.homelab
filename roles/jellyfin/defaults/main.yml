@@ -11,7 +11,7 @@ jellyfin_user: ndelucca
 jellyfin_group: ndelucca
 
 # Directory configuration — app state lives on the appdata disk (app_data_root,
-# defined in group_vars/homeservers.yml).
+# defined in group_vars/homeservers/storage.yml).
 jellyfin_base_dir: "{{ app_data_root }}/jellyfin"
 jellyfin_data_dir: "{{ jellyfin_base_dir }}/data"
 jellyfin_config_dir: "{{ jellyfin_base_dir }}/config"

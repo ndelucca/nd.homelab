@@ -19,4 +19,17 @@ restic prune
 log "checking repository integrity"
 restic check
 
+# --- Backup disk usage guard ------------------------------------------------
+# A silently filling backup disk is the classic way backups stop working, so
+# warn (and push an alert) once it crosses the threshold.
+usage=$(df --output=pcent "{{ storage_backup_disk }}" 2>/dev/null | tail -1 | tr -dc '0-9')
+if [ -n "${usage}" ] && [ "${usage}" -ge {{ backup_disk_usage_warn_percent }} ]; then
+  log "WARNING: backup disk {{ storage_backup_disk }} at ${usage}% (>= {{ backup_disk_usage_warn_percent }}%)"
+{% if backup_notify_enabled %}
+  "{{ backup_notify_script }}" \
+    "Backup disk {{ storage_backup_disk }} at ${usage}%" \
+    "Usage crossed {{ backup_disk_usage_warn_percent }}%. Prune may be insufficient; free space or grow D-Ursa." || true
+{% endif %}
+fi
+
 log "done"

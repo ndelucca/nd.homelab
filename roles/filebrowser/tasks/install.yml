@@ -62,10 +62,26 @@
   register: download_dir
   when: filebrowser_needs_install
 
+- name: Fetch FileBrowser release checksums
+  ansible.builtin.uri:
+    url: "https://github.com/{{ filebrowser_github_repo }}/releases/download/v{{ filebrowser_target_version }}/filebrowser_{{ filebrowser_target_version }}_checksums.txt"
+    return_content: true
+  register: filebrowser_checksums
+  when: filebrowser_needs_install
+
+- name: Extract expected SHA256 for the FileBrowser archive
+  ansible.builtin.set_fact:
+    filebrowser_archive_sha256: >-
+      {{ (filebrowser_checksums.content.splitlines()
+          | select('search', 'linux-' + filebrowser_arch + '-filebrowser.tar.gz')
+          | first).split() | first }}
+  when: filebrowser_needs_install
+
 - name: Download FileBrowser archive
   ansible.builtin.get_url:
     url: "https://github.com/{{ filebrowser_github_repo }}/releases/download/v{{ filebrowser_target_version }}/linux-{{ filebrowser_arch }}-filebrowser.tar.gz"
     dest: "{{ download_dir.path }}/filebrowser.tar.gz"
+    checksum: "sha256:{{ filebrowser_archive_sha256 }}"
     mode: '0644'
   when: filebrowser_needs_install
 

@@ -48,10 +48,10 @@
   become: true
 
 - name: Configure Podman for rootless operation
-  ansible.builtin.shell: |
-    loginctl enable-linger {{ ansible_user }}
+  ansible.builtin.command: loginctl enable-linger {{ ansible_user }}
+  args:
+    creates: /var/lib/systemd/linger/{{ ansible_user }}
   become: true
-  changed_when: false
 
 - name: Display Podman version
   ansible.builtin.command: podman --version

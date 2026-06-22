@@ -13,9 +13,7 @@
   become_user: "{{ backup_user }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ backup_uid }}"
-  loop:
-    - backup.timer
-    - backup-maintenance.timer
+  loop: "{{ backup_timers + (backup_restore_drill_timers if backup_restore_drill_enabled else []) }}"
 
 - name: Show backup status
   ansible.builtin.debug:
@@ -25,9 +23,12 @@
       Repository: {{ backup_repo }}
       Daily backup:  {{ backup_schedule_daily }}
       Weekly prune:  {{ backup_schedule_maintenance }}
+      {% if backup_restore_drill_enabled %}Restore drill: {{ backup_schedule_restore_drill }}{% endif %}
 
       Run a backup now:
         systemctl --user -M {{ backup_user }}@ start backup.service
+      Run a restore drill now:
+        systemctl --user -M {{ backup_user }}@ start backup-restore-drill.service
       List snapshots:
         sudo -u {{ backup_user }} env RESTIC_REPOSITORY={{ backup_repo }} \
           RESTIC_PASSWORD_FILE={{ backup_password_file }} restic snapshots

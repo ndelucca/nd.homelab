@@ -30,5 +30,6 @@
 
 - name: Enable lingering for user (allows user services without login)
   ansible.builtin.command: loginctl enable-linger {{ orcaslicer_user }}
+  args:
+    creates: /var/lib/systemd/linger/{{ orcaslicer_user }}
   become: true
-  changed_when: false

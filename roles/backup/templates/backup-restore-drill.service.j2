@@ -1,6 +1,6 @@
 [Unit]
 # {{ ansible_managed }}
-Description=restic repository maintenance (prune + check)
+Description=restic restore drill (prove the repo is restorable)
 RequiresMountsFor={{ storage_backup_disk }}
 {% if backup_notify_enabled %}
 OnFailure=backup-notify@%n.service
@@ -8,6 +8,6 @@ OnFailure=backup-notify@%n.service
 
 [Service]
 Type=oneshot
-ExecStart={{ backup_maintenance_script }}
+ExecStart={{ backup_restore_drill_script }}
 Nice=10
 IOSchedulingClass=idle

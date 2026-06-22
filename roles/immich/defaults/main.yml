@@ -7,7 +7,7 @@ immich_group: ndelucca
 immich_uid: 1000  # Obtained dynamically via getent in preflight
 
 # Directory configuration — state on the appdata disk, photo library on the
-# shared app media root (both defined in group_vars/homeservers.yml).
+# shared app media root (both defined in group_vars/homeservers/storage.yml).
 immich_base_dir: "{{ app_data_root }}/immich"
 immich_upload_location: "{{ app_media_root }}/Gallery"
 immich_db_data_location: "{{ immich_base_dir }}/postgres"

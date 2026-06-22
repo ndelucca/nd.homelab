@@ -4,6 +4,9 @@ Description=restic backup of irreplaceable data to {{ storage_backup_disk }}
 # Best-effort mount dependency; the script also guards the mounts explicitly
 # because RequiresMountsFor is unreliable for user units.
 RequiresMountsFor={{ storage_backup_disk }} {{ storage_appdata_disk }}
+{% if backup_notify_enabled %}
+OnFailure=backup-notify@%n.service
+{% endif %}
 
 [Service]
 Type=oneshot

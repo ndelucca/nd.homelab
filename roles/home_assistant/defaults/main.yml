@@ -7,7 +7,7 @@ home_assistant_group: ndelucca
 home_assistant_uid: 1000
 
 # Directory configuration — state on the appdata disk (app_data_root, defined in
-# group_vars/homeservers.yml).
+# group_vars/homeservers/storage.yml).
 home_assistant_base_dir: "{{ app_data_root }}/home_assistant"
 home_assistant_config_dir: "{{ home_assistant_base_dir }}/config"
 
