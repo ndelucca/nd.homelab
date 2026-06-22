@@ -1,0 +1,81 @@
+---
+# Idempotently seed the monitors into Uptime-Kuma's SQLite DB. The pod is only
+# stopped/started when monitors are actually missing, so re-runs are no-ops.
+
+- name: Check whether the Uptime-Kuma database exists yet
+  ansible.builtin.stat:
+    path: "{{ monitoring_data_dir }}/kuma.db"
+  register: monitoring_db
+  check_mode: false
+
+- name: Configure monitors
+  when: monitoring_db.stat.exists
+  block:
+    - name: Gather existing monitor names
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import sqlite3,sys;print('\\n'.join((r[0] or '') for r in sqlite3.connect(sys.argv[1]).execute('SELECT name FROM monitor')))"
+          - "{{ monitoring_data_dir }}/kuma.db"
+      become: true
+      become_user: "{{ monitoring_user }}"
+      register: monitoring_existing
+      changed_when: false
+      check_mode: false
+
+    - name: Compute missing monitors
+      ansible.builtin.set_fact:
+        monitoring_missing: >-
+          {{ (monitoring_http_checks + monitoring_port_checks + monitoring_ping_checks)
+             | map(attribute='name') | difference(monitoring_existing.stdout_lines) }}
+
+    - name: Seed missing monitors (stop pod, write DB, start pod)
+      when: monitoring_missing | length > 0
+      block:
+        - name: Deploy monitor-seeding script
+          ansible.builtin.template:
+            src: configure-monitors.py.j2
+            dest: "{{ monitoring_base_dir }}/configure-monitors.py"
+            owner: "{{ monitoring_user }}"
+            group: "{{ monitoring_group }}"
+            mode: '0750'
+          become: true
+
+        - name: Stop Uptime-Kuma for exclusive DB access
+          ansible.builtin.systemd:
+            name: "{{ monitoring_service_name }}"
+            state: stopped
+            scope: user
+          become: true
+          become_user: "{{ monitoring_user }}"
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ monitoring_uid }}"
+
+        - name: Insert missing monitors into the database
+          ansible.builtin.command: "python3 {{ monitoring_base_dir }}/configure-monitors.py"
+          become: true
+          become_user: "{{ monitoring_user }}"
+          register: monitoring_seed
+          changed_when: "'\"added\": []' not in monitoring_seed.stdout"
+
+        - name: Report seeded monitors
+          ansible.builtin.debug:
+            msg: "Seeded monitors: {{ (monitoring_seed.stdout | from_json).added | join(', ') }}"
+
+        - name: Start Uptime-Kuma again
+          ansible.builtin.systemd:
+            name: "{{ monitoring_service_name }}"
+            state: started
+            scope: user
+          become: true
+          become_user: "{{ monitoring_user }}"
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ monitoring_uid }}"
+
+        - name: Wait for Uptime-Kuma to be available again
+          ansible.builtin.wait_for:
+            host: "{{ monitoring_host }}"
+            port: "{{ monitoring_port }}"
+            delay: 5
+            timeout: 120

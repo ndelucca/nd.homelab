@@ -25,3 +25,8 @@
   ansible.builtin.import_tasks: selinux.yml
   tags: ['monitoring', 'selinux']
   when: monitoring_manage_selinux | bool
+
+- name: Seed monitors into Uptime-Kuma
+  ansible.builtin.import_tasks: monitors.yml
+  tags: ['monitoring', 'monitors']
+  when: monitoring_configure_monitors | bool

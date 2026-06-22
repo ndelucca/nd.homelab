@@ -9,13 +9,21 @@ metadata:
 spec:
   restartPolicy: Always
 
+  # Share the host network namespace so the monitor can reach every service
+  # directly on the host loopback (127.0.0.1:<port>) — the services bind to
+  # localhost only, which a bridged rootless container cannot reach. Uptime-Kuma
+  # is pinned to 127.0.0.1:{{ monitoring_port }} via the env vars below, so it
+  # still listens on loopback only and stays behind NGINX (status.<domain>).
+  hostNetwork: true
+
   containers:
   - name: uptime-kuma
     image: {{ monitoring_image }}
-    ports:
-    - containerPort: {{ monitoring_container_port }}
-      hostPort: {{ monitoring_port }}
-      hostIP: {{ monitoring_host }}
+    env:
+    - name: UPTIME_KUMA_HOST
+      value: "{{ monitoring_host }}"
+    - name: UPTIME_KUMA_PORT
+      value: "{{ monitoring_port }}"
     volumeMounts:
     - name: data
       mountPath: /app/data

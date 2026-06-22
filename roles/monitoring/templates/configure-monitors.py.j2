@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# {{ ansible_managed }}
+# Idempotently seed Uptime-Kuma monitors directly into its SQLite DB. Only
+# monitors whose name does not already exist are inserted, so re-running is safe.
+# Must run while the uptime-kuma container is stopped (exclusive DB access).
+import json
+import sqlite3
+
+DB = "{{ monitoring_data_dir }}/kuma.db"
+USER_ID = 1
+INTERVAL = {{ monitoring_check_interval }}
+RETRIES = {{ monitoring_check_retries }}
+
+monitors = []
+{% for c in monitoring_http_checks %}
+monitors.append({"name": {{ c.name | to_json }}, "type": "http", "url": {{ c.url | to_json }},
+                 "codes": {{ (c.accepted_codes | default(monitoring_http_accepted_codes)) | to_json }}})
+{% endfor %}
+{% for c in monitoring_port_checks %}
+monitors.append({"name": {{ c.name | to_json }}, "type": "port",
+                 "hostname": {{ c.host | to_json }}, "port": {{ c.port }}})
+{% endfor %}
+{% for c in monitoring_ping_checks %}
+monitors.append({"name": {{ c.name | to_json }}, "type": "ping", "hostname": {{ c.host | to_json }}})
+{% endfor %}
+
+conn = sqlite3.connect(DB)
+cur = conn.cursor()
+existing = {row[0] for row in cur.execute("SELECT name FROM monitor")}
+added = []
+for m in monitors:
+    if m["name"] in existing:
+        continue
+    cols = {
+        "name": m["name"], "type": m["type"], "user_id": USER_ID, "active": 1,
+        "interval": INTERVAL, "maxretries": RETRIES, "retry_interval": INTERVAL,
+    }
+    if m["type"] == "http":
+        cols["url"] = m["url"]
+        cols["ignore_tls"] = 1
+        cols["accepted_statuscodes_json"] = json.dumps(m["codes"])
+    elif m["type"] == "port":
+        cols["hostname"] = m["hostname"]
+        cols["port"] = m["port"]
+    elif m["type"] == "ping":
+        cols["hostname"] = m["hostname"]
+    placeholders = ",".join("?" * len(cols))
+    cur.execute(
+        "INSERT INTO monitor ({}) VALUES ({})".format(",".join(cols), placeholders),
+        list(cols.values()),
+    )
+    added.append(m["name"])
+
+conn.commit()
+conn.close()
+print(json.dumps({"added": added}))
