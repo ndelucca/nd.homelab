@@ -87,8 +87,14 @@ else
 fi
 
 # --- Retention (forget only; prune runs weekly in maintenance) --------------
+# Scope retention to the 'automated' snapshots this script creates (and group by
+# that tag) so the policy is deterministic and never forgets/keeps ad-hoc or
+# future snapshots that use a different path set — without --tag, forget groups
+# by (host,paths) and a second path-set would silently change retention.
 log "applying retention policy"
 restic forget \
+  --tag automated \
+  --group-by tags \
   --keep-daily {{ backup_keep_daily }} \
   --keep-weekly {{ backup_keep_weekly }} \
   --keep-monthly {{ backup_keep_monthly }}

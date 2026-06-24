@@ -38,11 +38,14 @@
   ansible.builtin.debug:
     msg: "Port {{ immich_port }} is {{ port_check.stdout }}"
 
+# A warning, not a failure: on a re-run the port is expected to be held by
+# Immich itself. `fail` + `ignore_errors` was a no-op guard that never aborted;
+# an explicit warning states the intent honestly (consistent with the other
+# container roles).
 - name: Warn if port is occupied
-  ansible.builtin.fail:
-    msg: "Port {{ immich_port }} is already in use"
+  ansible.builtin.debug:
+    msg: "WARNING: port {{ immich_port }} is already in use (expected if Immich is already running)"
   when: port_check.stdout == "occupied"
-  ignore_errors: true
 
 - name: Create Immich base directory
   ansible.builtin.file:

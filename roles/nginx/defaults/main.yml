@@ -10,6 +10,10 @@ nginx_ssl_certificate: /etc/pki/nginx/server.crt
 nginx_ssl_certificate_key: /etc/pki/nginx/server.key
 nginx_generate_selfsigned_cert: true
 
+# Shared TLS security-headers snippet, deployed by configure.yml and `include`d
+# by every HTTPS vhost (standard + bespoke) so the headers live in one place.
+nginx_ssl_headers_snippet: /etc/nginx/snippets/ssl_headers.conf
+
 # Self-signed bootstrap floor. ALWAYS generated at these paths regardless of the
 # active TLS mode (letsencrypt vs selfsigned), so switching to
 # `nginx_tls_mode: selfsigned` has a real cert to fall back to if lego fails.

@@ -43,15 +43,20 @@
     - "{{ forgejo_data_dir }}"
     - "{{ forgejo_config_dir }}"
 
-- name: Check if HTTP port is available
-  ansible.builtin.wait_for:
-    port: "{{ forgejo_port }}"
-    host: "{{ forgejo_host }}"
-    state: stopped
-    timeout: 1
-  ignore_errors: true
+- name: Check availability of port {{ forgejo_port }}
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":{{ forgejo_port }}\s" && echo "occupied" || echo "available"
   register: port_check
+  changed_when: false
+  failed_when: false
 
-- name: Display port availability
+- name: Display port status
   ansible.builtin.debug:
-    msg: "Port {{ forgejo_port }} is {{ 'available' if port_check is not failed else 'in use (may be existing Forgejo)' }}"
+    msg: "Port {{ forgejo_port }} is {{ port_check.stdout }}"
+
+# A warning, not a failure: on a re-run the port is expected to be held by
+# Forgejo itself (consistent with the other container roles).
+- name: Warn if port is occupied
+  ansible.builtin.debug:
+    msg: "WARNING: port {{ forgejo_port }} is already in use (expected if Forgejo is already running)"
+  when: port_check.stdout == "occupied"

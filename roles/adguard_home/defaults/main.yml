@@ -4,9 +4,13 @@
 # Application config values are hardcoded in template
 
 # Installation configuration
-# 'latest' auto-resolves the newest stable GitHub release on every run (betas
-# are pre-releases and skipped); or pin to an exact tag like "v0.107.74".
-adguard_version: latest
+# Pinned to an exact tag for reproducibility. IMPORTANT: keep this in sync with
+# adguard_schema_version below — the templated config carries a schema_version
+# that must match the binary's native schema, or AdGuard re-migrates the config
+# on every restart and may drop fields the template doesn't model. v0.107.77's
+# native schema is 34 (confmigrate LastSchemaVersion). Set to 'latest' only if
+# you also stop fully templating AdGuardHome.yaml. Bump both together.
+adguard_version: v0.107.77
 adguard_github_repo: AdguardTeam/AdGuardHome
 adguard_install_dir: /usr/local/bin
 adguard_working_dir: /opt/AdGuardHome
@@ -48,8 +52,16 @@ adguard_manage_selinux: true
 # Application configuration
 adguard_configure_app: false  # Set to true in inventory to deploy config
 
-# Users - provide in host_vars with hashed passwords
+# Users - provide in host_vars with hashed passwords. These SEED the config on
+# the first deploy only; afterwards the password you set in the web UI is
+# preserved (configure.yml reads the live config and keeps its users). To
+# rotate from Ansible, change it in the UI, or wipe AdGuardHome.yaml to re-seed.
 adguard_users: []
+
+# Resolved at runtime by configure.yml: the existing on-box users if the config
+# already has any, else adguard_users. The template renders THIS, not the raw
+# adguard_users, so a UI-set password is never clobbered on re-runs.
+adguard_effective_users: "{{ adguard_users }}"
 
 # DNS upstream servers - can override in host_vars
 adguard_upstream_dns:
@@ -116,5 +128,6 @@ adguard_filtering_enabled: true
 adguard_rewrites_enabled: true
 adguard_protection_enabled: true
 
-# Schema version
+# Schema version. MUST match the native schema of the pinned adguard_version
+# (see the note there). v0.107.77 -> 34. Bump both together on upgrade.
 adguard_schema_version: 34

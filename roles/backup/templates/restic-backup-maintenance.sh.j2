@@ -16,8 +16,15 @@ mountpoint -q "{{ storage_backup_disk }}" || die "backup disk {{ storage_backup_
 log "pruning unreferenced data"
 restic prune
 
-log "checking repository integrity (+ re-reading {{ backup_check_read_data_subset }} of pack data for bitrot)"
-restic check --read-data-subset={{ backup_check_read_data_subset }}
+# Rotate which slice of pack data we re-read each week. restic's m/n form reads
+# partition m of n (deterministic by pack ID); advancing m by ISO week number
+# means the WHOLE repo is bitrot-verified over {{ backup_check_read_data_partitions }} weeks,
+# instead of re-reading the same packs every week as a fixed N% would.
+parts={{ backup_check_read_data_partitions }}
+week=$((10#$(date +%V)))          # ISO week 1..53 (10# forces base-10, no octal)
+part=$(( week % parts + 1 ))      # 1..parts, advances each week
+log "checking repository integrity (+ re-reading pack subset ${part}/${parts} for bitrot)"
+restic check --read-data-subset="${part}/${parts}"
 
 # --- Backup disk usage guard ------------------------------------------------
 # A silently filling backup disk is the classic way backups stop working, so

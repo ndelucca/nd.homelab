@@ -107,6 +107,29 @@
         - "{{ adguard_working_dir }}(/.*)?"
       failed_when: false
 
+    # The service_maintenance role deploys an AdGuard cold-boot watchdog and a
+    # wait-for-network drop-in. Tear them down too, or they keep firing and log
+    # failures trying to restart a service that no longer exists.
+    - name: Stop and disable the AdGuard service watchdog timer
+      ansible.builtin.systemd:
+        name: service-watchdog.timer
+        state: stopped
+        enabled: false
+      failed_when: false
+
+    - name: Remove the service watchdog units and the AdGuard drop-in
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/systemd/system/service-watchdog.timer
+        - /etc/systemd/system/service-watchdog.service
+        - /etc/systemd/system/AdGuardHome.service.d
+
+    - name: Reload systemd after watchdog removal
+      ansible.builtin.systemd:
+        daemon_reload: true
+
     - name: Display completion message
       ansible.builtin.debug:
         msg: |

@@ -8,8 +8,11 @@ Image={{ home_assistant_image }}
 ContainerName=home_assistant
 PublishPort={{ home_assistant_host }}:{{ home_assistant_port }}:8123
 
-# Config volume
-Volume={{ home_assistant_config_dir }}:/config:Z
+# Config volume. No :z/:Z relabel: the role's selinux.yml (via container_base)
+# owns the persistent container_file_t label on home_assistant_config_dir. A :Z
+# here would stamp a per-container MCS category that the next restorecon/relabel
+# reverts, causing intermittent permission-denied (same pattern as kavita).
+Volume={{ home_assistant_config_dir }}:/config
 
 # Timezone
 Environment=TZ={{ home_assistant_timezone }}

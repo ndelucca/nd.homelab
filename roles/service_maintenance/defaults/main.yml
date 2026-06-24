@@ -16,6 +16,13 @@ service_maintenance_boot_delay: 2min
 service_maintenance_restart_services:
   - AdGuardHome
 
+# DNS health probe: a name AdGuard is configured to resolve to an answer (the
+# apex rewrite -> the server's LAN IP). The watchdog queries this and requires a
+# non-empty answer, so a wedged-but-listening AdGuard (answers NXDOMAIN/REFUSED)
+# is detected as unhealthy — unlike querying a bogus name, where any reply counts
+# as "up". Set to '' to skip the DNS probe and check only the unit's active state.
+service_maintenance_dns_probe_name: "{{ base_domain | default('') }}"
+
 # AdGuard drop-in configuration
 # Bounded readiness gate before AdGuard starts: ping the LAN gateway up to N
 # times (1s each), proceeding as soon as it answers. Replaces a fixed blind

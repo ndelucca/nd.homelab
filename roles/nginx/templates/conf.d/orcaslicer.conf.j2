@@ -24,11 +24,8 @@ server {
     # No body size limit for uploads
     client_max_body_size 0;
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # Shared TLS security headers (single source: ssl_headers.inc.j2)
+    include {{ nginx_ssl_headers_snippet }};
 
     location / {
         # Proxy to container's HTTPS port (self-signed cert)

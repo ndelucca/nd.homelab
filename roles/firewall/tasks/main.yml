@@ -47,7 +47,6 @@
   loop_control:
     label: "{{ item.port }} — {{ item.comment | default('') }}"
   when: item.when | default(true) | bool
-  notify: reload firewalld
 
 - name: Open LAN-facing services
   ansible.posix.firewalld:
@@ -61,7 +60,6 @@
   loop_control:
     label: "{{ item.service }} — {{ item.comment | default('') }}"
   when: item.when | default(true) | bool
-  notify: reload firewalld
 
 - name: Close ports/services that must stay behind NGINX (and legacy cleanup)
   ansible.posix.firewalld:
@@ -76,4 +74,3 @@
   loop_control:
     label: "{{ item.service | default(item.port) }} — {{ item.comment | default('') }}"
   when: item.when | default(true) | bool
-  notify: reload firewalld

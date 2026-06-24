@@ -21,11 +21,8 @@ server {
     # Allow large media file uploads
     client_max_body_size 20G;
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # Shared TLS security headers (single source: ssl_headers.inc.j2)
+    include {{ nginx_ssl_headers_snippet }};
 
     # CSP for YouTube metadata and Chromecast
     add_header Content-Security-Policy "default-src 'self' 'unsafe-inline' https://www.youtube.com https://i.ytimg.com https://www.gstatic.com" always;

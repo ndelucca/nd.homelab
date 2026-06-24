@@ -1,9 +1,9 @@
 # ========================================
 # ND.MARKET SUBDOMAIN
 # ========================================
-# Reverse proxy para nd.markets (app en 127.0.0.1:{{ nginx_ndmarket_port }}).
-# La app expone Server-Sent Events en /stream/{symbol}: requiere
-# proxy_buffering off y read timeout largo, si no los precios no llegan en vivo.
+# Reverse proxy for nd.markets (app on 127.0.0.1:{{ nginx_ndmarket_port }}).
+# The app exposes Server-Sent Events on /stream/{symbol}: it needs
+# proxy_buffering off and a long read timeout, or live prices don't come through.
 
 # HTTP - redirect to HTTPS
 server {
@@ -21,13 +21,10 @@ server {
     ssl_certificate {{ nginx_ssl_certificate }};
     ssl_certificate_key {{ nginx_ssl_certificate_key }};
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # Shared TLS security headers (single source: ssl_headers.inc.j2)
+    include {{ nginx_ssl_headers_snippet }};
 
-    # Compresion (gzip alcanza para los assets estaticos).
+    # Compression (gzip is enough for the static assets).
     gzip            on;
     gzip_types      text/css application/javascript application/json;
     gzip_min_length 1024;
@@ -42,7 +39,7 @@ server {
         proxy_set_header   X-Forwarded-Host  $host;
         proxy_set_header   Connection        "";
 
-        # Server-Sent Events: sin buffering y con timeout largo.
+        # Server-Sent Events: no buffering and a long timeout.
         proxy_buffering    off;
         proxy_cache        off;
         proxy_read_timeout 1h;

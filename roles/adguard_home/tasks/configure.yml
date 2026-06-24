@@ -1,6 +1,37 @@
 ---
 # Configure AdGuard Home with custom settings
 
+# Seed-once for users/passwords: the admin password is editable in the web UI,
+# which writes the new bcrypt hash back into AdGuardHome.yaml. To avoid clobbering
+# it on every converge, read the live config and reuse its users if it already
+# has any; only fall back to the vault-seeded adguard_users on first deploy.
+- name: Check for an existing AdGuard Home config
+  ansible.builtin.stat:
+    path: "{{ adguard_working_dir }}/AdGuardHome.yaml"
+  register: adguard_existing_config
+  become: true
+  when: adguard_configure_app | bool
+
+- name: Read the existing AdGuard Home config (to preserve UI-set users)
+  ansible.builtin.slurp:
+    src: "{{ adguard_working_dir }}/AdGuardHome.yaml"
+  register: adguard_existing_raw
+  become: true
+  no_log: true
+  when:
+    - adguard_configure_app | bool
+    - adguard_existing_config.stat.exists | default(false)
+
+- name: Resolve the users to render (seed once, then preserve)
+  ansible.builtin.set_fact:
+    adguard_effective_users: >-
+      {{ (adguard_existing_raw.content | b64decode | from_yaml).users
+         if (adguard_existing_config.stat.exists | default(false)
+              and (adguard_existing_raw.content | default('') | b64decode | from_yaml).users | default([]) | length > 0)
+         else adguard_users }}
+  no_log: true
+  when: adguard_configure_app | bool
+
 - name: Stop AdGuard Home service before configuration
   ansible.builtin.systemd:
     name: "{{ adguard_service_name }}"

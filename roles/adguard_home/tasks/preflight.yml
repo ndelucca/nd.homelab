@@ -8,16 +8,6 @@
     fail_msg: "This role is designed for Fedora systems"
     success_msg: "Running on Fedora {{ ansible_distribution_version }}"
 
-- name: Check if required commands are available
-  ansible.builtin.command: which {{ item }}  # noqa: command-instead-of-module
-  register: command_check
-  changed_when: false
-  failed_when: false
-  loop:
-    - curl
-    - tar
-    - systemctl
-
 - name: Ensure required packages are installed
   ansible.builtin.dnf:
     name:

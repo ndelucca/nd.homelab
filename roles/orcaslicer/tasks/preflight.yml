@@ -86,15 +86,20 @@
     - { path: "{{ orcaslicer_config_dir }}/gcodes", default: false }
     - { path: "{{ orcaslicer_config_dir }}/gcodes", default: true }
 
-- name: Check if port is available
-  ansible.builtin.wait_for:
-    port: "{{ orcaslicer_port }}"
-    host: "{{ orcaslicer_host }}"
-    state: stopped
-    timeout: 1
-  ignore_errors: true
+- name: Check availability of port {{ orcaslicer_port }}
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":{{ orcaslicer_port }}\s" && echo "occupied" || echo "available"
   register: port_check
+  changed_when: false
+  failed_when: false
 
-- name: Display port availability
+- name: Display port status
   ansible.builtin.debug:
-    msg: "Port {{ orcaslicer_port }} is {{ 'available' if port_check is not failed else 'in use (may be existing OrcaSlicer)' }}"
+    msg: "Port {{ orcaslicer_port }} is {{ port_check.stdout }}"
+
+# A warning, not a failure: on a re-run the port is expected to be held by
+# OrcaSlicer itself (consistent with the other container roles).
+- name: Warn if port is occupied
+  ansible.builtin.debug:
+    msg: "WARNING: port {{ orcaslicer_port }} is already in use (expected if OrcaSlicer is already running)"
+  when: port_check.stdout == "occupied"

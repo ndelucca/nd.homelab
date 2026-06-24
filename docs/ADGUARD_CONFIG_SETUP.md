@@ -70,7 +70,12 @@ Contains your current configuration:
 |--------|------------|
 | ndelucca.dedyn.io | 192.168.10.10 |
 | ndelucca-acer.com | 192.168.10.13 |
-| ndelucca-raspberry-printer.com | 192.168.10.11 |
+| printer.ndelucca.dedyn.io | 192.168.10.12 |
+
+> The printer is reached over WiFi (.12), the active path — `ansible_host`, the
+> `printer.` rewrite and its TLS cert all point at .12. The .11 ethernet lease is
+> dormant (cable down). The full, authoritative rewrite list lives in
+> `inventory/group_vars/homeservers/services.yml`; this table is illustrative.
 
 ### DNS Settings
 - **Upstream DNS**: AdGuard unfiltered, Quad9

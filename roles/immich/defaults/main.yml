@@ -15,7 +15,6 @@ immich_config_dir: "{{ immich_base_dir }}/config"
 immich_model_cache: "{{ immich_base_dir }}/model-cache"
 
 # Podman configuration
-immich_podman_user: "{{ immich_user }}"
 immich_pod_name: immich
 immich_quadlet_dir: /etc/containers/systemd/users  # System-managed user containers
 

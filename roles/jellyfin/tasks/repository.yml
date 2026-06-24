@@ -13,34 +13,33 @@
     - free
     - nonfree
 
-- name: Check if RPMFusion Free repository is enabled
-  ansible.builtin.command: dnf repolist --enabled  # noqa: command-instead-of-module
-  register: repo_list
-  changed_when: false
-
+# Installing the release RPM by URL is already idempotent: dnf reports "ok"
+# (not changed) once the rpmfusion-*-release package is present, so no manual
+# `dnf repolist` string-matching is needed (that matched 'rpmfusion-free' inside
+# 'rpmfusion-free-updates' and could skip the base repo, or never refresh the
+# cache when only nonfree was added). Register the installs and refresh the
+# cache only when a repo was actually added.
 - name: Install RPMFusion Free repository
   ansible.builtin.dnf:
     name: "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_distribution_version }}.noarch.rpm"
     state: present
   become: true
-  when:
-    - jellyfin_rpmfusion_free_enabled | bool
-    - "'rpmfusion-free' not in repo_list.stdout"
+  register: jellyfin_rpmfusion_free
+  when: jellyfin_rpmfusion_free_enabled | bool
 
 - name: Install RPMFusion Nonfree repository (optional)
   ansible.builtin.dnf:
     name: "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ ansible_distribution_version }}.noarch.rpm"
     state: present
   become: true
-  when:
-    - jellyfin_rpmfusion_nonfree_enabled | bool
-    - "'rpmfusion-nonfree' not in repo_list.stdout"
+  register: jellyfin_rpmfusion_nonfree
+  when: jellyfin_rpmfusion_nonfree_enabled | bool
 
 - name: Update DNF cache after adding RPMFusion
   ansible.builtin.dnf:
     update_cache: true
   become: true
-  when: "'rpmfusion-free' not in repo_list.stdout"
+  when: (jellyfin_rpmfusion_free is changed) or (jellyfin_rpmfusion_nonfree is changed)
 
 - name: Display repository status
   ansible.builtin.debug:

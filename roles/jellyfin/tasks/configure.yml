@@ -1,6 +1,10 @@
 ---
 # Configure Jellyfin directories and initial setup
 
+# Top-level only, no recurse: Jellyfin runs as {{ jellyfin_user }} and creates
+# everything under these dirs as that user, so ownership is already correct.
+# A recursive chown/chmod here would walk thousands of metadata/cache files on
+# every run (slow, churny) for no benefit — same reasoning as the media dir below.
 - name: Ensure Jellyfin's own state directories exist with correct ownership
   ansible.builtin.file:
     path: "{{ item }}"
@@ -8,7 +12,6 @@
     owner: "{{ jellyfin_user }}"
     group: "{{ jellyfin_group }}"
     mode: '0755'
-    recurse: true
   become: true
   loop:
     - "{{ jellyfin_data_dir }}"

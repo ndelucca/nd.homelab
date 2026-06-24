@@ -12,7 +12,7 @@ http:
   address: {{ adguard_bind_host }}:{{ adguard_admin_port }}
   session_ttl: 30d
 users:
-{% for user in adguard_users %}
+{% for user in adguard_effective_users %}
   - name: {{ user.name }}
     password: {{ user.password }}
 {% endfor %}

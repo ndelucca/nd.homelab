@@ -40,15 +40,20 @@
     mode: '0755'
   become: true
 
-- name: Check if port is available
-  ansible.builtin.wait_for:
-    port: "{{ home_assistant_port }}"
-    host: "{{ home_assistant_host }}"
-    state: stopped
-    timeout: 1
-  ignore_errors: true
+- name: Check availability of port {{ home_assistant_port }}
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":{{ home_assistant_port }}\s" && echo "occupied" || echo "available"
   register: port_check
+  changed_when: false
+  failed_when: false
 
-- name: Display port availability
+- name: Display port status
   ansible.builtin.debug:
-    msg: "Port {{ home_assistant_port }} is {{ 'available' if port_check is not failed else 'in use (may be existing Home Assistant)' }}"
+    msg: "Port {{ home_assistant_port }} is {{ port_check.stdout }}"
+
+# A warning, not a failure: on a re-run the port is expected to be held by
+# Home Assistant itself (consistent with the other container roles).
+- name: Warn if port is occupied
+  ansible.builtin.debug:
+    msg: "WARNING: port {{ home_assistant_port }} is already in use (expected if Home Assistant is already running)"
+  when: port_check.stdout == "occupied"

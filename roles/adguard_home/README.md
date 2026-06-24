@@ -26,11 +26,11 @@ This role installs and configures AdGuard Home DNS server as a native binary on 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `adguard_version` | `latest` | AdGuard Home version to install |
+| `adguard_version` | `v0.107.77` | Pinned AdGuard Home version (keep in sync with `adguard_schema_version`) |
 | `adguard_install_dir` | `/usr/local/bin` | Binary installation directory |
 | `adguard_working_dir` | `/opt/AdGuardHome` | Working directory for data and config |
-| `adguard_user` | `adguard` | System user for AdGuard Home |
-| `adguard_group` | `adguard` | System group for AdGuard Home |
+| `adguard_user` | `ndelucca` | System user for AdGuard Home |
+| `adguard_group` | `ndelucca` | System group for AdGuard Home |
 | `adguard_configure_app` | `false` | Deploy custom configuration (set to true in inventory to manage config) |
 
 ### Network Configuration
@@ -49,10 +49,12 @@ This role installs and configures AdGuard Home DNS server as a native binary on 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `adguard_upstream_dns` | AdGuard + Quad9 | List of upstream DNS servers |
-| `adguard_upstream_mode` | `load_balance` | Upstream mode: load_balance, parallel, or fastest_addr |
 | `adguard_bootstrap_dns` | Multiple providers | Bootstrap DNS for resolving upstream hostnames |
 | `adguard_cache_enabled` | `true` | Enable DNS cache |
-| `adguard_cache_size` | `4194304` | Cache size in bytes (4MB) |
+
+> Note: upstream mode (`parallel`) and cache size (4 MB) are fixed in the
+> config template, not exposed as variables. Edit `templates/AdGuardHome.yaml.j2`
+> to change them.
 
 ### DHCP Configuration
 
@@ -136,12 +138,6 @@ adguard_upstream_dns:
   - https://dns.google/dns-query
   - 1.1.1.1
   - 8.8.8.8
-
-# Use parallel mode for faster resolution
-adguard_upstream_mode: parallel
-
-# Increase cache size
-adguard_cache_size: 8388608  # 8MB
 ```
 
 ## Usage

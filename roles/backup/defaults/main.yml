@@ -54,9 +54,11 @@ backup_notify_ntfy_url: ""
 backup_disk_usage_warn_percent: 85
 
 # Weekly `restic check` also re-reads a subset of the actual pack data to catch
-# on-disk bitrot (a plain `restic check` only validates structure/metadata). A
-# percentage string covers the whole repo gradually over time.
-backup_check_read_data_subset: "10%"
+# on-disk bitrot (a plain `restic check` only validates structure/metadata). We
+# use restic's m/n form and advance m by ISO week, so coverage ROTATES and the
+# whole repo is verified over this many weeks. (A fixed "N%" re-reads ~the same
+# packs every week — deterministic by pack ID — so ~90% would never be checked.)
+backup_check_read_data_partitions: 5
 
 # --- Backup freshness dead-man's-switch -------------------------------------
 # OnFailure only fires when a unit RUNS and fails. The most dangerous failure is

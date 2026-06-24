@@ -7,11 +7,12 @@ Wants=network-online.target
 Type=oneshot
 
 {% for service in service_maintenance_restart_services %}
-# Only restart {{ service }} if it is NOT healthy — a blind restart on every
-# boot drops LAN DNS/DHCP for no reason when the service came up fine. Healthy =
-# unit active AND (dig absent OR it answers DNS on 127.0.0.1). The DNS probe
-# assumes the service answers on 127.0.0.1:53 (true for AdGuard).
-ExecStart=/bin/sh -c 'svc={{ service }}; if systemctl is-active --quiet "$svc" && { ! command -v dig >/dev/null 2>&1 || dig +time=2 +tries=1 @127.0.0.1 health-check.invalid >/dev/null 2>&1; }; then echo "$svc healthy, no restart"; else echo "$svc unhealthy, restarting"; systemctl restart "$svc"; fi'
+# Only restart {{ service }} if it is NOT healthy — a blind restart on every boot
+# drops LAN DNS/DHCP for no reason when the service came up fine. Healthy = unit
+# active AND (no probe name OR dig absent OR a query for the probe name returns a
+# NON-EMPTY answer on 127.0.0.1). Requiring an answer means a wedged-but-listening
+# resolver (NXDOMAIN/REFUSED/timeout) is caught, not treated as up.
+ExecStart=/bin/sh -c 'svc={{ service }}; probe="{{ service_maintenance_dns_probe_name }}"; if systemctl is-active --quiet "$svc" && { [ -z "$probe" ] || ! command -v dig >/dev/null 2>&1 || [ -n "$(dig +time=2 +tries=1 +short @127.0.0.1 "$probe" 2>/dev/null)" ]; }; then echo "$svc healthy, no restart"; else echo "$svc unhealthy, restarting"; systemctl restart "$svc"; fi'
 {% endfor %}
 
 # Logging

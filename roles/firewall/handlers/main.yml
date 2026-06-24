@@ -1,8 +1,7 @@
 ---
-# Handlers for Firewall role
-
-- name: reload firewalld
-  ansible.builtin.systemd:
-    name: firewalld
-    state: reloaded
-  become: true
+# Handlers for Firewall role.
+#
+# No `reload firewalld` handler: every rule task uses `immediate: true` +
+# `permanent: true`, so changes apply to the running firewall AND persist in one
+# step. A reload would only re-read permanent config (redundant) and could drop
+# runtime-only state, so it is intentionally omitted.

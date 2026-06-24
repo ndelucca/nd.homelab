@@ -21,11 +21,14 @@
 # mode). This guarantees the documented `nginx_tls_mode: selfsigned` fallback has
 # a cert on disk even when lego issuance has never run or has failed. `creates:`
 # keeps it idempotent.
+# NOTE: there is no renewal path for this floor cert — `creates:` means it is
+# generated once and never refreshed. The 10y (3650d) lifetime is deliberately
+# long so it outlives the host; if it ever expires, delete the file and re-run.
 - name: Generate self-signed SSL certificate (bootstrap floor)
   ansible.builtin.command:
     cmd: >
       openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509
-      -subj "/C=US/ST=State/L=City/O=Organization/CN={{ nginx_domain }}"
+      -subj "/O=home-server (self-signed fallback)/CN={{ nginx_domain }}"
       -keyout {{ nginx_selfsigned_key }}
       -out {{ nginx_selfsigned_cert }}
     creates: "{{ nginx_selfsigned_cert }}"

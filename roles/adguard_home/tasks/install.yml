@@ -117,8 +117,11 @@
   check_mode: false  # read-only; must run so the capability check works in --check
   when: adguard_set_capabilities | bool
 
-# Idempotent: only (re)apply when a fresh binary was just installed or when the
-# desired capabilities are not already present (getcap reports them lowercased).
+# Idempotent: only (re)apply when a fresh binary was just installed (caps are
+# wiped on replace) or when any wanted capability is missing. getcap prints the
+# caps lowercased (e.g. "<path> cap_net_bind_service,cap_net_raw=eip"); we pull
+# out the cap_* tokens and compare the SET, so output formatting (=eip vs +eip,
+# comma order) doesn't cause false "changed" churn.
 - name: Set capabilities on AdGuard Home binary
   ansible.builtin.command: >
     setcap '{{ adguard_capabilities | map("regex_replace", "^(.*)$", "\1=+eip") | join(" ") }}'
@@ -126,8 +129,11 @@
   become: true
   when:
     - adguard_set_capabilities | bool
-    - adguard_needs_install or
-      (adguard_capabilities | map('lower') | reject('in', adguard_current_caps.stdout | default('')) | list | length > 0)
+    - >-
+      adguard_needs_install
+      or ((adguard_capabilities | map('lower') | list) | difference(
+            adguard_current_caps.stdout | default('') | regex_findall('cap_[a-z_]+')
+          ) | length > 0)
   changed_when: true
 
 - name: Install AdGuard Home as a systemd service

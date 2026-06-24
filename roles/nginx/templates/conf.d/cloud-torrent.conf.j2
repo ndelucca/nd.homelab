@@ -19,11 +19,8 @@ server {
     ssl_certificate {{ nginx_ssl_certificate }};
     ssl_certificate_key {{ nginx_ssl_certificate_key }};
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # Shared TLS security headers (single source: ssl_headers.inc.j2)
+    include {{ nginx_ssl_headers_snippet }};
 
     location / {
         proxy_pass http://127.0.0.1:{{ nginx_cloud_torrent_port }};
