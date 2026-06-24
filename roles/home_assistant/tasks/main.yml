@@ -13,11 +13,13 @@
   ansible.builtin.import_tasks: quadlet.yml
   tags: ['home_assistant', 'quadlet']
 
-- name: Configure systemd service
-  ansible.builtin.import_tasks: service.yml
-  tags: ['home_assistant', 'service']
-
+# Apply SELinux contexts before the container starts so an enforcing host does
+# not deny volume access on the first run.
 - name: Configure SELinux
   ansible.builtin.import_tasks: selinux.yml
   tags: ['home_assistant', 'selinux']
   when: home_assistant_manage_selinux | bool
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['home_assistant', 'service']

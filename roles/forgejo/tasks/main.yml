@@ -13,6 +13,14 @@
   ansible.builtin.import_tasks: quadlet.yml
   tags: ['forgejo', 'quadlet']
 
+# Apply SELinux contexts before the container starts so an enforcing host does
+# not deny volume access on the first run (admin/mirror run after, against the
+# already-running container).
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  tags: ['forgejo', 'selinux']
+  when: forgejo_manage_selinux | bool
+
 - name: Configure systemd service
   ansible.builtin.import_tasks: service.yml
   tags: ['forgejo', 'service']
@@ -24,8 +32,3 @@
 - name: Configure pull mirrors from GitHub
   ansible.builtin.import_tasks: mirror.yml
   tags: ['forgejo', 'mirror']
-
-- name: Configure SELinux
-  ansible.builtin.import_tasks: selinux.yml
-  tags: ['forgejo', 'selinux']
-  when: forgejo_manage_selinux | bool

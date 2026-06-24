@@ -13,14 +13,16 @@
   ansible.builtin.import_tasks: quadlet.yml
   tags: ['monitoring', 'quadlet']
 
-- name: Configure systemd service
-  ansible.builtin.import_tasks: service.yml
-  tags: ['monitoring', 'service']
-
+# Apply SELinux contexts before the container starts so an enforcing host does
+# not deny volume access on the first run.
 - name: Configure SELinux
   ansible.builtin.import_tasks: selinux.yml
   tags: ['monitoring', 'selinux']
   when: monitoring_manage_selinux | bool
+
+- name: Configure systemd service
+  ansible.builtin.import_tasks: service.yml
+  tags: ['monitoring', 'service']
 
 - name: Seed monitors into Uptime-Kuma
   ansible.builtin.import_tasks: monitors.yml

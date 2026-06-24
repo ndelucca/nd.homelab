@@ -8,8 +8,10 @@ Image={{ orcaslicer_image }}
 ContainerName=orcaslicer
 PublishPort={{ orcaslicer_host }}:{{ orcaslicer_port }}:3001
 
-# Config volume (container home directory)
-Volume={{ orcaslicer_config_dir }}:/config:Z
+# Config volume (container home directory). No :Z here — selinux.yml labels this
+# dir container_file_t (a persistent label); adding :Z would apply a conflicting
+# per-container MCS category and fight that labeling.
+Volume={{ orcaslicer_config_dir }}:/config
 
 Environment=PUID={{ orcaslicer_uid }}
 Environment=PGID={{ orcaslicer_uid }}
