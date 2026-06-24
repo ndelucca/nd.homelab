@@ -31,12 +31,16 @@
     mode: '0755'
   become: true
 
+# Ownership of the config tree is handed to the container's app user below (via
+# podman unshare), so these tasks only ensure the dirs exist with the right mode.
+# Do NOT set owner here: the LSIO image runs OrcaSlicer as an in-container uid that
+# rootless Podman maps to a host sub-uid, NOT to {{ orcaslicer_user }}. Forcing
+# {{ orcaslicer_user }} ownership is exactly what blocks the app from writing (e.g.
+# "permission denied" saving G-code to config/gcodes).
 - name: Ensure config directory exists
   ansible.builtin.file:
     path: "{{ orcaslicer_config_dir }}"
     state: directory
-    owner: "{{ orcaslicer_user }}"
-    group: "{{ orcaslicer_group }}"
     mode: '0755'
   become: true
 
@@ -44,13 +48,28 @@
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    owner: "{{ orcaslicer_user }}"
-    group: "{{ orcaslicer_group }}"
     mode: '0755'
   become: true
   loop:
     - "{{ orcaslicer_config_dir }}/downloads"
     - "{{ orcaslicer_config_dir }}/gcodes"
+
+# Give the config tree to the container's app user. OrcaSlicer runs inside the
+# container as uid {{ orcaslicer_uid }} (PUID), which rootless Podman maps to a host
+# sub-uid (e.g. 525287). `podman unshare` enters that user namespace, so a chown to
+# the in-container uid resolves to the correct host sub-uid automatically — no need
+# to hardcode it. Host access for {{ orcaslicer_user }} is preserved by the ACLs
+# below. NOTE: keep-id is deliberately NOT used here; this LSIO/s6 image starts as
+# root and drops privileges, and keep-id breaks its init (it cannot chown its own
+# rootfs), so the app never starts.
+- name: Hand the config tree to the container's app user (rootless sub-uid)
+  ansible.builtin.command:
+    cmd: "podman unshare chown -R {{ orcaslicer_uid }}:{{ orcaslicer_uid }} {{ orcaslicer_config_dir }}"
+  become: true
+  become_user: "{{ orcaslicer_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ orcaslicer_uid }}"
+  changed_when: false
 
 - name: Set ACLs for user access to downloads and gcodes
   ansible.posix.acl:
