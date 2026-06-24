@@ -41,3 +41,11 @@ container_user: "{{ home_assistant_user }}"
 container_uid: "{{ home_assistant_uid }}"
 container_service_name: "{{ home_assistant_service_name }}"
 container_selinux_paths: "{{ [home_assistant_config_dir] }}"
+# container_base service-step contract (enable + wait_for). HA takes a bit to
+# come up, so use a longer initial delay and timeout.
+container_host: "{{ home_assistant_host }}"
+container_port: "{{ home_assistant_port }}"
+container_service_enabled: "{{ home_assistant_service_enabled }}"
+container_service_state: "{{ home_assistant_service_state }}"
+container_wait_delay: 15
+container_wait_timeout: 180

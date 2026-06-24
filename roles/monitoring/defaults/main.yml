@@ -100,3 +100,8 @@ container_user: "{{ monitoring_user }}"
 container_uid: "{{ monitoring_uid }}"
 container_service_name: "{{ monitoring_service_name }}"
 container_selinux_paths: "{{ [monitoring_data_dir] }}"
+# container_base service-step contract (enable + wait_for).
+container_host: "{{ monitoring_host }}"
+container_port: "{{ monitoring_port }}"
+container_service_enabled: "{{ monitoring_service_enabled }}"
+container_service_state: "{{ monitoring_service_state }}"

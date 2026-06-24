@@ -3,13 +3,16 @@
 # container_base — input contract (no values set here on purpose).
 # ----------------------------------------------------------------------------
 # This role owns the boilerplate shared by every rootless-Podman/Quadlet app
-# role (install + handlers). It is NOT used standalone; a consuming role pulls
-# it in from its install step:
+# role: the Podman install + shared handlers, and the SELinux and service steps.
+# It is NOT used standalone; a consuming role pulls each step in by name:
 #
-#   - name: Install the rootless Podman runtime and shared container handlers
-#     ansible.builtin.include_role:
-#       name: container_base
-#       tasks_from: install
+#   - include_role: { name: container_base, tasks_from: install }   # + handlers
+#   - include_role: { name: container_base, tasks_from: selinux }   # label volumes
+#   - include_role: { name: container_base, tasks_from: service }   # enable + wait
+#
+# (preflight and quadlet stay per-role: they create role-specific dirs and deploy
+# the role's own .container/.kube template, which `template:` resolves against
+# the consuming role's templates/, not this one.)
 #
 # include_role also makes this role's handlers available to the consumer. The
 # consumer MUST define these vars in its own defaults/main.yml (kept here as a
@@ -18,8 +21,17 @@
 #
 #   container_user            # the rootless service user (e.g. "{{ kavita_user }}")
 #   container_uid             # its uid, for XDG_RUNTIME_DIR (e.g. "{{ kavita_uid }}")
-#   container_service_name    # systemd --user unit to restart (e.g. "{{ kavita_service_name }}")
-#   container_selinux_paths   # list of dirs to restorecon (e.g. [config, library, ...])
+#   container_service_name    # systemd --user unit (e.g. "{{ kavita_service_name }}")
+#   container_selinux_paths   # list of dirs to label/restorecon ([config, library])
+#   container_host            # wait_for host (e.g. "{{ kavita_host }}")
+#   container_port            # wait_for port (e.g. "{{ kavita_port }}")
+#
+# Optional (sensible defaults in the service/selinux tasks):
+#   container_service_enabled # default true
+#   container_service_state   # default 'started'
+#   container_wait_delay      # default 10
+#   container_wait_timeout    # default 120
+#   container_selinux_booleans# default [] (e.g. ['container_use_devices'])
 #
 # Because every consuming role flushes its own handlers within the role, the
 # vars resolve to that role's values even when several container roles run in

@@ -70,3 +70,10 @@ container_user: "{{ forgejo_user }}"
 container_uid: "{{ forgejo_uid }}"
 container_service_name: "{{ forgejo_service_name }}"
 container_selinux_paths: "{{ [forgejo_data_dir, forgejo_config_dir] }}"
+# container_base service-step contract (enable + wait_for). Forgejo's first
+# start can be slow, so allow a longer wait timeout.
+container_host: "{{ forgejo_host }}"
+container_port: "{{ forgejo_port }}"
+container_service_enabled: "{{ forgejo_service_enabled }}"
+container_service_state: "{{ forgejo_service_state }}"
+container_wait_timeout: 180

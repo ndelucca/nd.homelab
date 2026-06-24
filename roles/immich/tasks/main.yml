@@ -20,11 +20,15 @@
 # SELinux contexts must be applied BEFORE the container starts: the immich pod
 # mounts hostPath volumes with no :Z relabel, so on an enforcing host the first
 # start is denied access unless the file contexts already exist.
-- name: Configure SELinux
-  ansible.builtin.import_tasks: selinux.yml
+- name: Configure SELinux (shared container_base step)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: selinux
   tags: ['immich', 'selinux']
   when: immich_manage_selinux | bool
 
-- name: Configure systemd service
-  ansible.builtin.import_tasks: service.yml
+- name: Configure systemd service (shared container_base step)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: service
   tags: ['immich', 'service']

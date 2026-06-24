@@ -16,13 +16,17 @@
 # Apply SELinux contexts before the container starts so an enforcing host does
 # not deny volume access on the first run (admin/mirror run after, against the
 # already-running container).
-- name: Configure SELinux
-  ansible.builtin.import_tasks: selinux.yml
+- name: Configure SELinux (shared container_base step)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: selinux
   tags: ['forgejo', 'selinux']
   when: forgejo_manage_selinux | bool
 
-- name: Configure systemd service
-  ansible.builtin.import_tasks: service.yml
+- name: Configure systemd service (shared container_base step)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: service
   tags: ['forgejo', 'service']
 
 - name: Create admin user

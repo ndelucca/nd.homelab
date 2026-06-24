@@ -64,13 +64,15 @@ docs/                               # BOOTSTRAP, RESTORE, TLS-AND-DNS, ADGUARD_C
 ```
 
 Roles follow a consistent skeleton: `preflight → install → [configure] →
-quadlet → service → selinux`. The rootless-Podman/Quadlet container roles
+quadlet → selinux → service`. The rootless-Podman/Quadlet container roles
 (kavita, immich, forgejo, home_assistant, orcaslicer, monitoring) share their
-install step and their daemon-reload / restart / SELinux-relabel handlers via
-the **`container_base`** role: each pulls it in from `tasks/install.yml`
-(`include_role … tasks_from: install`) and exposes the contract vars
-(`container_user`, `container_uid`, `container_service_name`,
-`container_selinux_paths`) in its `defaults/main.yml`.
+**install + handlers, SELinux step and service step** via the **`container_base`**
+role: each pulls them in by name (`include_role … tasks_from: install` /
+`selinux` / `service`) and exposes the contract vars (`container_user`,
+`container_uid`, `container_service_name`, `container_selinux_paths`,
+`container_host`, `container_port`) in its `defaults/main.yml`. Only `preflight`
+(role-specific dirs) and `quadlet` (the role's own `.container`/`.kube` template)
+stay per-role.
 
 ## Prerequisites
 

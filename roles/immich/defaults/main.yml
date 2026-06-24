@@ -60,3 +60,8 @@ container_user: "{{ immich_user }}"
 container_uid: "{{ immich_uid }}"
 container_service_name: "{{ immich_service_name }}"
 container_selinux_paths: "{{ [immich_upload_location, immich_db_data_location, immich_model_cache] }}"
+# container_base service-step contract (enable + wait_for).
+container_host: "{{ immich_host }}"
+container_port: "{{ immich_port }}"
+container_service_enabled: "{{ immich_service_enabled }}"
+container_service_state: "{{ immich_service_state }}"

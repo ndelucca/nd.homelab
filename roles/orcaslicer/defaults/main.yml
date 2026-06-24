@@ -48,3 +48,8 @@ container_user: "{{ orcaslicer_user }}"
 container_uid: "{{ orcaslicer_uid }}"
 container_service_name: "{{ orcaslicer_service_name }}"
 container_selinux_paths: "{{ [orcaslicer_config_dir] }}"
+# container_base service-step contract (enable + wait_for).
+container_host: "{{ orcaslicer_host }}"
+container_port: "{{ orcaslicer_port }}"
+container_service_enabled: "{{ orcaslicer_service_enabled }}"
+container_service_state: "{{ orcaslicer_service_state }}"

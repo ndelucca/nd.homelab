@@ -1,0 +1,43 @@
+---
+# Shared SELinux step for rootless-Podman/Quadlet container roles. Included via
+# `include_role: { name: container_base, tasks_from: selinux }`.
+#
+# Labels the role's volume dirs container_file_t and relabels them through the
+# shared `container apply selinux context` handler, which the service step
+# flushes before the container starts (so contexts exist on first run).
+#
+# Contract vars: container_selinux_paths (list of dirs), and optionally
+# container_selinux_booleans (list of seboolean names to enable, default []).
+
+- name: Display SELinux status
+  ansible.builtin.debug:
+    msg: "SELinux is {{ ansible_selinux.mode | default('disabled') }}"
+
+- name: Install SELinux policy packages
+  ansible.builtin.dnf:
+    name:
+      - policycoreutils-python-utils
+      - container-selinux
+    state: present
+  become: true
+  when: ansible_selinux.mode | default('') == 'enforcing'
+
+- name: Set SELinux file contexts (container_file_t) for the role's volumes
+  community.general.sefcontext:
+    target: "{{ item }}(/.*)?"
+    setype: container_file_t
+    state: present
+  become: true
+  loop: "{{ container_selinux_paths }}"
+  when: ansible_selinux.mode | default('') == 'enforcing'
+  notify: container apply selinux context
+
+- name: Enable optional SELinux booleans
+  ansible.posix.seboolean:
+    name: "{{ item }}"
+    state: true
+    persistent: true
+  become: true
+  loop: "{{ container_selinux_booleans | default([]) }}"
+  when: ansible_selinux.mode | default('') == 'enforcing'
+  failed_when: false

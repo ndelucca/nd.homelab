@@ -15,10 +15,12 @@
     src: orcaslicer.container.j2
     dest: "{{ orcaslicer_quadlet_dir }}/{{ orcaslicer_uid }}/{{ orcaslicer_service_name }}.container"
     owner: root
-    group: root
-    # 0600: the unit inlines the OrcaSlicer web password, so it must not be
-    # world-readable.
-    mode: '0600'
+    # Group-readable by the rootless service user (NOT world): the unit inlines
+    # the OrcaSlicer web password, but the per-user Quadlet generator runs AS
+    # this user and must read the file to generate the .service — 0600 root:root
+    # would hide it from the user and the unit would never be generated.
+    group: "{{ orcaslicer_group }}"
+    mode: '0640'
   become: true
   notify:
     - container daemon-reload-user
