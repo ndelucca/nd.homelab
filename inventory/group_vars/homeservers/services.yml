@@ -37,11 +37,17 @@ adguard_dhcp_static_leases:
   - ip: 192.168.10.10
     hostname: ndelucca-server
     mac: "4c:cc:6a:d3:fc:a1"
+  # Raspberry printer — two NICs, two reservations. The printer is currently
+  # reached over WiFi (.12): ansible_host (inventory/hosts.yml) and the
+  # printer.<domain> DNS rewrite both point at .12. The .11 ethernet reservation
+  # is dormant (cable down). If/when ethernet returns, move ansible_host and the
+  # printer. rewrite to .11 together so the canonical name and the IP in use stay
+  # in sync.
   - ip: 192.168.10.11
-    hostname: ndelucca-raspberry-printer
+    hostname: ndelucca-raspberry-printer            # ethernet (dormant)
     mac: "b8:27:eb:f1:af:50"
   - ip: 192.168.10.12
-    hostname: ndelucca-raspberry-printer-wireless
+    hostname: ndelucca-raspberry-printer-wireless   # WiFi — active path (printer. -> .12)
     mac: "b8:27:eb:a4:fa:05"
   - ip: 192.168.10.13
     hostname: ndelucca-acer

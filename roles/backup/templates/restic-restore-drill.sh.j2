@@ -5,6 +5,12 @@
 # (small, authoritative) DB dumps from the latest snapshot into a throwaway dir
 # and checking they came back non-empty. It restores ONLY the dumps, never the
 # live data, and touches nothing outside its temp dir.
+#
+# SCOPE (deliberate): this verifies restic can read+decrypt the repo and that the
+# dumps come back non-empty — NOT that each dump loads cleanly into a fresh DB
+# engine. Validating restore-into-DB (PRAGMA integrity_check / pg_restore) was
+# intentionally left out: this is a single-admin home-lab and the priority is
+# simply HAVING a second, restorable copy, not enterprise-grade verification.
 set -uo pipefail
 
 export RESTIC_REPOSITORY="{{ backup_repo }}"

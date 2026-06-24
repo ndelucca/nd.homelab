@@ -83,19 +83,19 @@ Contains your current configuration:
 ### Apply Full Configuration
 ```bash
 # Deploy everything (binary, config, service)
-ansible-playbook playbooks/adguard.yml
+ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard
 ```
 
 ### Update Configuration Only
 ```bash
 # Update just the configuration without reinstalling
-ansible-playbook playbooks/adguard.yml --tags configure
+ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard
 ```
 
 ### Skip Configuration (Manual Setup via Web UI)
 ```bash
 # Install binary and service, but don't deploy config
-ansible-playbook playbooks/adguard.yml -e "adguard_configure_app=false"
+ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard -e "adguard_configure_app=false"
 ```
 
 ## Modifying Configuration
@@ -124,7 +124,7 @@ Edit `roles/adguard_home/defaults/main.yml` to change defaults for all servers.
 Override variables at runtime:
 
 ```bash
-ansible-playbook playbooks/adguard.yml -e "adguard_dhcp_range_end=192.168.10.250"
+ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard -e "adguard_dhcp_range_end=192.168.10.250"
 ```
 
 ## Password Management
@@ -145,7 +145,7 @@ AdGuard Home uses bcrypt-hashed passwords. To change the password:
 
 3. **Apply the change**:
    ```bash
-   ansible-playbook playbooks/adguard.yml --tags configure
+   ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard
    ```
 
 ## Configuration Files Managed
@@ -195,7 +195,7 @@ adguard_dns_rewrites:
 
 Then apply:
 ```bash
-ansible-playbook playbooks/adguard.yml --tags configure
+ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard
 ```
 
 ### Change DNS Upstream Servers
@@ -225,7 +225,7 @@ adguard_filters:
 ### Configuration Not Applied
 ```bash
 # Check if configure task ran
-ansible-playbook playbooks/adguard.yml --tags configure -vv
+ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard -vv
 
 # Verify configuration file
 ansible ndelucca-server -m shell -a "cat /opt/AdGuardHome/AdGuardHome.yaml | head -20" --become

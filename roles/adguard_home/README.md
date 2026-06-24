@@ -31,17 +31,17 @@ This role installs and configures AdGuard Home DNS server as a native binary on 
 | `adguard_working_dir` | `/opt/AdGuardHome` | Working directory for data and config |
 | `adguard_user` | `adguard` | System user for AdGuard Home |
 | `adguard_group` | `adguard` | System group for AdGuard Home |
-| `adguard_configure_app` | `true` | Deploy custom configuration (set to false for manual setup) |
+| `adguard_configure_app` | `false` | Deploy custom configuration (set to true in inventory to manage config) |
 
 ### Network Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `adguard_bind_host` | `0.0.0.0` | IP address to bind HTTP interface |
-| `adguard_admin_port` | `80` | Admin web interface port |
+| `adguard_bind_host` | `127.0.0.1` | IP address to bind HTTP admin interface (behind NGINX) |
+| `adguard_admin_port` | `8081` | Admin web interface port |
 | `adguard_dns_port` | `53` | DNS server port |
 | `adguard_dns_over_tls_port` | `853` | DNS-over-TLS port |
-| `adguard_dns_over_quic_port` | `784` | DNS-over-QUIC port |
+| `adguard_dns_over_quic_port` | `853` | DNS-over-QUIC port |
 | `adguard_dns_over_https_port` | `443` | DNS-over-HTTPS port |
 
 ### DNS Configuration
@@ -149,21 +149,21 @@ adguard_cache_size: 8388608  # 8MB
 ### Run Complete Installation
 
 ```bash
-ansible-playbook playbooks/adguard.yml
+ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard
 ```
 
 ### Run Only Configuration Update
 
 ```bash
 # Update configuration without reinstalling
-ansible-playbook playbooks/adguard.yml --tags configure
+ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard,configure
 ```
 
 ### Skip Configuration (Manual Setup)
 
 ```bash
 # Install binary and service only, configure via web UI
-ansible-playbook playbooks/adguard.yml -e "adguard_configure_app=false"
+ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard -e "adguard_configure_app=false"
 ```
 
 ## Password Management

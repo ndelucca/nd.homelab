@@ -54,8 +54,10 @@ inventory/
     all/{main,vault}.yml            # base_domain + shared secrets
     homeservers/{services,storage,vault}.yml   # app/network config, disk layout, secrets
 playbooks/
-  site.yml                          # full orchestration (run this)
-  <service>.yml                     # per-service playbooks
+  site.yml                          # full orchestration (run this); one service via --tags <role>
+  printers.yml, mainsailos_update.yml  # Raspberry Pi printer plays (hosts: printers)
+  hosts.yml                         # manage /etc/hosts entries
+  remove_adguard.yml                # tear down the AdGuard install
   update.yml                        # report available container image updates
 roles/<role>/                       # one role per concern: tasks/ defaults/ templates/ handlers/ meta/
 docs/                               # BOOTSTRAP, RESTORE, TLS-AND-DNS, ADGUARD_CONFIG_SETUP

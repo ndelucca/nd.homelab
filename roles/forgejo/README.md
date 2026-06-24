@@ -18,7 +18,8 @@ subdomain and an AdGuard DNS rewrite.
 - Idempotent admin-user creation
 - Persistent data under `/srv/forgejo/data`
 - SELinux and firewall integration
-- Image pinned + `AutoUpdate=registry` (kept current by `playbooks/update.yml`)
+- Image pinned by tag (no `AutoUpdate`; bump `forgejo_version` and re-run to
+  upgrade — `playbooks/update.yml` only reports when a newer image exists)
 
 ## Requirements
 
@@ -55,10 +56,10 @@ subdomain and an AdGuard DNS rewrite.
 
 ```bash
 # Deploy Forgejo only
-ansible-playbook playbooks/forgejo.yml -l ndelucca-server
+ansible-playbook playbooks/site.yml -l ndelucca-server --tags forgejo
 
 # As part of the full site
-ansible-playbook playbooks/site.yml -l ndelucca-server --tags forgejo
+ansible-playbook playbooks/site.yml -l ndelucca-server
 ```
 
 ## SSH vs. the host sshd
@@ -111,7 +112,7 @@ already exist are skipped (HTTP 409).
 3. **Deploy:**
 
    ```bash
-   ansible-playbook playbooks/forgejo.yml -l ndelucca-server --tags forgejo,mirror
+   ansible-playbook playbooks/site.yml -l ndelucca-server --tags forgejo,mirror
    ```
 
 4. **Empty `forgejo_mirror_force_recreate`** after the first successful run (it is

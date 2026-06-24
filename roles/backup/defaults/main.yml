@@ -5,6 +5,13 @@
 # rootless service user (ndelucca): it can read all of appdata/media/D-Leo
 # (owned ndelucca:ndelucca) and `podman exec` the Immich Postgres over the user
 # socket. A daily systemd *user* timer runs the backup; a weekly one prunes.
+#
+# ACCEPTED RISK — this is 2-1-1, not 3-2-1: D-Ursa is a second disk in the SAME
+# chassis, writable by the same uid that runs the apps. A fire/theft/surge or a
+# compromised service user can take out both copies. Deliberate trade-off for a
+# single-admin home-lab (the point is surviving a primary-disk failure, not
+# offsite/ransomware resilience). Add `restic copy` to an offsite/append-only
+# target if that risk profile ever changes.
 
 # Service user — reuse the central storage user (rootless, uid 1000).
 backup_user: "{{ app_storage_user }}"
