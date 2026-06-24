@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Backup freshness dead-man's-switch. Alerts (journal + optional ntfy, via the
+# notify script) when the latest restic snapshot is older than the threshold, or
+# when there are no snapshots at all. This catches the silent failure mode where
+# the backup timer simply never runs. Always exits 0 — its job is to ALERT, not
+# to fail; a stale state is reported through the notify path, not the exit code.
+set -uo pipefail
+
+export RESTIC_REPOSITORY="{{ backup_repo }}"
+export RESTIC_PASSWORD_FILE="{{ backup_password_file }}"
+
+max_age_hours={{ backup_freshness_max_age_hours }}
+
+log() { echo "[backup-freshness] $*"; }
+notify() { "{{ backup_notify_script }}" "$1" "$2" || true; }
+
+if ! mountpoint -q "{{ storage_backup_disk }}"; then
+  notify "Backup freshness check could not run" \
+    "Backup disk {{ storage_backup_disk }} is not mounted, so snapshot age cannot be verified."
+  exit 0
+fi
+
+# Epoch of the most recent snapshot (0 if none / unparseable). restic timestamps
+# are RFC3339 with sub-second precision; strip the fractional part so Python's
+# fromisoformat accepts them regardless of digit count.
+last_epoch=$(restic snapshots --json --latest 1 --no-lock 2>/dev/null \
+  | python3 -c 'import sys,json,re,datetime
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print(0); sys.exit(0)
+if not d:
+    print(0); sys.exit(0)
+t = re.sub(r"\.\d+", "", d[-1]["time"])
+print(int(datetime.datetime.fromisoformat(t).timestamp()))' 2>/dev/null)
+
+if [ -z "${last_epoch}" ] || [ "${last_epoch}" -eq 0 ] 2>/dev/null; then
+  notify "No restic snapshots found" \
+    "The repository {{ backup_repo }} has no snapshots — backups may never have run."
+  exit 0
+fi
+
+now=$(date +%s)
+age=$(( now - last_epoch ))
+max=$(( max_age_hours * 3600 ))
+
+if [ "${age}" -gt "${max}" ]; then
+  hours=$(( age / 3600 ))
+  notify "Backup is stale" \
+    "Latest snapshot is ${hours}h old (> ${max_age_hours}h). The daily backup is not running."
+  exit 0
+fi
+
+log "ok: latest snapshot is $(( age / 3600 ))h old (threshold ${max_age_hours}h)"
+exit 0

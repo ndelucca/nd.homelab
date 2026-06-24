@@ -17,8 +17,11 @@ service_maintenance_restart_services:
   - AdGuardHome
 
 # AdGuard drop-in configuration
-# Delay before AdGuard starts (seconds)
-service_maintenance_adguard_start_delay: 10
+# Bounded readiness gate before AdGuard starts: ping the LAN gateway up to N
+# times (1s each), proceeding as soon as it answers. Replaces a fixed blind
+# sleep. Gateway defaults to the AdGuard DHCP gateway if defined.
+service_maintenance_gateway_ip: "{{ adguard_dhcp_gateway_ip | default('192.168.10.1') }}"
+service_maintenance_network_wait_tries: 30
 # Delay before auto-restart on failure (seconds)
 service_maintenance_adguard_restart_delay: 30
 

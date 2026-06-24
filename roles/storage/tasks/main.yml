@@ -40,6 +40,17 @@
   loop_control:
     label: "{{ item.name }} -> {{ item.mount }}"
 
+# --- Mount guard ------------------------------------------------------------
+# Fail fast if the appdata disk did not actually mount. With `nofail`, a missing
+# disk would otherwise let the skeleton dirs below land on the root filesystem
+# under the empty mountpoint — defeating the "missing mount" guard above and
+# silently shadowing data onto root. findmnt --mountpoint returns non-zero
+# unless the path is a real mountpoint.
+- name: Assert the appdata disk is mounted before creating the skeleton
+  ansible.builtin.command: "findmnt --mountpoint {{ storage_appdata_disk }}"
+  become: true
+  changed_when: false
+
 # --- App-data skeleton ------------------------------------------------------
 # Created after mounting so they land on the appdata disk, owned by the service
 # user. Each app role creates its own subdir under these.

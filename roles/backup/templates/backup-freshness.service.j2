@@ -1,0 +1,10 @@
+[Unit]
+# {{ ansible_managed }}
+Description=restic backup freshness check (dead-man's-switch)
+RequiresMountsFor={{ storage_backup_disk }}
+
+[Service]
+Type=oneshot
+ExecStart={{ backup_freshness_script }}
+Nice=10
+IOSchedulingClass=idle

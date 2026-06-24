@@ -13,7 +13,10 @@
   become_user: "{{ backup_user }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ backup_uid }}"
-  loop: "{{ backup_timers + (backup_restore_drill_timers if backup_restore_drill_enabled else []) }}"
+  loop: >-
+    {{ backup_timers
+       + (backup_restore_drill_timers if backup_restore_drill_enabled else [])
+       + (backup_freshness_timers if backup_freshness_enabled else []) }}
 
 - name: Show backup status
   ansible.builtin.debug:
@@ -23,6 +26,7 @@
       Repository: {{ backup_repo }}
       Daily backup:  {{ backup_schedule_daily }}
       Weekly prune:  {{ backup_schedule_maintenance }}
+      {% if backup_freshness_enabled %}Freshness check: {{ backup_schedule_freshness }} (alerts if latest snapshot > {{ backup_freshness_max_age_hours }}h){% endif %}
       {% if backup_restore_drill_enabled %}Restore drill: {{ backup_schedule_restore_drill }}{% endif %}
 
       Run a backup now:

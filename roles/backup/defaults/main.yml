@@ -46,6 +46,29 @@ backup_notify_ntfy_url: ""
 # Warn when the backup disk crosses this usage percentage (checked weekly).
 backup_disk_usage_warn_percent: 85
 
+# Weekly `restic check` also re-reads a subset of the actual pack data to catch
+# on-disk bitrot (a plain `restic check` only validates structure/metadata). A
+# percentage string covers the whole repo gradually over time.
+backup_check_read_data_subset: "10%"
+
+# --- Backup freshness dead-man's-switch -------------------------------------
+# OnFailure only fires when a unit RUNS and fails. The most dangerous failure is
+# the backup never running at all (linger off, user manager dead, timer
+# disabled) — that fails silently. A daily check alerts when the latest snapshot
+# is older than the threshold (or there are no snapshots), via the same notify
+# script (journal + optional ntfy).
+backup_freshness_enabled: true
+backup_freshness_max_age_hours: 26
+backup_freshness_script: "{{ backup_bin_dir }}/restic-backup-freshness.sh"
+# Run after the daily backup has had time to complete (daily backup is 03:00;
+# 26h threshold means a missed run trips by ~06:00).
+backup_schedule_freshness: "*-*-* 06:00:00"
+backup_freshness_units:
+  - backup-freshness.service
+  - backup-freshness.timer
+backup_freshness_timers:
+  - backup-freshness.timer
+
 # What to back up — only the irreplaceable data.
 backup_paths:
   - "{{ app_data_root }}"               # app STATE: DBs + config (incl. dumps/)

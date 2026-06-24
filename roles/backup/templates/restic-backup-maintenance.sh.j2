@@ -16,8 +16,8 @@ mountpoint -q "{{ storage_backup_disk }}" || die "backup disk {{ storage_backup_
 log "pruning unreferenced data"
 restic prune
 
-log "checking repository integrity"
-restic check
+log "checking repository integrity (+ re-reading {{ backup_check_read_data_subset }} of pack data for bitrot)"
+restic check --read-data-subset={{ backup_check_read_data_subset }}
 
 # --- Backup disk usage guard ------------------------------------------------
 # A silently filling backup disk is the classic way backups stop working, so
