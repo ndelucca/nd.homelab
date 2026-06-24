@@ -10,4 +10,4 @@
     group: "{{ immich_group }}"
     mode: '0644'
   become: true
-  notify: restart immich-pod
+  notify: container restart

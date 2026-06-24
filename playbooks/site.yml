@@ -32,7 +32,7 @@
       tags: ['jellyfin', 'media']
 
     - role: cloud_torrent
-      tags: ['cloud-torrent', 'torrent', 'media']
+      tags: ['cloud_torrent', 'torrent', 'media']
 
     - role: immich
       tags: ['immich', 'photos']

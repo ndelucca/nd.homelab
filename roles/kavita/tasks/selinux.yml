@@ -22,7 +22,7 @@
   become: true
   loop: "{{ [kavita_config_dir, kavita_library_dir] + (kavita_extra_libraries | map(attribute='path') | list) }}"
   when: ansible_selinux.mode | default('') == 'enforcing'
-  notify: kavita apply selinux context
+  notify: container apply selinux context
 
 - name: Enable SELinux boolean for container port binding
   ansible.posix.seboolean:

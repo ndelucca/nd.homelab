@@ -62,8 +62,13 @@ docs/                               # BOOTSTRAP, RESTORE, TLS-AND-DNS, ADGUARD_C
 ```
 
 Roles follow a consistent skeleton: `preflight → install → [configure] →
-quadlet → service → selinux`, with handlers for daemon-reload / restart /
-SELinux relabel.
+quadlet → service → selinux`. The rootless-Podman/Quadlet container roles
+(kavita, immich, forgejo, home_assistant, orcaslicer, monitoring) share their
+install step and their daemon-reload / restart / SELinux-relabel handlers via
+the **`container_base`** role: each pulls it in from `tasks/install.yml`
+(`include_role … tasks_from: install`) and exposes the contract vars
+(`container_user`, `container_uid`, `container_service_name`,
+`container_selinux_paths`) in its `defaults/main.yml`.
 
 ## Prerequisites
 
@@ -139,7 +144,9 @@ systemctl --user -M ndelucca@ start backup-restore-drill.service
 ## Adding a service
 
 Create `roles/<service>/` following an existing container role (e.g. `kavita`
-for a single container, `immich` for a pod), add it to `playbooks/site.yml`,
+for a single container, `immich` for a pod) — reuse `container_base` for the
+Podman install and the shared handlers, and just supply the `container_*`
+contract vars in the new role's `defaults/main.yml`. Add it to `playbooks/site.yml`,
 drop an NGINX vhost at `roles/nginx/templates/conf.d/<service>.conf.j2` (auto-
 discovered), an AdGuard DNS rewrite in `services.yml`, and — only if it must
 face the LAN directly — an entry in the firewall role's `firewall_open_ports`.

@@ -61,7 +61,6 @@ backup_excludes:
   - "{{ app_data_root }}/jellyfin/cache"        # regenerable
   - "{{ app_data_root }}/jellyfin/data/data/transcodes"
   - "{{ app_data_root }}/immich/model-cache"    # ML models, re-downloaded
-  - "*.migrated"                                # phase-1 migration leftovers
   - "lost+found"
 
 # Retention applied by `restic forget` (daily) — prune happens weekly.

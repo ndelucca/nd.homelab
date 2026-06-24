@@ -19,5 +19,5 @@
     mode: '0644'
   become: true
   notify:
-    - forgejo daemon-reload-user
-    - restart forgejo
+    - container daemon-reload-user
+    - container restart

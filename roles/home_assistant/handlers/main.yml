@@ -1,31 +1,6 @@
 ---
-# Handlers for Home Assistant rootless Podman role
-
-# Explicit `systemctl --user daemon-reload`: the systemd module's user-scope
-# daemon_reload does not reliably regenerate Quadlet units (the generated unit
-# keeps stale paths), whereas the command does.
-- name: home_assistant daemon-reload-user  # noqa: command-instead-of-module
-  ansible.builtin.command:
-    cmd: systemctl --user daemon-reload
-  become: true
-  become_user: "{{ home_assistant_user }}"
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ home_assistant_uid }}"
-  changed_when: false
-
-- name: restart home_assistant
-  ansible.builtin.systemd:
-    name: "{{ home_assistant_service_name }}"
-    state: restarted
-    scope: user
-  become: true
-  become_user: "{{ home_assistant_user }}"
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ home_assistant_uid }}"
-
-- name: home_assistant apply selinux context
-  ansible.builtin.command: "restorecon -Rv {{ item }}"
-  become: true
-  loop:
-    - "{{ home_assistant_config_dir }}"
-  changed_when: false
+# Handlers for this role are provided by the shared container_base role (pulled
+# in from tasks/install.yml). This role only supplies the contract vars in
+# defaults/main.yml (container_user/uid/service_name/selinux_paths) and notifies
+# the generic handlers: `container daemon-reload-user`, `container restart`,
+# `container apply selinux context`.

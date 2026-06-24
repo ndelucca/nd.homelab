@@ -64,3 +64,9 @@ forgejo_mirror_force_recreate: []                   # repos to delete+recreate a
 # GitHub Personal Access Token (classic: scope 'repo'; or fine-grained: Contents
 # Read + Metadata Read). REQUIRED when forgejo_pull_mirror_enabled — set via vault.
 forgejo_github_token: ""
+
+# container_base contract — feeds the shared install + handlers (see container_base).
+container_user: "{{ forgejo_user }}"
+container_uid: "{{ forgejo_uid }}"
+container_service_name: "{{ forgejo_service_name }}"
+container_selinux_paths: "{{ [forgejo_data_dir, forgejo_config_dir] }}"

@@ -29,12 +29,9 @@
     force: false
   become: true
 
-- name: Remove existing resolv.conf
-  ansible.builtin.file:
-    path: /etc/resolv.conf
-    state: absent
-  become: true
-
+# `state: link` + `force: true` is idempotent: it only rewrites /etc/resolv.conf
+# when it isn't already the right symlink (replacing a regular file or wrong
+# link as needed), so it no longer churns / breaks resolution on every re-run.
 - name: Link resolv.conf to systemd-resolved
   ansible.builtin.file:
     src: /run/systemd/resolve/resolv.conf

@@ -19,5 +19,5 @@
     mode: '0644'
   become: true
   notify:
-    - home_assistant daemon-reload-user
-    - restart home_assistant
+    - container daemon-reload-user
+    - container restart

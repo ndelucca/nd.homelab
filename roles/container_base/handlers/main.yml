@@ -1,0 +1,35 @@
+---
+# Shared handlers for rootless-Podman/Quadlet container roles. Made available to
+# a consuming role by `include_role: { name: container_base, tasks_from: install }`
+# in its install step. The consumer supplies the contract vars via its defaults
+# (container_user, container_uid, container_service_name, container_selinux_paths)
+# and flushes its own handlers within the role, so the vars resolve to that
+# role's values even when several container roles run in one play.
+
+# Explicit `systemctl --user daemon-reload`: the systemd module's user-scope
+# daemon_reload does not reliably regenerate Quadlet units (the generated unit
+# keeps stale paths), whereas the command does.
+- name: container daemon-reload-user  # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: systemctl --user daemon-reload
+  become: true
+  become_user: "{{ container_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ container_uid }}"
+  changed_when: false
+
+- name: container restart
+  ansible.builtin.systemd:
+    name: "{{ container_service_name }}"
+    state: restarted
+    scope: user
+  become: true
+  become_user: "{{ container_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ container_uid }}"
+
+- name: container apply selinux context
+  ansible.builtin.command: "restorecon -Rv {{ item }}"
+  become: true
+  changed_when: false
+  loop: "{{ container_selinux_paths }}"

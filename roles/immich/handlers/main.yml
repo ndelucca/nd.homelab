@@ -1,33 +1,6 @@
 ---
-# Handlers for Immich role
-
-# Explicit `systemctl --user daemon-reload`: the systemd module's user-scope
-# daemon_reload does not reliably regenerate Quadlet units (the generated unit
-# keeps stale paths), whereas the command does.
-- name: immich daemon-reload-user  # noqa: command-instead-of-module
-  ansible.builtin.command:
-    cmd: systemctl --user daemon-reload
-  become: true
-  become_user: "{{ immich_user }}"
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ immich_uid }}"
-  changed_when: false
-
-- name: restart immich-pod
-  ansible.builtin.systemd:
-    name: "{{ immich_service_name }}"
-    state: restarted
-    scope: user
-  become: true
-  become_user: "{{ immich_user }}"
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ immich_uid }}"
-
-- name: immich apply selinux context
-  ansible.builtin.command: "restorecon -Rv {{ item }}"
-  become: true
-  changed_when: false
-  loop:
-    - "{{ immich_upload_location }}"
-    - "{{ immich_db_data_location }}"
-    - "{{ immich_model_cache }}"
+# Handlers for Immich are provided by the shared container_base role (pulled in
+# from tasks/install.yml). This role only supplies the contract vars in
+# defaults/main.yml (container_user/uid/service_name/selinux_paths) and notifies
+# the generic handlers: `container daemon-reload-user`, `container restart`,
+# `container apply selinux context`.

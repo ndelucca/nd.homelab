@@ -24,7 +24,7 @@
     - "{{ forgejo_data_dir }}"
     - "{{ forgejo_config_dir }}"
   when: ansible_selinux.mode | default('') == 'enforcing'
-  notify: forgejo apply selinux context
+  notify: container apply selinux context
 
 - name: Apply SELinux context immediately
   ansible.builtin.command: "restorecon -Rv {{ item }}"

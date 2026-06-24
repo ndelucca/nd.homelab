@@ -87,3 +87,9 @@ monitoring_check_retries: 2       # failures before marking DOWN
 # (no API/password needed). Only missing monitors are added; the pod is briefly
 # stopped while the DB is written. Disable to manage monitors by hand in the UI.
 monitoring_configure_monitors: true
+
+# container_base contract — feeds the shared install + handlers (see container_base).
+container_user: "{{ monitoring_user }}"
+container_uid: "{{ monitoring_uid }}"
+container_service_name: "{{ monitoring_service_name }}"
+container_selinux_paths: "{{ [monitoring_data_dir] }}"

@@ -29,11 +29,13 @@
   ansible.builtin.debug:
     msg: "Port {{ kavita_port }} is {{ port_check.stdout }}"
 
+# A warning, not a failure: on a re-run the port is expected to be held by
+# Kavita itself. `fail` + `ignore_errors` was a no-op guard that never fired;
+# an explicit warning states the intent honestly without aborting the play.
 - name: Warn if port is occupied
-  ansible.builtin.fail:
-    msg: "Port {{ kavita_port }} is already in use"
+  ansible.builtin.debug:
+    msg: "WARNING: port {{ kavita_port }} is already in use (expected if Kavita is already running)"
   when: port_check.stdout == "occupied"
-  ignore_errors: true
 
 - name: Create Kavita base directory
   ansible.builtin.file:

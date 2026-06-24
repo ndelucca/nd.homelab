@@ -35,3 +35,9 @@ home_assistant_firewall_enabled: false
 
 # SELinux configuration
 home_assistant_manage_selinux: true
+
+# container_base contract — feeds the shared install + handlers (see container_base).
+container_user: "{{ home_assistant_user }}"
+container_uid: "{{ home_assistant_uid }}"
+container_service_name: "{{ home_assistant_service_name }}"
+container_selinux_paths: "{{ [home_assistant_config_dir] }}"

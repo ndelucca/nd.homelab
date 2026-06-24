@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: Naza
+  description: >-
+    Shared scaffolding for rootless-Podman/Quadlet container roles: the Podman
+    runtime install + Quadlet version gate + user lingering, and the common
+    daemon-reload / restart / SELinux-relabel handlers. Consumed via
+    `include_role: { name: container_base, tasks_from: install }`.
+  license: MIT
+  min_ansible_version: '2.13'
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+
+dependencies: []
+
+collections:
+  - community.general
+  - ansible.posix

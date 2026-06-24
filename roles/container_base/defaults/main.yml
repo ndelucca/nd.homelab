@@ -1,0 +1,27 @@
+---
+# ============================================================================
+# container_base — input contract (no values set here on purpose).
+# ----------------------------------------------------------------------------
+# This role owns the boilerplate shared by every rootless-Podman/Quadlet app
+# role (install + handlers). It is NOT used standalone; a consuming role pulls
+# it in from its install step:
+#
+#   - name: Install the rootless Podman runtime and shared container handlers
+#     ansible.builtin.include_role:
+#       name: container_base
+#       tasks_from: install
+#
+# include_role also makes this role's handlers available to the consumer. The
+# consumer MUST define these vars in its own defaults/main.yml (kept here as a
+# checklist; deliberately UNSET so the consumer's value always wins and there is
+# no role-defaults precedence ambiguity):
+#
+#   container_user            # the rootless service user (e.g. "{{ kavita_user }}")
+#   container_uid             # its uid, for XDG_RUNTIME_DIR (e.g. "{{ kavita_uid }}")
+#   container_service_name    # systemd --user unit to restart (e.g. "{{ kavita_service_name }}")
+#   container_selinux_paths   # list of dirs to restorecon (e.g. [config, library, ...])
+#
+# Because every consuming role flushes its own handlers within the role, the
+# vars resolve to that role's values even when several container roles run in
+# one play (verified under private_role_vars=True).
+# ============================================================================

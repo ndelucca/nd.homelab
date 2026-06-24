@@ -22,7 +22,7 @@
   loop:
     - "{{ kavita_quadlet_dir }}/{{ kavita_uid }}/kavita-pod.kube"
     - "{{ kavita_config_dir }}/kavita-pod.yaml"
-  notify: kavita daemon-reload-user
+  notify: container daemon-reload-user
 
 - name: Deploy Kavita Quadlet .container unit
   ansible.builtin.template:
@@ -33,8 +33,8 @@
     mode: '0644'
   become: true
   notify:
-    - kavita daemon-reload-user
-    - restart kavita-pod
+    - container daemon-reload-user
+    - container restart
 
 - name: Flush handlers to reload systemd
   ansible.builtin.meta: flush_handlers

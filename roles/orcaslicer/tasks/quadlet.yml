@@ -19,5 +19,5 @@
     mode: '0644'
   become: true
   notify:
-    - orcaslicer daemon-reload-user
-    - restart orcaslicer
+    - container daemon-reload-user
+    - container restart

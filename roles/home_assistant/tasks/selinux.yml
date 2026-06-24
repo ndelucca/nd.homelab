@@ -19,7 +19,7 @@
     state: present
   become: true
   when: ansible_selinux.mode | default('') == 'enforcing'
-  notify: home_assistant apply selinux context
+  notify: container apply selinux context
 
 - name: Apply SELinux context immediately
   ansible.builtin.command: "restorecon -Rv {{ home_assistant_config_dir }}"

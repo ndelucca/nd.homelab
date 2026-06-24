@@ -3,17 +3,17 @@
 
 - name: Include preflight checks
   ansible.builtin.import_tasks: preflight.yml
-  tags: ['cloud-torrent', 'preflight']
+  tags: ['cloud_torrent', 'preflight']
 
 - name: Install Cloud Torrent binary
   ansible.builtin.import_tasks: install.yml
-  tags: ['cloud-torrent', 'install']
+  tags: ['cloud_torrent', 'install']
 
 - name: Configure systemd service
   ansible.builtin.import_tasks: service.yml
-  tags: ['cloud-torrent', 'service']
+  tags: ['cloud_torrent', 'service']
 
 - name: Configure SELinux
   ansible.builtin.import_tasks: selinux.yml
-  tags: ['cloud-torrent', 'selinux']
+  tags: ['cloud_torrent', 'selinux']
   when: cloud_torrent_manage_selinux | bool

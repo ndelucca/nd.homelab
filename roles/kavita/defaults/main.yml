@@ -41,6 +41,12 @@ kavita_firewall_enabled: false  # False because NGINX handles external access
 # SELinux configuration
 kavita_manage_selinux: true
 
+# container_base contract — feeds the shared install + handlers (see container_base).
+container_user: "{{ kavita_user }}"
+container_uid: "{{ kavita_uid }}"
+container_service_name: "{{ kavita_service_name }}"
+container_selinux_paths: "{{ [kavita_config_dir, kavita_library_dir] + (kavita_extra_libraries | map(attribute='path') | list) }}"
+
 # Podman image. The upstream :latest tag floats, so we pin by digest for
 # reproducibility. To upgrade: pull the new image and update the digest here
 # (the digest below was the image running when this was pinned).
