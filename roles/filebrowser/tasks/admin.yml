@@ -1,0 +1,46 @@
+---
+# Seed the INITIAL FileBrowser admin user. FileBrowser keeps users in its
+# database (bbolt), NOT in config.json, so without this step the vaulted
+# filebrowser_admin_password would never be applied — the service would just
+# auto-create a default admin/admin on first start.
+#
+# This runs once, BEFORE the service first starts, so there is no exclusive
+# bbolt DB lock held by the running server to contend with. Once the DB exists
+# it is a no-op; change the password afterwards from the FileBrowser UI.
+
+- name: Check if the FileBrowser database already exists
+  ansible.builtin.stat:
+    path: "{{ filebrowser_database }}"
+  register: filebrowser_db_stat
+
+- name: Ensure the FileBrowser working directory exists
+  ansible.builtin.file:
+    path: "{{ filebrowser_working_dir }}"
+    state: directory
+    owner: "{{ filebrowser_user }}"
+    group: "{{ filebrowser_group }}"
+    mode: '0750'
+  become: true
+  when: not filebrowser_db_stat.stat.exists
+
+- name: Initialise the FileBrowser database
+  ansible.builtin.command:
+    cmd: "{{ filebrowser_install_dir }}/filebrowser -d {{ filebrowser_database }} config init"
+    chdir: "{{ filebrowser_working_dir }}"
+  become: true
+  become_user: "{{ filebrowser_user }}"
+  when: not filebrowser_db_stat.stat.exists
+  changed_when: true
+
+- name: Create the initial FileBrowser admin user
+  ansible.builtin.command:
+    cmd: >
+      {{ filebrowser_install_dir }}/filebrowser -d {{ filebrowser_database }}
+      users add {{ filebrowser_admin_username }} {{ filebrowser_admin_password }}
+      --perm.admin
+    chdir: "{{ filebrowser_working_dir }}"
+  become: true
+  become_user: "{{ filebrowser_user }}"
+  no_log: true
+  when: not filebrowser_db_stat.stat.exists
+  changed_when: true

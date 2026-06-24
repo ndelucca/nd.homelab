@@ -1,7 +1,7 @@
 ---
 # Configure Jellyfin directories and initial setup
 
-- name: Ensure all Jellyfin directories exist with correct ownership
+- name: Ensure Jellyfin's own state directories exist with correct ownership
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -15,4 +15,17 @@
     - "{{ jellyfin_config_dir }}"
     - "{{ jellyfin_cache_dir }}"
     - "{{ jellyfin_log_dir }}"
-    - "{{ jellyfin_media_dir }}"
+
+# The media root is shared with other apps (immich, filebrowser, …) and is
+# created/owned by the storage role. Only ensure the top-level dir exists — do
+# NOT recurse: a recursive chown/chmod here would rewrite ownership and force
+# 0755 on every media file on every run (slow, churny, and would clobber the
+# other apps' files under the shared tree).
+- name: Ensure the media directory exists (top-level only, no recurse)
+  ansible.builtin.file:
+    path: "{{ jellyfin_media_dir }}"
+    state: directory
+    owner: "{{ jellyfin_user }}"
+    group: "{{ jellyfin_group }}"
+    mode: '0755'
+  become: true

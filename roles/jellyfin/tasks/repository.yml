@@ -1,6 +1,18 @@
 ---
 # Setup RPMFusion repository for Jellyfin
 
+# Import the RPMFusion GPG keys BEFORE installing the release RPMs so their
+# signatures are actually verified (these 2020 keys cover Fedora 33-46).
+# rpm_key is idempotent: a no-op once the fingerprint is already present.
+- name: Import RPMFusion GPG keys
+  ansible.builtin.rpm_key:
+    key: "https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-{{ item }}-fedora-2020"
+    state: present
+  become: true
+  loop:
+    - free
+    - nonfree
+
 - name: Check if RPMFusion Free repository is enabled
   ansible.builtin.command: dnf repolist --enabled  # noqa: command-instead-of-module
   register: repo_list
@@ -10,7 +22,6 @@
   ansible.builtin.dnf:
     name: "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_distribution_version }}.noarch.rpm"
     state: present
-    disable_gpg_check: true
   become: true
   when:
     - jellyfin_rpmfusion_free_enabled | bool
@@ -20,7 +31,6 @@
   ansible.builtin.dnf:
     name: "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ ansible_distribution_version }}.noarch.rpm"
     state: present
-    disable_gpg_check: true
   become: true
   when:
     - jellyfin_rpmfusion_nonfree_enabled | bool

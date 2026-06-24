@@ -14,6 +14,12 @@
   tags: ['filebrowser', 'configure']
   when: filebrowser_use_config_file | bool
 
+# Seed the initial admin into the DB before the service starts (users live in
+# the DB, not config.json). Runs regardless of filebrowser_use_config_file.
+- name: Seed the initial admin user
+  ansible.builtin.import_tasks: admin.yml
+  tags: ['filebrowser', 'admin']
+
 - name: Configure systemd service
   ansible.builtin.import_tasks: service.yml
   tags: ['filebrowser', 'service']
