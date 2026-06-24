@@ -1,38 +1,51 @@
 ---
-# Default variables for Firewall role
+# Default variables for the Firewall role.
+#
+# The role is data-driven: it OPENS the handful of LAN-facing ports/services and
+# CLOSES everything that must stay behind NGINX. All rules go into a single zone,
+# auto-detected from the active LAN interface (FedoraServer on Fedora Server),
+# so rules can't land in a zone the traffic never hits.
 
-# Global firewall settings
 firewall_enabled: true
-firewall_default_zone: public
 
-# Cockpit firewall settings
-cockpit_firewall_enabled: true
-cockpit_firewall_zone: "{{ firewall_default_zone }}"
-cockpit_firewall_service: cockpit
+# Fallback zone used only if the interface's active zone can't be detected.
+firewall_default_zone: FedoraServer
 
-# AdGuard Home firewall settings
-adguard_firewall_enabled: true
-adguard_firewall_zone: "{{ firewall_default_zone }}"
+# Interface whose zone every rule targets (same NIC AdGuard serves DHCP on).
+firewall_interface: "{{ adguard_dhcp_interface_name | default('enp6s0') }}"
 
-# Port definitions (referenced from role variables)
-adguard_bind_port: 3000
-adguard_admin_port: 80
-adguard_dns_port: 53
-adguard_dns_over_tls_port: 853
-adguard_dns_over_quic_port: 853
-adguard_dns_over_https_port: 443
-
-# FileBrowser firewall settings
-filebrowser_firewall_enabled: true
-filebrowser_firewall_zone: "{{ firewall_default_zone }}"
-filebrowser_port: 8080
-
-# Cloud Torrent firewall settings
-cloud_torrent_firewall_enabled: true
-cloud_torrent_firewall_zone: FedoraServer
-cloud_torrent_port: 9091
-
-# Forgejo firewall settings (opens the git SSH port; HTTP stays behind NGINX)
+# Forgejo's container git-SSH port (the only app port intentionally exposed).
 forgejo_firewall_enabled: true
-forgejo_firewall_zone: FedoraServer
 forgejo_ssh_port: 2222
+
+# --- Ports to OPEN on the LAN -----------------------------------------------
+firewall_open_ports:
+  - { port: "53/tcp", comment: "AdGuard DNS", when: "{{ adguard_firewall_enabled | default(true) | bool }}" }
+  - { port: "53/udp", comment: "AdGuard DNS", when: "{{ adguard_firewall_enabled | default(true) | bool }}" }
+  - { port: "80/tcp", comment: "NGINX HTTP", when: "{{ nginx_firewall_enabled | default(true) | bool }}" }
+  - { port: "443/tcp", comment: "NGINX HTTPS", when: "{{ nginx_firewall_enabled | default(true) | bool }}" }
+  - { port: "{{ forgejo_ssh_port }}/tcp", comment: "Forgejo git SSH", when: "{{ forgejo_firewall_enabled | default(true) | bool }}" }
+
+# --- Services to OPEN on the LAN --------------------------------------------
+firewall_open_services:
+  - { service: dhcp, comment: "AdGuard DHCP", when: "{{ adguard_dhcp_enabled | default(false) | bool }}" }
+
+# --- Ports/services to CLOSE (apps live behind NGINX; legacy cleanup) --------
+# Cockpit ships enabled in the FedoraServer zone, so it must be explicitly
+# removed: the UI is reachable only via the NGINX 443 vhost (cockpit.socket is
+# also bound to 127.0.0.1 by the cockpit role). 853 is the dead DoT/DoQ rule
+# (AdGuard has TLS disabled).
+firewall_blocked:
+  - { service: cockpit, comment: "Cockpit only via NGINX 443" }
+  - { port: "853/tcp", comment: "Dead DoT rule (TLS disabled)" }
+  - { port: "853/udp", comment: "Dead DoQ rule (TLS disabled)" }
+  - { port: "3000/tcp", comment: "Forgejo HTTP — localhost only, behind NGINX" }
+  - { port: "8096/tcp", comment: "Jellyfin direct HTTP" }
+  - { port: "8920/tcp", comment: "Jellyfin direct HTTPS" }
+  - { port: "2283/tcp", comment: "Immich direct" }
+  - { port: "5000/tcp", comment: "Kavita direct" }
+  - { port: "3011/tcp", comment: "Uptime-Kuma direct" }
+  - { port: "8123/tcp", comment: "Home Assistant direct" }
+  - { port: "{{ filebrowser_port | default(8080) }}/tcp", comment: "FileBrowser direct" }
+  - { port: "9091/tcp", comment: "Cloud Torrent direct" }
+  - { port: "3001/tcp", comment: "OrcaSlicer direct" }

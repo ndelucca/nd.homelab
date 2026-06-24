@@ -1,15 +1,6 @@
 ---
-# Configure Immich pod and environment
-
-- name: Generate Immich environment file
-  ansible.builtin.template:
-    src: immich.env.j2
-    dest: "{{ immich_config_dir }}/immich.env"
-    owner: "{{ immich_user }}"
-    group: "{{ immich_group }}"
-    mode: '0600'
-  become: true
-  notify: restart immich-pod
+# Configure Immich pod. All env vars are inlined into the pod YAML below, so no
+# separate env file is generated.
 
 - name: Generate Kubernetes YAML pod definition
   ansible.builtin.template:

@@ -8,15 +8,24 @@
     fail_msg: "This role is designed for Fedora systems"
     success_msg: "Running on Fedora {{ ansible_distribution_version }}"
 
-- name: Get user UID for rootless Podman
-  ansible.builtin.command: id -u {{ immich_user }}
-  register: immich_user_uid_result
-  changed_when: false
-  check_mode: false  # read-only; must run so the uid is set in --check
+- name: Require the Immich DB password to be set (from vault)
+  ansible.builtin.assert:
+    that:
+      - immich_db_password | length > 0
+    fail_msg: >-
+      immich_db_password is empty. Define it in group_vars/homeservers/vault.yml
+      (it must match the password the running Postgres already uses).
+    success_msg: "Immich DB password is set"
+
+- name: Resolve Immich user UID for rootless Podman
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ immich_user }}"
+  check_mode: false
 
 - name: Set immich_uid fact
   ansible.builtin.set_fact:
-    immich_uid: "{{ immich_user_uid_result.stdout }}"
+    immich_uid: "{{ getent_passwd[immich_user][1] }}"
 
 - name: Check availability of port {{ immich_port }}
   ansible.builtin.shell: |

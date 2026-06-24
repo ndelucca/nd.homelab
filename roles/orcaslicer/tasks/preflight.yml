@@ -8,15 +8,15 @@
     fail_msg: "This role only supports Fedora"
     success_msg: "Running on Fedora {{ ansible_distribution_version }}"
 
-- name: Get user UID dynamically
-  ansible.builtin.command: "getent passwd {{ orcaslicer_user }}"
-  register: getent_output
-  changed_when: false
-  check_mode: false  # read-only; must run so the uid is set in --check
+- name: Resolve orcaslicer user UID for rootless Podman
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ orcaslicer_user }}"
+  check_mode: false
 
-- name: Extract UID from getent
+- name: Set orcaslicer_uid fact
   ansible.builtin.set_fact:
-    orcaslicer_uid: "{{ getent_output.stdout.split(':')[2] }}"
+    orcaslicer_uid: "{{ getent_passwd[orcaslicer_user][1] }}"
 
 - name: Display user UID
   ansible.builtin.debug:

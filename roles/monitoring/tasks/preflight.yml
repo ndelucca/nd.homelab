@@ -8,15 +8,15 @@
     fail_msg: "This role is designed for Fedora systems"
     success_msg: "Running on Fedora {{ ansible_distribution_version }}"
 
-- name: Get user UID for rootless Podman
-  ansible.builtin.command: id -u {{ monitoring_user }}
-  register: monitoring_user_uid_result
-  changed_when: false
-  check_mode: false  # read-only; must run so the uid is set in --check
+- name: Resolve monitoring user UID for rootless Podman
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ monitoring_user }}"
+  check_mode: false
 
 - name: Set monitoring_uid fact
   ansible.builtin.set_fact:
-    monitoring_uid: "{{ monitoring_user_uid_result.stdout }}"
+    monitoring_uid: "{{ getent_passwd[monitoring_user][1] }}"
 
 - name: Check availability of port {{ monitoring_port }}
   ansible.builtin.shell: |

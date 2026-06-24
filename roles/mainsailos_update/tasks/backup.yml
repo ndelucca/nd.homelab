@@ -11,7 +11,7 @@
   become: false
 
 - name: Capture git SHA of each managed repo (for rollback)
-  ansible.builtin.command: "git -C {{ item }} rev-parse HEAD"
+  ansible.builtin.command: "git -C {{ item }} rev-parse HEAD"  # noqa: command-instead-of-module
   loop: "{{ mainsailos_managed_repos }}"
   register: mainsailos_repo_shas
   changed_when: false

@@ -8,15 +8,15 @@
     fail_msg: "This role is designed for Fedora systems"
     success_msg: "Running on Fedora {{ ansible_distribution_version }}"
 
-- name: Get user UID for rootless Podman
-  ansible.builtin.command: id -u {{ kavita_user }}
-  register: kavita_user_uid_result
-  changed_when: false
-  check_mode: false  # read-only; must run so the uid is set in --check
+- name: Resolve Kavita user UID for rootless Podman
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ kavita_user }}"
+  check_mode: false
 
 - name: Set kavita_uid fact
   ansible.builtin.set_fact:
-    kavita_uid: "{{ kavita_user_uid_result.stdout }}"
+    kavita_uid: "{{ getent_passwd[kavita_user][1] }}"
 
 - name: Check availability of port {{ kavita_port }}
   ansible.builtin.shell: |

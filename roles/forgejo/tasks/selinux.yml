@@ -1,14 +1,9 @@
 ---
 # Configure SELinux for Forgejo
 
-- name: Check SELinux status
-  ansible.builtin.command: getenforce
-  register: selinux_status
-  changed_when: false
-
 - name: Display SELinux status
   ansible.builtin.debug:
-    msg: "SELinux is {{ selinux_status.stdout }}"
+    msg: "SELinux is {{ ansible_selinux.mode | default('disabled') }}"
 
 - name: Install SELinux packages
   ansible.builtin.dnf:
@@ -17,7 +12,7 @@
       - container-selinux
     state: present
   become: true
-  when: selinux_status.stdout == "Enforcing"
+  when: ansible_selinux.mode | default('') == 'enforcing'
 
 - name: Set SELinux context for data and config directories
   community.general.sefcontext:
@@ -28,7 +23,7 @@
   loop:
     - "{{ forgejo_data_dir }}"
     - "{{ forgejo_config_dir }}"
-  when: selinux_status.stdout == "Enforcing"
+  when: ansible_selinux.mode | default('') == 'enforcing'
   notify: forgejo apply selinux context
 
 - name: Apply SELinux context immediately
@@ -37,5 +32,5 @@
   loop:
     - "{{ forgejo_data_dir }}"
     - "{{ forgejo_config_dir }}"
-  when: selinux_status.stdout == "Enforcing"
+  when: ansible_selinux.mode | default('') == 'enforcing'
   changed_when: false

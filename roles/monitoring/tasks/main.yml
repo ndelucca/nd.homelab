@@ -9,10 +9,6 @@
   ansible.builtin.import_tasks: install.yml
   tags: ['monitoring', 'install']
 
-- name: Configure Uptime-Kuma pod
-  ansible.builtin.import_tasks: configure.yml
-  tags: ['monitoring', 'configure']
-
 - name: Deploy Quadlet unit files
   ansible.builtin.import_tasks: quadlet.yml
   tags: ['monitoring', 'quadlet']

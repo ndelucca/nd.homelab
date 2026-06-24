@@ -26,9 +26,5 @@ cockpit_service_state: started
 # Podman socket configuration
 podman_enable_socket: true
 
-# Firewall settings (used by firewall role)
-cockpit_firewall_service: cockpit
-cockpit_firewall_zone: public
-
-# Port configuration
+# Port configuration (bound to 127.0.0.1; exposed only via the NGINX 443 vhost)
 cockpit_port: 9090

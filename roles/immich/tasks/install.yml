@@ -43,19 +43,20 @@
     state: present
   become: true
 
-- name: Install Immich CLI globally
-  ansible.builtin.command: npm install -g @immich/cli
-  become: true
-  register: immich_cli_install
-  changed_when: "'added' in immich_cli_install.stdout"
-
-- name: Verify Immich CLI installation
+- name: Check the currently installed Immich CLI version
   ansible.builtin.command: immich --version
-  register: immich_cli_version
+  register: immich_cli_current
   changed_when: false
   failed_when: false
+  check_mode: false  # read-only; must run so the guard below is accurate in --check
+
+- name: Install Immich CLI at the pinned version (only when missing or mismatched)
+  ansible.builtin.command: npm install -g @immich/cli@{{ immich_cli_version }}
+  become: true
+  register: immich_cli_install
+  changed_when: "'added' in immich_cli_install.stdout or 'changed' in immich_cli_install.stdout"
+  when: immich_cli_version not in (immich_cli_current.stdout | default(''))
 
 - name: Display Immich CLI version
   ansible.builtin.debug:
-    msg: "Installed Immich CLI {{ immich_cli_version.stdout }}"
-  when: immich_cli_version.rc == 0
+    msg: "Immich CLI pinned to {{ immich_cli_version }}"

@@ -54,6 +54,25 @@
     nginx_config:
       changed: "{{ nginx_main_config.changed or nginx_service_configs.changed }}"
 
+# Reload so config changes actually take effect. Only when already running:
+# on a fresh host NGINX is started later (after AdGuard frees port 53), and
+# `state: reloaded` would fail on a stopped unit.
+- name: Check whether NGINX is already running
+  ansible.builtin.systemd:
+    name: nginx
+  become: true
+  register: nginx_runtime
+  check_mode: false
+
+- name: Reload NGINX to apply configuration changes
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+  become: true
+  when:
+    - nginx_config.changed | bool
+    - nginx_runtime.status.ActiveState == "active"
+
 - name: Ensure NGINX can connect to network
   ansible.posix.seboolean:
     name: httpd_can_network_connect

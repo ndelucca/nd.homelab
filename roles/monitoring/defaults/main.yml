@@ -26,12 +26,15 @@ monitoring_port: 3011        # host port (3011 is free; 3001 is OrcaSlicer)
 monitoring_container_port: 3001
 monitoring_host: 127.0.0.1
 
-# Application configuration.
-monitoring_version: "1"      # Uptime-Kuma v1 stable tag
+# Application configuration. Pinned to an exact patch release (the :1 tag floats
+# across the 1.x line); bump monitoring_version to upgrade.
+monitoring_version: "1.23.17"
 monitoring_image: "docker.io/louislam/uptime-kuma:{{ monitoring_version }}"
 
-# Service configuration.
-monitoring_service_name: uptime-kuma-pod
+# Service configuration. Deployed as a single .container quadlet, so the unit is
+# uptime-kuma.service (the old .kube produced uptime-kuma-pod.service; quadlet.yml
+# cleans up the legacy unit).
+monitoring_service_name: uptime-kuma
 monitoring_service_enabled: true
 monitoring_service_state: started
 

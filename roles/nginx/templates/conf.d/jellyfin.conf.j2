@@ -2,47 +2,11 @@
 # JELLYFIN SUBDOMAIN
 # ========================================
 
-# HTTP
+# HTTP - redirect to HTTPS
 server {
     listen 80;
     server_name jellyfin.{{ nginx_domain }};
-
-    # Allow large media file uploads
-    client_max_body_size 20G;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-Content-Type-Options "nosniff";
-    add_header X-XSS-Protection "1; mode=block";
-
-    # CSP for YouTube metadata and Chromecast
-    add_header Content-Security-Policy "default-src 'self' 'unsafe-inline' https://www.youtube.com https://i.ytimg.com https://www.gstatic.com";
-
-    location / {
-        proxy_pass http://127.0.0.1:{{ nginx_jellyfin_port }};
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $host;
-
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-
-    # Jellyfin SyncPlay WebSocket endpoint
-    location /socket {
-        proxy_pass http://127.0.0.1:{{ nginx_jellyfin_port }}/socket;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
+    return 301 https://$host$request_uri;
 }
 
 # HTTPS
@@ -58,12 +22,13 @@ server {
     client_max_body_size 20G;
 
     # Security headers
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-Content-Type-Options "nosniff";
-    add_header X-XSS-Protection "1; mode=block";
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     # CSP for YouTube metadata and Chromecast
-    add_header Content-Security-Policy "default-src 'self' 'unsafe-inline' https://www.youtube.com https://i.ytimg.com https://www.gstatic.com";
+    add_header Content-Security-Policy "default-src 'self' 'unsafe-inline' https://www.youtube.com https://i.ytimg.com https://www.gstatic.com" always;
 
     location / {
         proxy_pass http://127.0.0.1:{{ nginx_jellyfin_port }};
@@ -75,7 +40,7 @@ server {
 
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
     }
 
     # Jellyfin SyncPlay WebSocket endpoint
@@ -88,6 +53,6 @@ server {
 
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
     }
 }

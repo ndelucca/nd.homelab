@@ -2,7 +2,7 @@
 # Setup RPMFusion repository for Jellyfin
 
 - name: Check if RPMFusion Free repository is enabled
-  ansible.builtin.command: dnf repolist --enabled
+  ansible.builtin.command: dnf repolist --enabled  # noqa: command-instead-of-module
   register: repo_list
   changed_when: false
 

@@ -31,6 +31,23 @@
   become: true
   notify: restart cockpit socket
 
+- name: Create cockpit.socket drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/cockpit.socket.d
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Bind cockpit.socket to localhost (reachable only via NGINX)
+  ansible.builtin.template:
+    src: cockpit-socket-override.conf.j2
+    dest: /etc/systemd/system/cockpit.socket.d/override.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: restart cockpit socket
+
 - name: Enable and start Cockpit socket
   ansible.builtin.systemd:
     name: "{{ cockpit_service_name }}"

@@ -25,11 +25,12 @@ kavita_port: 5000
 kavita_host: 127.0.0.1
 
 # Application configuration
-kavita_version: latest
 kavita_timezone: America/Los_Angeles
 
-# Service configuration
-kavita_service_name: kavita-pod
+# Service configuration. Deployed as a single .container quadlet, so the unit is
+# kavita.service (the old .kube produced kavita-pod.service; quadlet.yml cleans
+# up the legacy unit).
+kavita_service_name: kavita
 kavita_service_enabled: true
 kavita_service_state: started
 
@@ -40,5 +41,7 @@ kavita_firewall_enabled: false  # False because NGINX handles external access
 # SELinux configuration
 kavita_manage_selinux: true
 
-# Podman images
-kavita_image: "docker.io/jvmilazz0/kavita:{{ kavita_version }}"
+# Podman image. The upstream :latest tag floats, so we pin by digest for
+# reproducibility. To upgrade: pull the new image and update the digest here
+# (the digest below was the image running when this was pinned).
+kavita_image: "docker.io/jvmilazz0/kavita@sha256:ca6af7a18d7124d014702983c2364e485294f808c1552e9555f2595b7cda7982"

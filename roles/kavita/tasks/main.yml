@@ -9,10 +9,6 @@
   ansible.builtin.import_tasks: install.yml
   tags: ['kavita', 'install']
 
-- name: Configure Kavita pod
-  ansible.builtin.import_tasks: configure.yml
-  tags: ['kavita', 'configure']
-
 - name: Deploy Quadlet unit files
   ansible.builtin.import_tasks: quadlet.yml
   tags: ['kavita', 'quadlet']

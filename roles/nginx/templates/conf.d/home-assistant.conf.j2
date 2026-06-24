@@ -2,23 +2,11 @@
 # HOME ASSISTANT SUBDOMAIN
 # ========================================
 
-# HTTP
+# HTTP - redirect to HTTPS
 server {
     listen 80;
     server_name home.{{ nginx_domain }};
-
-    location / {
-        proxy_pass http://127.0.0.1:{{ nginx_home_assistant_port }};
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # WebSocket support for Home Assistant frontend
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
+    return 301 https://$host$request_uri;
 }
 
 # HTTPS
@@ -30,6 +18,12 @@ server {
     ssl_certificate {{ nginx_ssl_certificate }};
     ssl_certificate_key {{ nginx_ssl_certificate_key }};
 
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
     location / {
         proxy_pass http://127.0.0.1:{{ nginx_home_assistant_port }};
         proxy_set_header Host $host;
@@ -40,6 +34,6 @@ server {
         # WebSocket support for Home Assistant frontend
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
     }
 }

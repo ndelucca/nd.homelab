@@ -1,8 +1,8 @@
 # Restore runbook (restic ← D-Ursa)
 
 How to recover data after losing the appdata disk (**D-Draco**) or after a bad
-state change. Backups are restic snapshots on **D-Ursa** (`{{ storage_backup_disk }}/restic`,
-i.e. `/srv/disks/D-Ursa/restic`), written daily by the `backup` role.
+state change. Backups are restic snapshots on **D-Ursa** (`/srv/disks/D-Ursa/restic`),
+written daily by the `backup` role.
 
 > The repository is **automatically restore-tested** once a month by the
 > `backup-restore-drill.timer` (restores the latest DB dumps to a temp dir and
@@ -13,7 +13,8 @@ i.e. `/srv/disks/D-Ursa/restic`), written daily by the `backup` role.
 
 The restic password lives in two places, so a restore needs nothing memorised:
 
-- the vault: `forgejo`/`backup_password` in `inventory/group_vars/homeservers/vault.yml`
+- the vault: `backup_password` in `inventory/group_vars/homeservers/vault.yml`
+  (decrypts with the vault password — keep that escrowed off-box, see BOOTSTRAP.md)
 - on the box: `/home/ndelucca/.config/restic/password` (0600), recreated by the playbook
 
 All commands run as the service user **ndelucca** (uid 1000). Export the repo env once:
@@ -73,11 +74,12 @@ gunzip -c /srv/disks/D-Draco/appdata/immich/dumps/immich.sql.gz \
 ```
 
 **SQLite apps (Jellyfin, Forgejo, Kavita):** with the app **stopped**, copy the
-dump over the live DB:
+dump over the live DB. The user-service unit names are `jellyfin`, `forgejo` and
+`kavita` respectively (all single-container quadlets):
 
 ```bash
-# Forgejo example — repeat per app with the path from the role defaults.
-systemctl --user stop forgejo-pod        # stop the app first
+# Forgejo example — repeat per app with the unit/path from the role defaults.
+systemctl --user stop forgejo            # stop the app first (jellyfin / kavita likewise)
 cp /srv/disks/D-Draco/appdata/forgejo/dumps/forgejo.db \
    /srv/disks/D-Draco/appdata/forgejo/data/data/gitea.db
 ```

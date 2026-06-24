@@ -1,545 +1,149 @@
-# Fedora Home Server Ansible Configuration
+# Fedora Home Server — Ansible
 
-Ansible project to configure a Fedora home server with Cockpit (web management interface) and AdGuard Home for DNS filtering.
+Ansible automation for a Fedora home server: LAN DNS/DHCP, a reverse proxy with
+real TLS, and ~12 self-hosted apps as rootless Podman containers — all reachable
+on the LAN by name, with **nothing exposed to the internet**.
 
-## Overview
+## Architecture at a glance
 
-This project uses Ansible best practices with a role-based structure to:
-- Install and configure **Cockpit** web console for server management
-- Install and configure **AdGuard Home** for DNS filtering and ad blocking (native binary)
-- Handle Fedora-specific configurations (systemd-resolved, SELinux, firewalld)
-- Provide a maintainable, extensible foundation for future services
+- **Split-horizon DNS + real certs.** AdGuard Home resolves the public domain
+  (`ndelucca.dedyn.io`, hosted at deSEC) *internally* to the server's LAN IP.
+  A wildcard Let's Encrypt cert is issued out-of-band via the **DNS-01**
+  challenge (`roles/acme`, lego + deSEC), so browsers see a trusted cert while
+  no port is ever opened to the internet.
+- **NGINX reverse proxy** terminates TLS for every app on `192.168.10.10` and
+  proxies to each backend on `127.0.0.1`. Apps bind to loopback only; only
+  `53` (DNS), `80/443` (NGINX), DHCP and Forgejo's git-SSH `2222` face the LAN.
+- **Rootless Podman + Quadlet.** Containerized apps run as the unprivileged
+  `ndelucca` user via systemd Quadlet units (`.container`, plus `.kube` for the
+  multi-container Immich pod).
+- **Storage that survives a reinstall.** All irreplaceable state lives on
+  UUID-mounted data disks, not on root. Root holds only the OS and is 100%
+  reproducible from this playbook; re-running it after a fresh install brings
+  the apps back with their data. See `inventory/group_vars/homeservers/storage.yml`.
 
-## Features
+## Services
 
-- **Modern Ansible Best Practices**: FQCN, YAML inventory, role-based organization
-- **Fedora-Optimized**: Handles systemd-resolved port conflicts and SELinux contexts
-- **Security Hardening**: Systemd service restrictions, unprivileged users, capabilities
-- **Idempotent**: Safe to run multiple times
-- **Tagged Tasks**: Run specific components independently
-- **Extensible**: Easy to add new roles and services
+| Subdomain (`*.ndelucca.dedyn.io`) | App | Role | Deploy |
+|---|---|---|---|
+| `adguard.` / apex | AdGuard Home (DNS + DHCP) | `adguard_home` | native binary |
+| `cockpit.` | Cockpit (web admin) | `cockpit` | host (localhost + NGINX) |
+| `files.` | FileBrowser | `filebrowser` | native binary |
+| `jellyfin.` | Jellyfin (media) | `jellyfin` | package |
+| `torrent.` | Cloud Torrent | `cloud_torrent` | native binary |
+| `gallery.` | Immich (photos) | `immich` | Podman `.kube` pod |
+| `books.` | Kavita (reading) | `kavita` | Podman `.container` |
+| `slicer.` | OrcaSlicer (web) | `orcaslicer` | Podman `.container` |
+| `home.` | Home Assistant | `home_assistant` | Podman `.container` |
+| `git.` | Forgejo (+ git SSH :2222) | `forgejo` | Podman `.container` |
+| `status.` | Uptime-Kuma | `monitoring` | Podman `.container` |
+| `market.` | nd.markets | (external app) | reverse-proxied only |
 
-## Documentation
+Cross-cutting roles: `storage` (disks), `acme` (TLS), `nginx` (proxy),
+`firewall` (firewalld), `backup` (restic → D-Ursa), `service_maintenance`
+(AdGuard cold-boot watchdog).
 
-- **[docs/BOOTSTRAP.md](docs/BOOTSTRAP.md)** — rebuild the host from scratch (disaster recovery).
-- **[docs/RESTORE.md](docs/RESTORE.md)** — restore data from the D-Ursa restic backups.
-- **[docs/TLS-AND-DNS.md](docs/TLS-AND-DNS.md)** — Let's Encrypt and secondary-DNS options.
+## Repository layout
+
+```
+ansible.cfg                         # project config (vault password file, SSH, become)
+requirements.yml                    # Galaxy collections (ansible.posix, community.general)
+inventory/
+  hosts.yml                         # homeservers / printers / clients groups
+  group_vars/
+    all/{main,vault}.yml            # base_domain + shared secrets
+    homeservers/{services,storage,vault}.yml   # app/network config, disk layout, secrets
+playbooks/
+  site.yml                          # full orchestration (run this)
+  <service>.yml                     # per-service playbooks
+  update.yml                        # report available container image updates
+roles/<role>/                       # one role per concern: tasks/ defaults/ templates/ handlers/ meta/
+docs/                               # BOOTSTRAP, RESTORE, TLS-AND-DNS, ADGUARD_CONFIG_SETUP
+```
+
+Roles follow a consistent skeleton: `preflight → install → [configure] →
+quadlet → service → selinux`, with handlers for daemon-reload / restart /
+SELinux relabel.
 
 ## Prerequisites
 
-### Control Node (where you run Ansible)
-- Ansible 2.14 or higher
-- Python 3.8+
-- Required collections:
+- **Control node:** Ansible 2.14+, Python 3.8+, and the collections:
+  `ansible-galaxy collection install -r requirements.yml`
+- **Target:** Fedora Server, SSH key auth, sudo. The control node connects as
+  `ndelucca` with `~/.ssh/id_rsa` (see `ansible.cfg`).
+- **Vault password:** in `.vault_pass` (gitignored). Keep a copy escrowed
+  off-box — see [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md).
+
+## Usage
+
+```bash
+# Connectivity check
+ansible -l ndelucca-server homeservers -m ping
+
+# Full setup / converge (idempotent — safe to re-run)
+ansible-playbook -l ndelucca-server playbooks/site.yml
+
+# Dry run
+ansible-playbook -l ndelucca-server playbooks/site.yml --check --diff
+
+# One service via tags (e.g. just NGINX, or just AdGuard)
+ansible-playbook -l ndelucca-server playbooks/site.yml --tags nginx
+ansible-playbook -l ndelucca-server playbooks/site.yml --tags adguard
+```
+
+> **Always pass `-l ndelucca-server`** so you never touch the Raspberry printer
+> or the Acer client by accident.
+
+Each role is tagged with its name plus topic aliases (`dns`, `media`, `tls`,
+`photos`, `books`, `backup`, …) and the cross-cutting stage tags
+(`preflight`, `install`, `service`, `selinux`, `firewall`).
+
+## Configuration & secrets
+
+- Non-secret config: `inventory/group_vars/homeservers/services.yml`
+  (network, DNS rewrites, DHCP, per-app settings) and `storage.yml` (disks).
+- The single source of truth for the domain is `base_domain` in
+  `group_vars/all/main.yml`; everything derives from it.
+- Secrets live in `vault.yml` files as inline `!vault` values. Edit with:
   ```bash
-  ansible-galaxy collection install ansible.posix
-  ansible-galaxy collection install community.general
+  ansible-vault edit inventory/group_vars/homeservers/vault.yml
+  # or encrypt a single value:
+  ansible-vault encrypt_string --name <var> '<value>'
   ```
-
-### Target Server
-- Fedora 38 or higher
-- SSH access with key-based authentication
-- User with sudo privileges
-- Minimum 1GB RAM (2GB+ recommended)
-- Internet connection
-
-## Quick Start
-
-### 1. Clone or Navigate to This Directory
-
-```bash
-cd /home/ndelucca/environment/home-server
-```
-
-### 2. Update Inventory Configuration
-
-Edit `inventory/hosts.yml` and update:
-- `ansible_host`: Your server's IP address
-- `ansible_user`: Your SSH username
-
-```yaml
-ndelucca-server:
-  ansible_host: 192.168.1.100  # CHANGE THIS
-  ansible_user: your_username   # CHANGE THIS
-```
-
-### 3. Verify SSH Key Configuration
-
-Ensure your SSH key path matches in `ansible.cfg` (default: `~/.ssh/id_ed25519`):
-
-```bash
-# Test SSH connection
-ssh your_username@192.168.1.100
-```
-
-### 4. Test Ansible Connectivity
-
-```bash
-ansible homeservers -m ping
-```
-
-Expected output:
-```
-ndelucca-server | SUCCESS => {
-    "ping": "pong"
-}
-```
-
-### 5. Run the Complete Setup
-
-```bash
-ansible-playbook playbooks/site.yml
-```
-
-This will:
-1. Install and configure Cockpit
-2. Configure systemd-resolved to free port 53
-3. Install AdGuard Home native binary
-4. Configure firewall rules
-5. Set SELinux contexts
-6. Start all services
-
-## Usage Examples
-
-### Run Complete Setup
-```bash
-ansible-playbook playbooks/site.yml
-```
-
-### Install Only Cockpit
-```bash
-ansible-playbook playbooks/cockpit.yml
-```
-
-### Install Only AdGuard Home
-```bash
-ansible-playbook playbooks/adguard.yml
-```
-
-### Use Tags for Specific Tasks
-```bash
-# Run only firewall configuration
-ansible-playbook playbooks/site.yml --tags firewall
-
-# Run only AdGuard installation (skip configuration)
-ansible-playbook playbooks/site.yml --tags install
-
-# Skip SELinux configuration
-ansible-playbook playbooks/site.yml --skip-tags selinux
-```
-
-### Dry Run (Check Mode)
-```bash
-# See what would change without making changes
-ansible-playbook playbooks/site.yml --check --diff
-```
-
-### Syntax Check
-```bash
-ansible-playbook playbooks/site.yml --syntax-check
-```
-
-## Post-Installation
-
-### Access Cockpit
-
-1. Open your browser and navigate to:
-   ```
-   https://YOUR_SERVER_IP:9090
-   ```
-
-2. Log in with your server credentials
-3. Accept the self-signed certificate warning (or install a proper certificate)
-
-### Configure AdGuard Home
-
-1. Open your browser and navigate to:
-   ```
-   http://YOUR_SERVER_IP:3000
-   ```
-
-2. Complete the initial setup wizard:
-   - Set admin username and password
-   - Configure listening interfaces (usually keep defaults)
-   - Configure upstream DNS servers (e.g., 1.1.1.1, 8.8.8.8)
-   - Choose filter lists (recommended: enable default lists)
-
-3. Configure your devices to use the server's IP as their DNS server
-
-### Service Management (AdGuard Home)
-
-```bash
-# View AdGuard Home service logs
-sudo journalctl -u AdGuardHome -n 50
-
-# Restart AdGuard Home service
-sudo systemctl restart AdGuardHome
-
-# Check service status
-sudo systemctl status AdGuardHome
-
-# Update AdGuard Home binary
-ansible-playbook playbooks/adguard.yml
-```
-
-### Verification Commands
-
-```bash
-# Check service status
-sudo systemctl status cockpit.socket
-sudo systemctl status AdGuardHome
-
-# Verify DNS functionality
-dig @127.0.0.1 example.com
-
-# Check listening ports
-ss -tulnp | grep -E ':(53|3000|80|9090)'
-
-# Check firewall rules
-sudo firewall-cmd --list-all
-
-# Check SELinux denials
-sudo ausearch -m avc -ts recent
-```
-
-## Configuration
-
-### Customizing Variables
-
-#### Host-Specific Variables
-Edit `inventory/hosts.yml`:
-```yaml
-ndelucca-server:
-  ansible_host: 192.168.1.100
-  cockpit_port: 9090
-  adguard_container_tag: "latest"
-```
-
-#### Group Variables
-Group config lives in `inventory/group_vars/homeservers/`, split by concern:
-
-- `storage.yml` — disk layout (single source of truth, addressed by UUID)
-- `services.yml` — network / DNS / DHCP / reverse proxy / per-app settings
-- `vault.yml` — secrets (Ansible Vault)
-
-Edit non-secret settings in `services.yml`:
-```yaml
-firewall_enabled: true
-firewall_default_zone: public
-```
-
-Edit secrets with the vault tooling:
-```bash
-ansible-vault edit inventory/group_vars/homeservers/vault.yml
-```
-
-#### Override Role Defaults
-Put host-specific overrides in `host_vars/<host>.yml` only when a host must
-differ from the group defaults. `ndelucca-server` is the sole member of the
-`homeservers` group, so its config lives in `group_vars/homeservers/`.
-
-### Common Customizations
-
-#### Change AdGuard Home Version
-In `inventory/hosts.yml` or via extra vars:
-```yaml
-adguard_version: "v0.107.69"  # Pin to specific version (or use 'latest')
-```
-
-#### Add More Cockpit Modules
-In `roles/cockpit/defaults/main.yml`:
-```yaml
-cockpit_packages:
-  - cockpit
-  - cockpit-podman      # Add container management
-  - cockpit-machines    # Add VM management
-  - cockpit-pcp         # Add performance monitoring
-```
-
-#### Customize Firewall Zones
-In `inventory/group_vars/homeservers/services.yml`:
-```yaml
-firewall_default_zone: home  # Use 'home' zone instead of 'public'
-```
-
-## Troubleshooting
-
-### Port 53 Already in Use
-
-**Symptom**: AdGuard Home fails to start with port binding error
-
-**Solution**: Manually check and disable systemd-resolved stub:
-```bash
-# Check what's using port 53
-sudo ss -tulnp | grep :53
-
-# Verify systemd-resolved configuration
-cat /etc/systemd/resolved.conf.d/adguardhome.conf
-
-# Reload systemd-resolved
-sudo systemctl restart systemd-resolved
-
-# Verify port is free
-sudo ss -tulnp | grep :53
-```
-
-### SELinux Denials
-
-**Symptom**: AdGuard Home fails with permission errors
-
-**Solution**: Check and apply SELinux contexts:
-```bash
-# Check for denials
-sudo ausearch -m avc -ts recent
-
-# Manually apply contexts
-sudo restorecon -Rv /opt/AdGuardHome
-sudo restorecon -Rv /var/lib/AdGuardHome
-
-# Temporarily set to permissive (for testing only)
-sudo setenforce 0
-```
-
-### Firewall Blocking Access
-
-**Symptom**: Cannot access Cockpit or AdGuard Home from network
-
-**Solution**: Verify firewall rules:
-```bash
-# Check firewall status
-sudo firewall-cmd --state
-
-# List all rules
-sudo firewall-cmd --list-all
-
-# Manually add rules if needed
-sudo firewall-cmd --permanent --add-service=cockpit
-sudo firewall-cmd --permanent --add-port=3000/tcp
-sudo firewall-cmd --permanent --add-port=53/tcp
-sudo firewall-cmd --permanent --add-port=53/udp
-sudo firewall-cmd --reload
-```
-
-### SSH Connection Issues
-
-**Symptom**: Ansible cannot connect to server
-
-**Solution**:
-```bash
-# Test SSH manually
-ssh -vvv your_username@server_ip
-
-# Verify SSH key
-ssh-add -l
-
-# Test with password (if key fails)
-ansible homeservers -m ping --ask-pass
-```
-
-### AdGuard Home Service Won't Start
-
-**Symptom**: AdGuard Home service fails to start
-
-**Solution**: Check service and binary configuration:
-```bash
-# Check systemd logs
-sudo journalctl -u AdGuardHome -n 50 --no-pager
-
-# Verify binary exists
-ls -la /usr/local/bin/AdGuardHome
-
-# Check working directory permissions
-ls -la /opt/AdGuardHome
-
-# Check capabilities
-getcap /usr/local/bin/AdGuardHome
-
-# Manually reload systemd
-sudo systemctl daemon-reload
-
-# Try starting manually
-sudo systemctl start AdGuardHome
-```
-
-## Project Structure
-
-```
-home-server/
-├── ansible.cfg                          # Project configuration
-├── inventory/
-│   ├── hosts.yml                        # Server inventory
-│   ├── host_vars/                       # Per-host overrides (usually empty)
-│   └── group_vars/
-│       └── homeservers/                 # homeservers group config
-│           ├── storage.yml              # disk layout (UUIDs, mounts)
-│           ├── services.yml             # network / DNS / proxy / apps
-│           └── vault.yml                # secrets (Ansible Vault)
-├── playbooks/
-│   ├── site.yml                         # Main playbook
-│   ├── cockpit.yml                      # Cockpit playbook
-│   ├── adguard.yml                      # AdGuard playbook
-│   └── remove_adguard.yml               # AdGuard removal playbook
-├── roles/
-│   ├── cockpit/                         # Cockpit role
-│   │   ├── tasks/main.yml
-│   │   ├── handlers/main.yml
-│   │   ├── defaults/main.yml
-│   │   └── meta/main.yml
-│   └── adguard_home/                    # AdGuard Home role
-│       ├── tasks/
-│       │   ├── main.yml
-│       │   ├── preflight.yml
-│       │   ├── systemd-resolved.yml
-│       │   ├── install.yml
-│       │   ├── service.yml
-│       │   ├── firewall.yml
-│       │   └── selinux.yml
-│       ├── handlers/main.yml
-│       ├── defaults/main.yml
-│       └── meta/main.yml
-└── README.md
-```
-
-## Available Tags
-
-| Tag | Description |
-|-----|-------------|
-| `cockpit` | All Cockpit tasks |
-| `adguard` | All AdGuard Home tasks |
-| `dns` | Same as adguard |
-| `monitoring` | Cockpit + Uptime-Kuma |
-| `uptime-kuma` | Uptime-Kuma monitoring only |
-| `backup` | restic backups, alerts and restore drill |
-| `preflight` | Pre-installation checks |
-| `systemd-resolved` | systemd-resolved configuration |
-| `install` | Binary installation |
-| `service` | Systemd service configuration |
-| `firewall` | Firewall configuration |
-| `selinux` | SELinux configuration |
-
-## Security Notes
-
-- AdGuard Home runs as an unprivileged `adguard` user
-- Capabilities are used instead of root for port binding
-- SELinux remains in enforcing mode with proper contexts
-- Systemd service includes security hardening directives
-- Only necessary ports are opened in the firewall
-- SSH uses key-based authentication only
-
-## Extending This Project
-
-### Adding a New Service
-
-1. Create a new role:
-   ```bash
-   mkdir -p roles/myservice/{tasks,handlers,defaults,templates,meta}
-   ```
-
-2. Create role files following the Cockpit role as a template
-
-3. Add to `playbooks/site.yml`:
-   ```yaml
-   - role: myservice
-     tags: ['myservice']
-   ```
-
-### Adding Multiple Servers
-
-1. Edit `inventory/hosts.yml`:
-   ```yaml
-   homeservers:
-     hosts:
-       ndelucca-server:
-         ansible_host: 192.168.10.10
-       ndelucca-acer:
-         ansible_host: 192.168.10.13
-   ```
-
-2. Use host variables for server-specific configuration
-
-### Creating a Staging Environment
-
-1. Copy inventory:
-   ```bash
-   cp -r inventory inventory_staging
-   ```
-
-2. Update staging hosts and variables
-
-3. Run with staging inventory:
-   ```bash
-   ansible-playbook -i inventory_staging playbooks/site.yml
-   ```
-
-## Maintenance
-
-### Updating AdGuard Home
-
-1. Change version in inventory or use extra vars:
-   ```yaml
-   adguard_version: "v0.108.0"  # New version
-   ```
-
-2. Run the playbook to download new binary and restart service:
-   ```bash
-   ansible-playbook playbooks/adguard.yml
-   # Or use extra vars directly:
-   ansible-playbook playbooks/adguard.yml -e "adguard_version=latest"
-   ```
-
-### Backup AdGuard Home Configuration
-
-```bash
-# Manual backup (native binary installation)
-scp your_username@server_ip:/opt/AdGuardHome/AdGuardHome.yaml ./backups/
-
-# Backup entire working directory
-ssh your_username@server_ip "sudo tar -czf /tmp/adguard-backup.tar.gz /opt/AdGuardHome"
-scp your_username@server_ip:/tmp/adguard-backup.tar.gz ./backups/
-
-# Or use Ansible to fetch config
-ansible homeservers -m fetch \
-  -a "src=/opt/AdGuardHome/AdGuardHome.yaml dest=./backups/{{ inventory_hostname }}/" \
-  --become
-```
-
-### Backups & Disaster Recovery
+- **Container images are pinned** (explicit tag, or digest for Kavita) so
+  deployments are reproducible. Upgrade by bumping the version var in the role's
+  `defaults/main.yml` and re-running with that role's tag. `playbooks/update.yml`
+  reports when newer images are available upstream.
+
+## Backups & disaster recovery
 
 The `backup` role takes encrypted restic snapshots of the irreplaceable data
 (app state + DB dumps, the Immich gallery, books, the D-Leo archive) to
 **D-Ursa**, on a daily systemd user timer. Weekly maintenance prunes and runs
 `restic check`; a **monthly restore drill** restores the latest DB dumps to a
-temp dir to prove the repo is actually restorable. Failures (and a filling
-backup disk) are surfaced via `OnFailure=` — to the journal always, and to ntfy
-if `backup_notify_ntfy_url` is set in `group_vars/homeservers/services.yml`.
+temp dir to prove the repo is restorable. Failures surface via `OnFailure=` to
+the journal, and to ntfy if `backup_notify_ntfy_url` is set in `services.yml`
+(the same topic also receives TLS-renewal-failure alerts).
 
-Runbooks:
-
-- **[docs/RESTORE.md](docs/RESTORE.md)** — restore data from D-Ursa (disk loss
-  or bad state change), including DB-dump restore per app.
-- **[docs/BOOTSTRAP.md](docs/BOOTSTRAP.md)** — rebuild the host from scratch
-  (fresh OS, disk UUIDs, vault password, then `site.yml`).
+- [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md) — rebuild the host from scratch.
+- [docs/RESTORE.md](docs/RESTORE.md) — restore data from D-Ursa.
+- [docs/TLS-AND-DNS.md](docs/TLS-AND-DNS.md) — Let's Encrypt / DNS design.
+- [docs/ADGUARD_CONFIG_SETUP.md](docs/ADGUARD_CONFIG_SETUP.md) — AdGuard setup notes.
 
 ```bash
-# Run a backup now / a restore drill now (as the service user):
+# Run a backup / restore drill now (as the service user):
 systemctl --user -M ndelucca@ start backup.service
 systemctl --user -M ndelucca@ start backup-restore-drill.service
-# List snapshots:
-sudo -u ndelucca env RESTIC_REPOSITORY=/srv/disks/D-Ursa/restic \
-  RESTIC_PASSWORD_FILE=/home/ndelucca/.config/restic/password restic snapshots
 ```
+
+## Adding a service
+
+Create `roles/<service>/` following an existing container role (e.g. `kavita`
+for a single container, `immich` for a pod), add it to `playbooks/site.yml`,
+drop an NGINX vhost at `roles/nginx/templates/conf.d/<service>.conf.j2` (auto-
+discovered), an AdGuard DNS rewrite in `services.yml`, and — only if it must
+face the LAN directly — an entry in the firewall role's `firewall_open_ports`.
 
 ## License
 
 MIT
-
-## Contributing
-
-Feel free to submit issues and pull requests for improvements.
-
-## References
-
-- [Ansible Best Practices](https://docs.ansible.com/ansible/latest/user_guide/playbooks_best_practices.html)
-- [AdGuard Home Documentation](https://github.com/AdguardTeam/AdGuardHome/wiki)
-- [Cockpit Project](https://cockpit-project.org/)
-- [Fedora Documentation](https://docs.fedoraproject.org/)

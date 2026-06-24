@@ -3,6 +3,8 @@
 Description=Renew Let's Encrypt certificates via lego (DNS-01 / {{ acme_dns_provider }})
 Wants=network-online.target
 After=network-online.target
+# Alert (journal + optional ntfy) if a renewal fails, so certs never lapse silently.
+OnFailure=lego-renew-notify.service
 
 [Service]
 Type=oneshot

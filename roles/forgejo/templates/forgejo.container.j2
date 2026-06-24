@@ -35,9 +35,6 @@ Environment=FORGEJO__database__DB_TYPE=sqlite3
 Environment=FORGEJO__service__DISABLE_REGISTRATION={{ forgejo_disable_registration | string | lower }}
 Environment=FORGEJO__security__INSTALL_LOCK=true
 
-# Auto-update from registry
-AutoUpdate=registry
-
 [Service]
 Restart=on-failure
 RestartSec=30

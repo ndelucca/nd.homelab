@@ -11,9 +11,11 @@ home_assistant_uid: 1000
 home_assistant_base_dir: "{{ app_data_root }}/home_assistant"
 home_assistant_config_dir: "{{ home_assistant_base_dir }}/config"
 
-# Podman/Quadlet configuration
+# Podman/Quadlet configuration. Pin to an exact release for reproducibility;
+# bump home_assistant_version to upgrade (HA ships breaking changes regularly).
 home_assistant_quadlet_dir: /etc/containers/systemd/users
-home_assistant_image: ghcr.io/home-assistant/home-assistant:stable
+home_assistant_version: "2026.6.4"
+home_assistant_image: "ghcr.io/home-assistant/home-assistant:{{ home_assistant_version }}"
 
 # Network configuration
 home_assistant_port: 8123

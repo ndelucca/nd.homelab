@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Emit a certificate-renewal alert. Always logs to the journal at error priority
+# (visible via `journalctl -t lego-renew`); additionally pushes to ntfy when a
+# topic URL is configured. Alerting must never fail the caller, so every push is
+# best-effort.
+# Usage: acme-notify.sh "<title>" "<message>"
+set -uo pipefail
+
+title="${1:-Certificate renewal alert}"
+message="${2:-(no details)}"
+
+# 1) Journal (always). Tagged so it is easy to grep or build journald alerts on.
+logger -t lego-renew -p user.err -- "${title}: ${message}" 2>/dev/null \
+  || echo "[lego-renew][ERROR] ${title}: ${message}" >&2
+
+# 2) ntfy push (best-effort).
+{% if acme_notify_ntfy_url %}
+curl -fsS --max-time 15 \
+  -H "Title: ${title}" \
+  -H "Priority: high" \
+  -H "Tags: warning,lock" \
+  -d "${message}" \
+  "{{ acme_notify_ntfy_url }}" >/dev/null 2>&1 \
+  || logger -t lego-renew -p user.err -- "ntfy push failed for: ${title}"
+{% endif %}
+
+exit 0

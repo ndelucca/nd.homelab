@@ -12,6 +12,25 @@
   become: true
   no_log: true
 
+- name: Deploy the renewal-failure notify script
+  ansible.builtin.template:
+    src: acme-notify.sh.j2
+    dest: "{{ acme_notify_script }}"
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Deploy lego renewal failure-notify unit
+  ansible.builtin.template:
+    src: lego-renew-notify.service.j2
+    dest: /etc/systemd/system/lego-renew-notify.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  register: acme_renew_notify_unit
+
 - name: Deploy lego renewal service unit
   ansible.builtin.template:
     src: lego-renew.service.j2
@@ -37,5 +56,5 @@
     name: lego-renew.timer
     enabled: true
     state: started
-    daemon_reload: "{{ (acme_renew_service_unit is changed) or (acme_renew_timer_unit is changed) }}"
+    daemon_reload: "{{ (acme_renew_service_unit is changed) or (acme_renew_timer_unit is changed) or (acme_renew_notify_unit is changed) }}"
   become: true

@@ -11,14 +11,13 @@
   become: true
   notify: restart jellyfin
 
-- name: Verify Jellyfin installation
-  ansible.builtin.command: rpm -q jellyfin
-  register: jellyfin_verify
-  changed_when: false
+- name: Gather installed package facts
+  ansible.builtin.package_facts:
+    manager: rpm
 
 - name: Display Jellyfin version
   ansible.builtin.debug:
-    msg: "Installed {{ jellyfin_verify.stdout }}"
+    msg: "Installed jellyfin-{{ ansible_facts.packages['jellyfin'][0].version }}"
 
 - name: Display installation information
   ansible.builtin.debug:

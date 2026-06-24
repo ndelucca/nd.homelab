@@ -8,12 +8,11 @@
 # ============================================================================
 
 # --- Firewall ---------------------------------------------------------------
+# The firewall role auto-detects the LAN interface's zone; see roles/firewall.
 firewall_enabled: true
-firewall_default_zone: public
 
 # --- AdGuard Home (DNS + DHCP for the LAN) ----------------------------------
 adguard_configure_app: true
-adguard_firewall_zone: FedoraServer
 
 # Allowed domains (whitelist rules).
 adguard_user_rules:
@@ -113,7 +112,6 @@ adguard_dns_rewrites:
 
 # --- NGINX reverse proxy ----------------------------------------------------
 nginx_firewall_enabled: true
-nginx_firewall_zone: FedoraServer
 # Derived from base_domain (group_vars/all/main.yml); drives every vhost
 # server_name and the wildcard cert.
 nginx_domain: "{{ base_domain }}"
@@ -171,7 +169,10 @@ kavita_extra_libraries:
 forgejo_pull_mirror_enabled: true
 forgejo_mirror_force_recreate: []
 
-# --- Backup alerting --------------------------------------------------------
-# Optional ntfy topic to receive backup-failure / disk-full pushes. Leave empty
-# to rely on the journal alert only (journalctl -t restic-backup).
+# --- Failure alerting (ntfy) ------------------------------------------------
+# One ntfy topic drives ALL failure pushes: backup failures / disk-full
+# (journalctl -t restic-backup) AND Let's Encrypt renewal failures
+# (journalctl -t lego-renew; acme_notify_ntfy_url defaults to this var). Leave
+# commented to rely on the journal alerts only. To enable phone pushes, set it
+# to your private topic URL:
 # backup_notify_ntfy_url: "https://ntfy.sh/your-private-topic"

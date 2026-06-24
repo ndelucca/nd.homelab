@@ -11,6 +11,15 @@ Recovery splits in two:
 2. **Data disk (D-Draco) also lost** → do step 1, then follow
    [RESTORE.md](RESTORE.md) to restore from D-Ursa.
 
+> ⚠️ **The one secret you must have: the Ansible vault password.**
+> It is NOT stored in this repo (only the encrypted vault is). Everything else —
+> the restic backup password, every app secret, the deSEC token — is inside the
+> vault and decrypts *only* with it. **Lose the vault password and the backups
+> and all secrets are permanently unrecoverable.** Escrow it OFF the server and
+> off this repo: a password manager and/or a printed copy kept somewhere
+> separate from the machine. Verify you can retrieve it *before* you ever need
+> this runbook.
+
 ## 1. Install Fedora Server
 
 - Install Fedora Server (matching the version the roles target; see README).
@@ -33,7 +42,8 @@ ansible-galaxy collection install -r requirements.yml
 ssh-copy-id ndelucca@192.168.10.10
 ssh ndelucca@192.168.10.10 true        # confirm key auth works
 
-# Vault password — restic + all app secrets decrypt with this.
+# Vault password — restic + all app secrets decrypt with this. Retrieve it from
+# your off-box escrow (see the warning at the top). There is no way to derive it.
 printf '%s' '<the-vault-password>' > .vault_pass && chmod 600 .vault_pass
 ansible-inventory -i inventory --host ndelucca-server >/dev/null  # decrypts → no error = good
 ```
@@ -95,3 +105,4 @@ the DB dumps, fix ownership, then re-run `site.yml`.
 | D-Draco (appdata)      | restore from D-Ursa                    | RESTORE.md                   |
 | D-Ursa (backup)        | live data fine; no backups until fixed | replace disk, re-run playbook |
 | D-Leo (personal)       | restore from D-Ursa                    | RESTORE.md                   |
+| **Vault password lost**| **backups + all secrets unrecoverable**| **none — must be escrowed off-box** |

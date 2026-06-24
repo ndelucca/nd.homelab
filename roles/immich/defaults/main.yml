@@ -23,15 +23,19 @@ immich_quadlet_dir: /etc/containers/systemd/users  # System-managed user contain
 immich_port: 2283
 immich_host: 127.0.0.1
 
-# Application configuration
-immich_version: release  # Can pin to specific versions like v1.117.0
+# Application configuration. Pin to an exact release for reproducibility; bump
+# this (and immich_cli_version to match) to upgrade. See the upstream releases.
+immich_version: v2.7.5
+immich_cli_version: "2.7.5"  # keep in sync with immich_version
 immich_timezone: America/Los_Angeles
 
-# Database configuration
+# Database configuration. immich_db_password MUST be supplied via vault
+# (see group_vars/homeservers/vault.yml); preflight asserts it is set. We do NOT
+# generate a random default — that would silently rotate the Postgres password
+# on every run and lock the app out of its own database.
 immich_db_username: immich
 immich_db_database: immich
-immich_db_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
-# In production, use Ansible Vault for password or set in host_vars
+immich_db_password: ""
 
 # Service configuration
 immich_service_name: immich-pod

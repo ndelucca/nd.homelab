@@ -8,15 +8,13 @@
     fail_msg: "This role is designed for Fedora systems"
     success_msg: "Running on Fedora {{ ansible_distribution_version }}"
 
-- name: Check if Jellyfin is already installed
-  ansible.builtin.command: rpm -q jellyfin
-  register: jellyfin_installed
-  changed_when: false
-  failed_when: false
+- name: Gather installed package facts
+  ansible.builtin.package_facts:
+    manager: rpm
 
 - name: Display installation status
   ansible.builtin.debug:
-    msg: "Jellyfin {{ 'is already installed' if jellyfin_installed.rc == 0 else 'will be installed' }}"
+    msg: "Jellyfin {{ 'is already installed' if 'jellyfin' in ansible_facts.packages else 'will be installed' }}"
 
 - name: Check if HTTP port is available
   ansible.builtin.shell: |

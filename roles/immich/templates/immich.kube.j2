@@ -11,11 +11,10 @@ Wants=network-online.target
 # Path to Kubernetes YAML
 Yaml={{ immich_config_dir }}/immich-pod.yaml
 
-# Set SELinux labels for volumes
+# Run the unit from the YAML's directory. NOTE: this does NOT relabel volumes;
+# SELinux labeling is handled by the role's selinux.yml (container_file_t on the
+# data dirs). Image is pinned via immich_version; no AutoUpdate (reproducible).
 SetWorkingDirectory=yaml
-
-# Auto-update images
-AutoUpdate=registry
 
 [Service]
 # Restart policy

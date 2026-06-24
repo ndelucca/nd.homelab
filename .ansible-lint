@@ -23,4 +23,7 @@ warn_list:
   - no-changed-when
   - var-naming[no-role-prefix]
   - name[casing]
-  - command-instead-of-module
+  # command-instead-of-module: native modules/facts now used everywhere the
+  # conversion is clean (getenforce->ansible_selinux, id-u->getent,
+  # rpm-q->package_facts). The two remaining legit queries (`which`,
+  # `dnf repolist`) carry an inline `# noqa`.

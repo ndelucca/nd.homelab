@@ -9,7 +9,7 @@
     success_msg: "Running on Fedora {{ ansible_distribution_version }}"
 
 - name: Check if required commands are available
-  ansible.builtin.command: which {{ item }}
+  ansible.builtin.command: which {{ item }}  # noqa: command-instead-of-module
   register: command_check
   changed_when: false
   failed_when: false

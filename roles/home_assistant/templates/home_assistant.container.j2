@@ -14,9 +14,6 @@ Volume={{ home_assistant_config_dir }}:/config:Z
 # Timezone
 Environment=TZ={{ home_assistant_timezone }}
 
-# Auto-update from registry
-AutoUpdate=registry
-
 [Service]
 Restart=on-failure
 RestartSec=30

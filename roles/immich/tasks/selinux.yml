@@ -1,14 +1,9 @@
 ---
 # Configure SELinux for Immich containers
 
-- name: Check current SELinux status
-  ansible.builtin.command: getenforce
-  register: selinux_status
-  changed_when: false
-
 - name: Display SELinux status
   ansible.builtin.debug:
-    msg: "SELinux is {{ selinux_status.stdout }}"
+    msg: "SELinux is {{ ansible_selinux.mode | default('disabled') }}"
 
 - name: Install SELinux policy packages
   ansible.builtin.dnf:
@@ -17,7 +12,7 @@
       - container-selinux
     state: present
   become: true
-  when: selinux_status.stdout == "Enforcing"
+  when: ansible_selinux.mode | default('') == 'enforcing'
 
 - name: Set SELinux file contexts for Immich directories
   community.general.sefcontext:
@@ -29,7 +24,7 @@
     - "{{ immich_upload_location }}"
     - "{{ immich_db_data_location }}"
     - "{{ immich_model_cache }}"
-  when: selinux_status.stdout == "Enforcing"
+  when: ansible_selinux.mode | default('') == 'enforcing'
   notify: immich apply selinux context
 
 - name: Enable SELinux boolean for container port binding
@@ -38,5 +33,5 @@
     state: true
     persistent: true
   become: true
-  when: selinux_status.stdout == "Enforcing"
+  when: ansible_selinux.mode | default('') == 'enforcing'
   failed_when: false

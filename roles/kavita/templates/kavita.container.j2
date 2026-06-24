@@ -1,0 +1,32 @@
+# Kavita Quadlet Unit File
+# Managed by Ansible - DO NOT EDIT MANUALLY
+# Single-container app: a plain .container unit (was a .kube pod with one
+# container). SELinux labeling of the volumes is handled by the role's
+# selinux.yml (container_file_t), so no :z/:Z relabel is requested here.
+
+[Unit]
+Description=Kavita Reading Server
+Documentation=https://wiki.kavitareader.com
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ kavita_image }}
+ContainerName=kavita
+PublishPort={{ kavita_host }}:{{ kavita_port }}:5000
+
+Volume={{ kavita_config_dir }}:/kavita/config
+Volume={{ kavita_library_dir }}:/library
+{% for lib in kavita_extra_libraries %}
+Volume={{ lib.path }}:/{{ lib.name }}
+{% endfor %}
+
+Environment=TZ={{ kavita_timezone }}
+
+[Service]
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target default.target

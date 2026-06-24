@@ -11,4 +11,5 @@
   ansible.builtin.systemd:
     name: cockpit.socket
     state: restarted
+    daemon_reload: true
   become: true

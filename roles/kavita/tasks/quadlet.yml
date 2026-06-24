@@ -1,10 +1,33 @@
 ---
-# Deploy Quadlet unit files
+# Deploy Quadlet unit files.
 
-- name: Deploy Kavita Quadlet .kube unit
+# Migration: the role previously shipped a .kube pod (kavita-pod.service). Stop
+# and remove the legacy unit so only the new kavita.service remains.
+- name: Stop legacy kavita-pod service if present
+  ansible.builtin.systemd:
+    name: kavita-pod.service
+    state: stopped
+    scope: user
+  become: true
+  become_user: "{{ kavita_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ kavita_uid }}"
+  failed_when: false
+
+- name: Remove legacy .kube unit and pod YAML
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  become: true
+  loop:
+    - "{{ kavita_quadlet_dir }}/{{ kavita_uid }}/kavita-pod.kube"
+    - "{{ kavita_config_dir }}/kavita-pod.yaml"
+  notify: kavita daemon-reload-user
+
+- name: Deploy Kavita Quadlet .container unit
   ansible.builtin.template:
-    src: kavita.kube.j2
-    dest: "{{ kavita_quadlet_dir }}/{{ kavita_uid }}/{{ kavita_service_name }}.kube"
+    src: kavita.container.j2
+    dest: "{{ kavita_quadlet_dir }}/{{ kavita_uid }}/kavita.container"
     owner: root
     group: root
     mode: '0644'

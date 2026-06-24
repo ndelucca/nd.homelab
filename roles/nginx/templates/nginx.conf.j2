@@ -29,6 +29,10 @@ http {
     include             /etc/nginx/mime.types;
     default_type        application/octet-stream;
 
+    # Generous upload baseline (nginx default is only 1m). Upload-heavy vhosts
+    # (immich, jellyfin, filebrowser, forgejo, orcaslicer) raise it further.
+    client_max_body_size 1g;
+
     # SSL Configuration
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';

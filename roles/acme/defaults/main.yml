@@ -47,5 +47,11 @@ acme_renew_days: 30                  # renew when fewer than N days remain
 acme_staging: false                  # true -> Let's Encrypt staging CA (untrusted, no rate limits)
 acme_reload_service: nginx           # service reloaded after issuance/renewal
 
+# Failure alerting. lego-renew.service fires OnFailure=lego-renew-notify.service,
+# which logs to the journal (tag lego-renew) and, when a URL is set, pushes ntfy.
+# Defaults to the backup role's ntfy topic so one setting covers all alerts.
+acme_notify_script: "{{ acme_install_dir }}/acme-notify.sh"
+acme_notify_ntfy_url: "{{ backup_notify_ntfy_url | default('') }}"
+
 # SELinux (Fedora). Automatically skipped where SELinux is not enabled (e.g. the Pi).
 acme_manage_selinux: true

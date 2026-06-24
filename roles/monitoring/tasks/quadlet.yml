@@ -1,10 +1,33 @@
 ---
 # Deploy Quadlet unit files.
 
-- name: Deploy Uptime-Kuma Quadlet .kube unit
+# Migration: the role previously shipped a .kube pod (uptime-kuma-pod.service).
+# Stop and remove the legacy unit so only the new uptime-kuma.service remains.
+- name: Stop legacy uptime-kuma-pod service if present
+  ansible.builtin.systemd:
+    name: uptime-kuma-pod.service
+    state: stopped
+    scope: user
+  become: true
+  become_user: "{{ monitoring_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_uid }}"
+  failed_when: false
+
+- name: Remove legacy .kube unit and pod YAML
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  become: true
+  loop:
+    - "{{ monitoring_quadlet_dir }}/{{ monitoring_uid }}/uptime-kuma-pod.kube"
+    - "{{ monitoring_data_dir }}/uptime-kuma-pod.yaml"
+  notify: monitoring daemon-reload-user
+
+- name: Deploy Uptime-Kuma Quadlet .container unit
   ansible.builtin.template:
-    src: uptime-kuma.kube.j2
-    dest: "{{ monitoring_quadlet_dir }}/{{ monitoring_uid }}/{{ monitoring_service_name }}.kube"
+    src: uptime-kuma.container.j2
+    dest: "{{ monitoring_quadlet_dir }}/{{ monitoring_uid }}/uptime-kuma.container"
     owner: root
     group: root
     mode: '0644'
