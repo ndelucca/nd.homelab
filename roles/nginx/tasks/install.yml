@@ -16,20 +16,18 @@
     group: root
   become: true
 
-- name: Check if SSL certificate exists
-  ansible.builtin.stat:
-    path: "{{ nginx_ssl_certificate }}"
-  register: ssl_cert_stat
-
-- name: Generate self-signed SSL certificate
+# Always generate the self-signed cert at the FIXED nginx_selfsigned_* paths,
+# never at nginx_ssl_certificate (which resolves to the lego path in letsencrypt
+# mode). This guarantees the documented `nginx_tls_mode: selfsigned` fallback has
+# a cert on disk even when lego issuance has never run or has failed. `creates:`
+# keeps it idempotent.
+- name: Generate self-signed SSL certificate (bootstrap floor)
   ansible.builtin.command:
     cmd: >
       openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509
       -subj "/C=US/ST=State/L=City/O=Organization/CN={{ nginx_domain }}"
-      -keyout {{ nginx_ssl_certificate_key }}
-      -out {{ nginx_ssl_certificate }}
-    creates: "{{ nginx_ssl_certificate }}"
+      -keyout {{ nginx_selfsigned_key }}
+      -out {{ nginx_selfsigned_cert }}
+    creates: "{{ nginx_selfsigned_cert }}"
   become: true
-  when:
-    - nginx_generate_selfsigned_cert | bool
-    - not ssl_cert_stat.stat.exists
+  when: nginx_generate_selfsigned_cert | bool

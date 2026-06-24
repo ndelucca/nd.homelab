@@ -5,7 +5,7 @@
 # Usage: ansible-playbook playbooks/remove_adguard.yml
 
 - name: Remove AdGuard Home (native binary)
-  hosts: all
+  hosts: homeservers
   become: true
 
   vars:

@@ -16,7 +16,9 @@
     dest: "{{ orcaslicer_quadlet_dir }}/{{ orcaslicer_uid }}/{{ orcaslicer_service_name }}.container"
     owner: root
     group: root
-    mode: '0644'
+    # 0600: the unit inlines the OrcaSlicer web password, so it must not be
+    # world-readable.
+    mode: '0600'
   become: true
   notify:
     - container daemon-reload-user

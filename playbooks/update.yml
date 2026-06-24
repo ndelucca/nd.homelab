@@ -32,6 +32,10 @@
   tasks:
     - name: Check upstream for newer images (dry-run; no changes made)
       ansible.builtin.command: podman auto-update --dry-run
+      # Rootless containers belong to the unprivileged service user, not root.
+      # ansible.cfg sets become=True globally; override it here so the command
+      # runs in the right user/runtime context.
+      become: false
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ podman_user_uid }}"
         DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ podman_user_uid }}/bus"
