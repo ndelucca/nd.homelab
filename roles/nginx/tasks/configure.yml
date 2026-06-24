@@ -44,6 +44,29 @@
     label: "{{ item.path | basename }}"
   register: nginx_service_configs
 
+# Prune vhost files left behind when a service template is removed from the role
+# (e.g. the vhosts folded into 10-services.conf). Without this, the stale .conf
+# lingers on the host and produces a conflicting/duplicate server_name.
+- name: List deployed vhost files on the host
+  ansible.builtin.find:
+    paths: /etc/nginx/conf.d
+    patterns: "*.conf"
+  become: true
+  register: nginx_deployed_confs
+
+- name: Remove stale vhost files no longer managed by the role
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  become: true
+  loop: "{{ nginx_deployed_confs.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: >-
+    (item.path | basename ~ '.j2')
+    not in (nginx_conf_templates.files | map(attribute='path') | map('basename') | list)
+  register: nginx_stale_removed
+
 - name: Validate complete NGINX configuration
   ansible.builtin.command: nginx -t
   become: true
@@ -52,7 +75,7 @@
 - name: Set configuration changed flag
   ansible.builtin.set_fact:
     nginx_config:
-      changed: "{{ nginx_main_config.changed or nginx_service_configs.changed }}"
+      changed: "{{ nginx_main_config.changed or nginx_service_configs.changed or (nginx_stale_removed.changed | default(false)) }}"
 
 # Reload so config changes actually take effect. Only when already running:
 # on a fresh host NGINX is started later (after AdGuard frees port 53), and
