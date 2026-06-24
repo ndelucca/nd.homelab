@@ -1,0 +1,55 @@
+# {{ ansible_managed }}
+# Standard reverse-proxy vhosts, generated from nginx_vhosts
+# (roles/nginx/defaults/main.yml). Bespoke vhosts that need extra named
+# locations or an exotic upstream keep their own conf.d/*.conf.j2 files
+# (jellyfin, cloud-torrent, ndmarket, orcaslicer). The $connection_upgrade map
+# is defined globally in conf.d/00-upgrade-map.conf.
+{% for v in nginx_vhosts %}
+{% set fqdn = nginx_domain if v.subdomain == '' else v.subdomain ~ '.' ~ nginx_domain %}
+
+# ===== {{ fqdn }} =====
+server {
+    listen 80;
+    server_name {{ fqdn }};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name {{ fqdn }};
+
+    ssl_certificate {{ nginx_ssl_certificate }};
+    ssl_certificate_key {{ nginx_ssl_certificate_key }};
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+{% if v.client_max_body_size is defined %}
+    client_max_body_size {{ v.client_max_body_size }};
+{% endif %}
+{% if v.server_snippet is defined %}
+    {{ v.server_snippet | trim | indent(4) }}
+{% endif %}
+
+    location / {
+        proxy_pass http://127.0.0.1:{{ v.port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto {{ v.forwarded_proto | default('$scheme') }};
+        proxy_set_header X-Forwarded-Host $host;
+
+        proxy_http_version 1.1;
+{% if v.websocket | default(true) %}
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+{% endif %}
+{% if v.location_snippet is defined %}
+        {{ v.location_snippet | trim | indent(8) }}
+{% endif %}
+    }
+}
+{% endfor %}

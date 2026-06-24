@@ -32,6 +32,44 @@ nginx_ndmarket_port: 28310
 nginx_forgejo_port: 3000
 nginx_uptime_kuma_port: 3011
 
+# --- Reverse-proxy vhosts ---------------------------------------------------
+# Standard vhosts rendered from this list by conf.d/10-services.conf.j2 (one
+# HTTP->HTTPS redirect + one HTTPS server block each, shared cert + security
+# headers + X-Forwarded-* set). The bespoke vhosts that need extra named
+# locations or an exotic upstream (jellyfin /socket + CSP, cloud-torrent SSE,
+# ndmarket SSE, orcaslicer https/no-http2) keep their own conf.d/*.conf.j2.
+# Per-entry knobs:
+#   subdomain         '' = apex ({{ nginx_domain }}), else <sub>.{{ nginx_domain }}
+#   port              loopback upstream port
+#   websocket         add Upgrade/Connection headers (default true)
+#   forwarded_proto   X-Forwarded-Proto value (default $scheme)
+#   client_max_body_size   optional upload cap
+#   server_snippet    raw lines injected at server level (before location /)
+#   location_snippet  raw lines injected inside location /
+nginx_vhosts:
+  - {subdomain: "", port: "{{ nginx_adguard_port }}"}
+  - {subdomain: "adguard", port: "{{ nginx_adguard_port }}"}
+  - {subdomain: "books", port: "{{ nginx_kavita_port }}"}
+  - {subdomain: "git", port: "{{ nginx_forgejo_port }}", client_max_body_size: "0"}
+  - {subdomain: "home", port: "{{ nginx_home_assistant_port }}"}
+  - {subdomain: "status", port: "{{ nginx_uptime_kuma_port }}"}
+  - {subdomain: "cockpit", port: "{{ nginx_cockpit_port }}", forwarded_proto: "https", location_snippet: "gzip off;"}
+  - subdomain: "files"
+    port: "{{ nginx_filebrowser_port }}"
+    websocket: false
+    client_max_body_size: "0"
+    server_snippet: "proxy_request_buffering off;"
+    location_snippet: "proxy_buffering off;"
+  - subdomain: "gallery"
+    port: "{{ nginx_immich_port }}"
+    client_max_body_size: "50G"
+    server_snippet: |-
+      client_body_timeout 600s;
+      proxy_read_timeout 600s;
+    location_snippet: |-
+      proxy_buffering off;
+      proxy_request_buffering off;
+
 # Firewall configuration
 nginx_firewall_enabled: true
 nginx_firewall_zone: FedoraServer
