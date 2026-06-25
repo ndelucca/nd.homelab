@@ -86,7 +86,6 @@ dns:
   hostsfile_enabled: true
   pending_requests:
     enabled: true
-# TLS/Encryption - configure certificates to enable HTTPS/DoT/DoH
 tls:
   enabled: false
   server_name: ""
@@ -138,7 +137,6 @@ dhcp:
     lease_duration: {{ adguard_dhcp_lease_duration }}
     icmp_timeout_msec: 1000
     options: []
-  # DHCPv6 - configure if needed
   dhcpv6:
     range_start: ""
     lease_duration: 86400
@@ -152,7 +150,6 @@ filtering:
       time_zone: Local
     ids: []
   protection_disabled_until: null
-  # Safe Search - enable for family filtering
   safe_search:
     enabled: false
     bing: true

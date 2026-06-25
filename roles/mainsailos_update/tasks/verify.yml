@@ -1,6 +1,4 @@
 ---
-# Confirm the printer came back healthy and print a final version report.
-
 - name: Check that the key services are active
   ansible.builtin.systemd:
     name: "{{ item }}"

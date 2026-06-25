@@ -1,38 +1,39 @@
 ---
-# Default variables for the backup role.
+# Variables por defecto del role backup.
 #
-# Local disk-to-disk backups to D-Ursa using restic. Runs entirely as the
-# rootless service user (ndelucca): it can read all of appdata/media/D-Leo
-# (owned ndelucca:ndelucca) and `podman exec` the Immich Postgres over the user
-# socket. A daily systemd *user* timer runs the backup; a weekly one prunes.
+# Backups locales disco-a-disco a D-Ursa usando restic. Corre enteramente como el
+# service user rootless (ndelucca): puede leer todo appdata/media/D-Leo
+# (owned ndelucca:ndelucca) y hacer `podman exec` al Postgres de Immich por el
+# socket de usuario. Un timer *user* de systemd diario corre el backup; uno
+# semanal hace prune.
 #
-# ACCEPTED RISK — this is 2-1-1, not 3-2-1: D-Ursa is a second disk in the SAME
-# chassis, writable by the same uid that runs the apps. A fire/theft/surge or a
-# compromised service user can take out both copies. Deliberate trade-off for a
-# single-admin home-lab (the point is surviving a primary-disk failure, not
-# offsite/ransomware resilience). Add `restic copy` to an offsite/append-only
-# target if that risk profile ever changes.
+# RIESGO ACEPTADO: esto es 2-1-1, no 3-2-1. D-Ursa es un segundo disco en el MISMO
+# chasis, escribible por el mismo uid que corre las apps. Un incendio/robo/pico de
+# tensión o un service user comprometido puede llevarse ambas copias. Trade-off
+# deliberado para un home-lab de un solo admin (el objetivo es sobrevivir la falla
+# del disco primario, no resiliencia offsite/ransomware). Agregar `restic copy` a
+# un target offsite/append-only si ese perfil de riesgo llega a cambiar.
 
-# Service user — reuse the central storage user (rootless, uid 1000).
+# Service user: se reutiliza el storage user central (rootless, uid 1000).
 backup_user: "{{ app_storage_user }}"
 backup_group: "{{ app_storage_group }}"
 backup_uid: "{{ app_storage_uid }}"
 
-# restic repository on the backup disk (D-Ursa).
+# Repositorio de restic en el disco de backup (D-Ursa).
 backup_repo: "{{ storage_backup_disk }}/restic"
 
-# Password handling. restic ALWAYS encrypts; there is no plaintext mode. To keep
-# disaster recovery friction-free (no secret to memorise) the password lives in
-# the vault AND is written to a 0600 file on the box — re-running the playbook
-# recreates the file, so a restore needs nothing remembered. The encryption is an
-# internal detail, not a secret to guard (the disk is local to the same machine).
-# MUST be set via vault in host_vars.
+# Manejo del password. restic SIEMPRE encripta; no hay modo en texto plano. Para
+# mantener el disaster recovery sin fricción (sin secreto que memorizar) el
+# password vive en el vault Y se escribe en un archivo 0600 en la máquina:
+# re-correr el playbook recrea el archivo, así que un restore no necesita recordar
+# nada. La encriptación es un detalle interno, no un secreto a cuidar (el disco es
+# local a la misma máquina). DEBE setearse vía vault en host_vars.
 backup_password: ""
 backup_config_dir: "/home/{{ backup_user }}/.config/restic"
 backup_password_file: "{{ backup_config_dir }}/password"
 backup_excludes_file: "{{ backup_config_dir }}/excludes.txt"
 
-# Where the helper scripts and systemd user units land.
+# Dónde aterrizan los scripts auxiliares y las user units de systemd.
 backup_bin_dir: "/home/{{ backup_user }}/.local/bin"
 backup_run_script: "{{ backup_bin_dir }}/restic-backup-run.sh"
 backup_maintenance_script: "{{ backup_bin_dir }}/restic-backup-maintenance.sh"
@@ -40,37 +41,37 @@ backup_notify_script: "{{ backup_bin_dir }}/restic-backup-notify.sh"
 backup_restore_drill_script: "{{ backup_bin_dir }}/restic-restore-drill.sh"
 backup_user_unit_dir: "/home/{{ backup_user }}/.config/systemd/user"
 
-# --- Failure / disk alerting -----------------------------------------------
-# Surface backup or maintenance failures (and a filling backup disk) instead of
-# letting them fail silently. The notify script ALWAYS logs the alert to the
-# journal at error priority (so `journalctl -t restic-backup` and journald-based
-# alerting see it); if an ntfy topic URL is set it also pushes a phone alert.
-# Wired via systemd `OnFailure=backup-notify@%n.service` on both units.
+# Hace visibles las fallas de backup o maintenance (y un disco de backup que se
+# llena) en lugar de dejarlas fallar en silencio. El script de notify SIEMPRE
+# loguea la alerta al journal con prioridad de error (para que `journalctl -t
+# restic-backup` y el alerting basado en journald la vean); si hay una URL de
+# topic de ntfy seteada, además manda una alerta al teléfono. Cableado vía
+# systemd `OnFailure=backup-notify@%n.service` en ambas units.
 backup_notify_enabled: true
-# ntfy push target, e.g. https://ntfy.sh/<your-private-topic> or a self-hosted
-# URL. Leave empty to rely on the journal alert only.
+# Target del push de ntfy, p. ej. https://ntfy.sh/<tu-topic-privado> o una URL
+# self-hosted. Dejar vacío para depender solo de la alerta del journal.
 backup_notify_ntfy_url: ""
-# Warn when the backup disk crosses this usage percentage (checked weekly).
+# Avisar cuando el disco de backup cruza este porcentaje de uso (se chequea semanalmente).
 backup_disk_usage_warn_percent: 85
 
-# Weekly `restic check` also re-reads a subset of the actual pack data to catch
-# on-disk bitrot (a plain `restic check` only validates structure/metadata). We
-# use restic's m/n form and advance m by ISO week, so coverage ROTATES and the
-# whole repo is verified over this many weeks. (A fixed "N%" re-reads ~the same
-# packs every week — deterministic by pack ID — so ~90% would never be checked.)
+# El `restic check` semanal además relee un subconjunto de los packs reales para
+# detectar bitrot en disco (un `restic check` simple solo valida estructura/
+# metadata). Se usa la forma m/n de restic y se avanza m por semana ISO, así la
+# cobertura ROTA y todo el repo se verifica a lo largo de esta cantidad de
+# semanas. (Un "N%" fijo relee ~los mismos packs cada semana —determinístico por
+# pack ID— así que ~90% nunca se chequearía.)
 backup_check_read_data_partitions: 5
 
-# --- Backup freshness dead-man's-switch -------------------------------------
-# OnFailure only fires when a unit RUNS and fails. The most dangerous failure is
-# the backup never running at all (linger off, user manager dead, timer
-# disabled) — that fails silently. A daily check alerts when the latest snapshot
-# is older than the threshold (or there are no snapshots), via the same notify
-# script (journal + optional ntfy).
+# OnFailure solo dispara cuando una unit CORRE y falla. La falla más peligrosa es
+# que el backup nunca llegue a correr (linger apagado, user manager muerto, timer
+# deshabilitado): eso falla en silencio. Un chequeo diario alerta cuando el último
+# snapshot supera el umbral de antigüedad (o no hay snapshots), vía el mismo
+# script de notify (journal + ntfy opcional).
 backup_freshness_enabled: true
 backup_freshness_max_age_hours: 26
 backup_freshness_script: "{{ backup_bin_dir }}/restic-backup-freshness.sh"
-# Run after the daily backup has had time to complete (daily backup is 03:00;
-# 26h threshold means a missed run trips by ~06:00).
+# Corre después de que el backup diario tuvo tiempo de completarse (el backup
+# diario es a las 03:00; el umbral de 26h hace que una corrida perdida salte a las ~06:00).
 backup_schedule_freshness: "*-*-* 06:00:00"
 backup_freshness_units:
   - backup-freshness.service
@@ -78,42 +79,42 @@ backup_freshness_units:
 backup_freshness_timers:
   - backup-freshness.timer
 
-# What to back up — only the irreplaceable data.
+# Qué respaldar: solo los datos irreemplazables.
 backup_paths:
-  - "{{ app_data_root }}"               # app STATE: DBs + config (incl. dumps/)
-  - "{{ app_media_root }}/Gallery"      # Immich photo library (irreplaceable)
-  - "{{ app_media_root }}/Books"        # small, not trivially re-sourced
-  - "{{ storage_personal_disk }}"       # D-Leo personal archive
+  - "{{ app_data_root }}"               # ESTADO de las apps: DBs + config (incl. dumps/)
+  - "{{ app_media_root }}/Gallery"      # biblioteca de fotos de Immich (irreemplazable)
+  - "{{ app_media_root }}/Books"        # chico, no se re-consigue trivialmente
+  - "{{ storage_personal_disk }}"       # archivo personal de D-Leo
 
-# What NOT to back up — regenerable or inconsistent-at-rest.
+# Qué NO respaldar: regenerable o inconsistente en reposo.
 backup_excludes:
-  - "{{ app_media_root }}/Movies"               # re-downloadable
-  - "{{ app_media_root }}/Series"               # re-downloadable
-  - "{{ app_data_root }}/immich/postgres"       # live PG data: backed up via pg_dump
+  - "{{ app_media_root }}/Movies"               # re-descargable
+  - "{{ app_media_root }}/Series"               # re-descargable
+  - "{{ app_data_root }}/immich/postgres"       # datos PG vivos: respaldados vía pg_dump
   - "{{ app_data_root }}/jellyfin/cache"        # regenerable
   - "{{ app_data_root }}/jellyfin/data/data/transcodes"
-  - "{{ app_data_root }}/immich/model-cache"    # ML models, re-downloaded
+  - "{{ app_data_root }}/immich/model-cache"    # modelos de ML, se re-descargan
   - "lost+found"
 
-# Retention applied by `restic forget` (daily) — prune happens weekly.
-# Capped at ~1 month: daily granularity for the last week, then weekly out to
-# ~4 weeks. No monthly snapshots, so nothing older than ~28 days survives.
+# Retención aplicada por `restic forget` (diario); el prune ocurre semanalmente.
+# Topeada en ~1 mes: granularidad diaria para la última semana, luego semanal
+# hasta ~4 semanas. Sin snapshots mensuales, así que nada más viejo que ~28 días sobrevive.
 backup_keep_daily: 7
 backup_keep_weekly: 4
 backup_keep_monthly: 0
 
-# Schedules (systemd OnCalendar). Daily backup off-peak; weekly prune later;
-# monthly restore drill (1st of the month) to prove the repo is restorable.
+# Schedules (OnCalendar de systemd). Backup diario fuera de pico; prune semanal
+# más tarde; restore drill mensual (día 1 del mes) para probar que el repo es restaurable.
 backup_schedule_daily: "*-*-* 03:00:00"
 backup_schedule_maintenance: "Sun *-*-* 04:30:00"
 backup_schedule_restore_drill: "*-*-01 05:30:00"
 
-# Monthly restore drill: restore the latest snapshot's DB dumps to a temp dir
-# and verify they come back non-empty. Cheap end-to-end proof of restorability.
+# Restore drill mensual: restaura los dumps de las DBs del último snapshot a un
+# directorio temporal y verifica que vuelvan no vacíos. Prueba end-to-end barata de restaurabilidad.
 backup_restore_drill_enabled: true
 
-# systemd user units deployed by the role. The notify@ template backs the
-# OnFailure= alert; the restore-drill units are added only when enabled.
+# user units de systemd que despliega el role. El template notify@ respalda la
+# alerta OnFailure=; las units del restore-drill se agregan solo cuando está habilitado.
 backup_units:
   - backup.service
   - backup.timer
@@ -123,25 +124,25 @@ backup_units:
 backup_restore_drill_units:
   - backup-restore-drill.service
   - backup-restore-drill.timer
-# Timers to enable (drill timer appended when the drill is enabled).
+# Timers a habilitar (el timer del drill se agrega cuando el drill está habilitado).
 backup_timers:
   - backup.timer
   - backup-maintenance.timer
 backup_restore_drill_timers:
   - backup-restore-drill.timer
 
-# --- Database dumps (consistent, no service downtime) -----------------------
-# Each app's dump is written under {{ app_data_root }}/<app>/dumps/ so the restic
-# snapshot captures a consistent copy. The dump is the authoritative restore
-# source; the live DB file is also captured but secondary.
+# Dumps de las bases de datos (consistentes, sin downtime del servicio).
+# El dump de cada app se escribe bajo {{ app_data_root }}/<app>/dumps/ para que el
+# snapshot de restic capture una copia consistente. El dump es la fuente
+# autoritativa de restore; el archivo de DB vivo también se captura pero es secundario.
 
-# Immich PostgreSQL (running in the rootless `immich-database` container).
+# Immich PostgreSQL (corriendo en el container rootless `immich-database`).
 backup_immich_enabled: true
 backup_immich_container: immich-database
 backup_immich_db_user: immich
 backup_immich_db_name: immich
 
-# SQLite databases (online `.backup`, safe while the app is running).
+# Bases SQLite (`.backup` online, seguro mientras la app está corriendo).
 backup_sqlite_dbs:
   - app: jellyfin
     path: "{{ app_data_root }}/jellyfin/data/data/jellyfin.db"
@@ -150,9 +151,9 @@ backup_sqlite_dbs:
   - app: kavita
     path: "{{ app_data_root }}/kavita/config/kavita.db"
 
-# Non-SQLite single-file databases backed up by copy. Filebrowser uses BoltDB,
-# which is transactional/crash-consistent on disk, so a plain copy is a valid
-# snapshot (and it only writes on user/share config changes).
+# Bases de un solo archivo no-SQLite respaldadas por copia. Filebrowser usa
+# BoltDB, que es transaccional/crash-consistent en disco, así que una copia simple
+# es un snapshot válido (y solo escribe ante cambios de config de usuarios/shares).
 backup_copy_dbs:
   - app: filebrowser
     path: "{{ app_data_root }}/filebrowser/filebrowser.db"

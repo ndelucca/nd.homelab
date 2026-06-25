@@ -1,6 +1,6 @@
 ---
-# Automatic renewal: a daily systemd timer runs `lego renew` for every managed
-# certificate and reloads the consuming service via lego's --renew-hook.
+# Renovación automática: un timer diario de systemd corre `lego renew` por cada
+# certificado gestionado y recarga el servicio consumidor vía el --renew-hook de lego.
 
 - name: Deploy deSEC credentials env file
   ansible.builtin.template:

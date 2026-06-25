@@ -1,6 +1,4 @@
 ---
-# Main entry point for AdGuard Home role
-
 - name: Include preflight checks
   ansible.builtin.import_tasks: preflight.yml
   tags: ['adguard', 'preflight']

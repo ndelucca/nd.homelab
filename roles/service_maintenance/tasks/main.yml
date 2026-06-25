@@ -1,7 +1,4 @@
 ---
-# Main entry point for service maintenance role
-
-# Option 2: Add systemd drop-in for AdGuard to wait for network
 - name: Create AdGuardHome drop-in directory
   ansible.builtin.file:
     path: /etc/systemd/system/AdGuardHome.service.d
@@ -23,7 +20,6 @@
   notify: daemon-reload
   tags: ['service_maintenance', 'adguard']
 
-# Option 1: Timer-based restart after boot
 - name: Deploy service watchdog unit
   ansible.builtin.template:
     src: service-watchdog.service.j2

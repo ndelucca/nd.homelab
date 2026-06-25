@@ -2,7 +2,7 @@
 Description=Cloud Torrent - Web-based torrent client
 Documentation=https://github.com/jpillora/cloud-torrent
 After=network.target
-# Do not start unless the appdata disk (state + downloads) is mounted.
+# No arrancar si el disco de appdata (estado + descargas) no está montado.
 RequiresMountsFor={{ storage_appdata_disk }}
 
 [Service]
@@ -25,7 +25,6 @@ Environment="CLOUD_TORRENT_DOWNLOADS={{ cloud_torrent_downloads_dir }}"
 Restart=on-failure
 RestartSec=5s
 
-# Security hardening
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

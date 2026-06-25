@@ -1,6 +1,4 @@
 ---
-# Preflight checks for AdGuard Home native installation
-
 - name: Verify we're running on Fedora
   ansible.builtin.assert:
     that:
@@ -13,7 +11,7 @@
     name:
       - curl
       - tar
-      - libcap  # For setcap command
+      - libcap  # para el comando setcap
     state: present
   become: true
 

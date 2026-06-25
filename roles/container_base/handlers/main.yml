@@ -1,14 +1,15 @@
 ---
-# Shared handlers for rootless-Podman/Quadlet container roles. Made available to
-# a consuming role by `include_role: { name: container_base, tasks_from: install }`
-# in its install step. The consumer supplies the contract vars via its defaults
+# Handlers compartidos para roles de container con Podman rootless/Quadlet. Se
+# vuelven disponibles en un role consumidor vía
+# `include_role: { name: container_base, tasks_from: install }` en su paso de
+# install. El consumidor provee las variables del contrato vía sus defaults
 # (container_user, container_uid, container_service_name, container_selinux_paths)
-# and flushes its own handlers within the role, so the vars resolve to that
-# role's values even when several container roles run in one play.
+# y flushea sus propios handlers dentro del role, así las variables resuelven a los
+# valores de ese role incluso cuando varios roles de container corren en un play.
 
-# Explicit `systemctl --user daemon-reload`: the systemd module's user-scope
-# daemon_reload does not reliably regenerate Quadlet units (the generated unit
-# keeps stale paths), whereas the command does.
+# `systemctl --user daemon-reload` explícito: el daemon_reload en user-scope del
+# módulo systemd no regenera de forma confiable los units de Quadlet (el unit
+# generado conserva paths viejos), mientras que el comando sí.
 - name: container daemon-reload-user  # noqa: command-instead-of-module
   ansible.builtin.command:
     cmd: systemctl --user daemon-reload

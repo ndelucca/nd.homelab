@@ -1,5 +1,5 @@
 ---
-# Handlers for Cockpit role
+# Handlers del role Cockpit
 
 - name: restart cockpit
   ansible.builtin.systemd:

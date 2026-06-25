@@ -1,44 +1,48 @@
-# Restore runbook (restic ← D-Ursa)
+# Runbook de restore (restic ← D-Ursa)
 
-How to recover data after losing the appdata disk (**D-Draco**) or after a bad
-state change. Backups are restic snapshots on **D-Ursa** (`/srv/disks/D-Ursa/restic`),
-written daily by the `backup` role.
+Cómo recuperar datos tras perder el disco de appdata (**D-Draco**) o tras un
+cambio de estado erróneo. Los backups son snapshots de restic en **D-Ursa**
+(`/srv/disks/D-Ursa/restic`), escritos a diario por el role `backup`.
 
-> The repository is **automatically restore-tested** once a month by the
-> `backup-restore-drill.timer` (restores the latest DB dumps to a temp dir and
-> checks them). A failure pushes an alert via the notify path. Still, read this
-> before a real restore — a drill proves *restorability*, not *your* procedure.
+> El repositorio se **prueba automáticamente** una vez por mes con el
+> `backup-restore-drill.timer` (restaura los últimos dumps de DB a un directorio
+> temporal y los chequea). Una falla dispara un aviso por el camino de notify.
+> Aun así, leé esto antes de un restore real — un drill prueba la
+> *restaurabilidad*, no *tu* procedimiento.
 
-## 0. Prerequisites
+## 0. Prerequisitos
 
-The restic password lives in two places, so a restore needs nothing memorised:
+El password de restic vive en dos lugares, así que un restore no necesita nada
+memorizado:
 
-- the vault: `backup_password` in `inventory/group_vars/homeservers/vault.yml`
-  (decrypts with the vault password — keep that escrowed off-box, see BOOTSTRAP.md)
-- on the box: `/home/ndelucca/.config/restic/password` (0600), recreated by the playbook
+- el vault: `backup_password` en `inventory/group_vars/homeservers/vault.yml`
+  (se desencripta con el vault password — mantenelo en custodia fuera del equipo,
+  ver BOOTSTRAP.md)
+- en el equipo: `/home/ndelucca/.config/restic/password` (0600), recreado por el playbook
 
-All commands run as the service user **ndelucca** (uid 1000). Export the repo env once:
+Todos los comandos corren como el usuario de servicio **ndelucca** (uid 1000).
+Exportá el entorno del repo una vez:
 
 ```bash
 export RESTIC_REPOSITORY=/srv/disks/D-Ursa/restic
 export RESTIC_PASSWORD_FILE=/home/ndelucca/.config/restic/password
 ```
 
-## 1. Inspect what you have
+## 1. Inspeccionar lo que tenés
 
 ```bash
-restic snapshots                 # list snapshots (note the ID/time you want)
-restic check                     # verify repository integrity before relying on it
-restic ls latest | head          # peek at the file tree of the latest snapshot
+restic snapshots                 # listar snapshots (anotá el ID/hora que querés)
+restic check                     # verificar la integridad del repo antes de confiar en él
+restic ls latest | head          # espiar el árbol de archivos del último snapshot
 ```
 
-## 2. Restore application data (D-Draco lost or wiped)
+## 2. Restaurar los datos de las apps (D-Draco perdido o borrado)
 
-After re-mounting a fresh D-Draco (see below) and before starting the apps:
+Tras re-montar un D-Draco fresco (ver abajo) y antes de arrancar las apps:
 
 ```bash
-# Restore app STATE + the irreplaceable media back to their original paths.
-# --target / restores to absolute paths captured in the snapshot.
+# Restaurar el ESTADO de las apps + la media irremplazable a sus rutas originales.
+# --target / restaura a las rutas absolutas capturadas en el snapshot.
 restic restore latest --target / \
   --include /srv/disks/D-Draco/appdata \
   --include /srv/disks/D-Draco/media/Gallery \
@@ -46,70 +50,74 @@ restic restore latest --target / \
   --include /srv/disks/D-Leo
 ```
 
-Fix ownership (everything under the appdata disk must be `ndelucca:ndelucca`,
-uid/gid 1000 — pinned for rootless Podman `UserNS=keep-id`):
+Corregí la propiedad de archivos (todo lo que cuelga del disco de appdata debe
+ser `ndelucca:ndelucca`, uid/gid 1000 — pinned para el Podman rootless
+`UserNS=keep-id`):
 
 ```bash
 sudo chown -R 1000:1000 /srv/disks/D-Draco/appdata /srv/disks/D-Draco/media
 ```
 
-Movies/Series are **not** in backup by design (re-downloadable) — recreate the
-empty dirs so the apps have their library roots:
+Movies/Series **no** están en el backup por diseño (se pueden re-descargar) —
+recreá los directorios vacíos para que las apps tengan sus raíces de biblioteca:
 
 ```bash
 mkdir -p /srv/disks/D-Draco/media/Movies /srv/disks/D-Draco/media/Series
 ```
 
-## 3. Restore databases from the dumps (authoritative)
+## 3. Restaurar las bases de datos desde los dumps (fuente autoritativa)
 
-The live DB files are captured too, but the **dumps** under
-`.../appdata/<app>/dumps/` are the consistent, authoritative restore source.
+Los archivos de DB en vivo también se capturan, pero los **dumps** bajo
+`.../appdata/<app>/dumps/` son la fuente de restore consistente y autoritativa.
 
-**Immich (PostgreSQL):** start only the database container, then load the dump.
+**Immich (PostgreSQL):** arrancá solo el contenedor de la base de datos, luego
+cargá el dump.
 
 ```bash
-# With the immich pod running (or just immich-database):
+# Con el pod de immich corriendo (o solo immich-database):
 gunzip -c /srv/disks/D-Draco/appdata/immich/dumps/immich.sql.gz \
   | podman exec -i immich-database psql -U immich -d immich
 ```
 
-**SQLite apps (Jellyfin, Forgejo, Kavita):** with the app **stopped**, copy the
-dump over the live DB. The user-service unit names are `jellyfin`, `forgejo` and
-`kavita` respectively (all single-container quadlets):
+**Apps SQLite (Jellyfin, Forgejo, Kavita):** con la app **detenida**, copiá el
+dump por encima de la DB en vivo. Los nombres de los user-service units son
+`jellyfin`, `forgejo` y `kavita` respectivamente (todos quadlets de un solo
+contenedor):
 
 ```bash
-# Forgejo example — repeat per app with the unit/path from the role defaults.
-systemctl --user stop forgejo            # stop the app first (jellyfin / kavita likewise)
+# Ejemplo de Forgejo — repetir por app con el unit/ruta de los defaults del role.
+systemctl --user stop forgejo            # detener la app primero (igual para jellyfin / kavita)
 cp /srv/disks/D-Draco/appdata/forgejo/dumps/forgejo.db \
    /srv/disks/D-Draco/appdata/forgejo/data/data/gitea.db
 ```
 
-**FileBrowser (BoltDB):** same idea — stop, copy `filebrowser/dumps/filebrowser.db`
-over the live `filebrowser/filebrowser.db`.
+**FileBrowser (BoltDB):** misma idea — detener, copiar
+`filebrowser/dumps/filebrowser.db` por encima del `filebrowser/filebrowser.db`
+en vivo.
 
-## 4. Bring the apps back
+## 4. Devolver las apps a la vida
 
 ```bash
 ansible-playbook -l ndelucca-server playbooks/site.yml
 ```
 
-Re-running the playbook recreates configs/units and starts the services against
-the restored data. Verify each service responds (see the checklist below).
+Re-correr el playbook recrea las configs/units y arranca los servicios contra los
+datos restaurados. Verificá que cada servicio responda (ver el checklist abajo).
 
-## 5. Targeted / point-in-time restore
+## 5. Restore puntual / a un momento en el tiempo
 
 ```bash
-# Restore one app's state from a specific snapshot into a temp dir to inspect.
+# Restaurar el estado de una app desde un snapshot específico a un dir temporal para inspeccionar.
 restic restore <snapshot-id> --target /tmp/inspect \
   --include /srv/disks/D-Draco/appdata/kavita
-# Or restore a single file:
+# O restaurar un solo archivo:
 restic dump <snapshot-id> /srv/disks/D-Draco/appdata/forgejo/dumps/forgejo.db > /tmp/forgejo.db
 ```
 
-## Verification checklist
+## Checklist de verificación
 
-- [ ] `restic check` clean
-- [ ] Ownership is `1000:1000` under `D-Draco/appdata` and `D-Draco/media`
-- [ ] Immich: `curl -k https://gallery.ndelucca.dedyn.io` and photos visible
-- [ ] Forgejo/Jellyfin/Kavita reachable on their subdomains, data present
-- [ ] `journalctl --user -M ndelucca@ -u backup.service` shows the next run OK
+- [ ] `restic check` sin errores
+- [ ] La propiedad es `1000:1000` bajo `D-Draco/appdata` y `D-Draco/media`
+- [ ] Immich: `curl -k https://gallery.ndelucca.dedyn.io` y las fotos visibles
+- [ ] Forgejo/Jellyfin/Kavita accesibles en sus subdominios, con los datos presentes
+- [ ] `journalctl --user -M ndelucca@ -u backup.service` muestra la próxima corrida OK

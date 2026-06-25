@@ -1,7 +1,8 @@
 ---
-# Non-destructive, reversible backup taken BEFORE any update.
-# Archives the precious printer_data subdirs plus a rollback manifest of git
-# SHAs, then prunes old archives. Runs as the printer user (become: false).
+# Backup no destructivo y reversible tomado ANTES de cualquier update.
+# Archiva los preciados subdirectorios de printer_data más un manifiesto de
+# rollback con los SHAs de git, y luego poda los archivos viejos. Corre como el
+# usuario de la impresora (become: false).
 
 - name: Ensure the backup directory exists
   ansible.builtin.file:
@@ -47,7 +48,7 @@
                           if mainsailos_mainsail_version_raw.content is defined
                           else 'unknown' }}
 
-      # repo git HEADs (use `git -C <repo> reset --hard <sha>` to roll back)
+      # HEADs de git de los repos (usar `git -C <repo> reset --hard <sha>` para hacer rollback)
       {% for r in mainsailos_repo_shas.results %}
       {{ r.item }}: {{ r.stdout | default('MISSING') }}
       {% endfor %}

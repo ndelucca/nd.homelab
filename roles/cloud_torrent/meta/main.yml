@@ -1,6 +1,4 @@
 ---
-# Metadata for Cloud Torrent role
-
 galaxy_info:
   author: Naza
   description: Install and configure Cloud Torrent web-based torrent client

@@ -1,55 +1,47 @@
 ---
-# Default variables for Cloud Torrent role
-
-# Installation configuration
 cloud_torrent_version: "0.9.4"
 cloud_torrent_arch: amd64
 cloud_torrent_download_url: "https://github.com/jpillora/cloud-torrent/releases/download/v{{ cloud_torrent_version }}/cloud-torrent_{{ cloud_torrent_version }}_linux_{{ cloud_torrent_arch }}.gz"
-# SHA256 of the pinned linux/amd64 archive, from the release checksums file
-# (cloud-torrent_{{ cloud_torrent_version }}_checksums.txt). Update if the
-# pinned version or arch changes.
+# SHA256 del archive linux/amd64 pineado, tomado del archivo de checksums del
+# release (cloud-torrent_{{ cloud_torrent_version }}_checksums.txt). Actualizar si
+# cambia la versión o la arch pineada.
 cloud_torrent_sha256: "ef8b5e21730d50a962af8cf7bbc46a6c46aa8ed3285ee39c1a9728ccee67f95a"
 cloud_torrent_install_dir: /usr/local/bin
-# State (config + torrent metadata) lives on the appdata disk (app_data_root,
-# defined in group_vars/homeservers/storage.yml).
+# El estado (config + metadata de torrents) vive en el disco de appdata
+# (app_data_root, definido en group_vars/homeservers/storage.yml).
 cloud_torrent_working_dir: "{{ app_data_root }}/cloud-torrent"
 
-# Service configuration
 cloud_torrent_user: ndelucca
 cloud_torrent_group: ndelucca
 cloud_torrent_service_name: cloud-torrent
 cloud_torrent_service_enabled: true
 cloud_torrent_service_state: started
 
-# Network configuration
 cloud_torrent_port: 9091
 cloud_torrent_host: 127.0.0.1
 
-# BitTorrent peer (incoming) port. This is the torrent engine's default
-# IncomingPort, persisted in cloud_torrent_config_path (the engine has no CLI
-# flag for it; change it in the web UI to override). Named here so it is not an
-# untracked magic number. Opening it on the LAN is gated by the toggle below and
-# OFF by default: the host is LAN-only with no router port-forward, so inbound
-# peers from the internet can't arrive regardless. Outbound peering (NAT) works
-# without any open port. Flip the toggle (and add a router forward) if that
-# changes; the firewall role consumes both vars (set them in services.yml to
-# expose them to that role).
+# Puerto de peers (entrante) de BitTorrent. Es el IncomingPort por defecto del
+# motor de torrents, persistido en cloud_torrent_config_path (el motor no tiene
+# flag de CLI para esto; se cambia desde la web UI para sobrescribirlo). Se nombra
+# acá para que no sea un número mágico sin trazar. Abrirlo en la LAN está gobernado
+# por el toggle de abajo y está OFF por defecto: el host es solo LAN sin
+# port-forward en el router, así que igual no pueden llegar peers entrantes desde
+# internet. El peering saliente (NAT) funciona sin ningún puerto abierto. Cambiar
+# el toggle (y agregar un forward en el router) si eso cambia; el role firewall
+# consume ambas vars (setearlas en services.yml para exponerlas a ese role).
 cloud_torrent_peer_port: 50007
 cloud_torrent_open_peer_port: false
 
-# Application configuration
 cloud_torrent_title: "Cloud Torrent"
 cloud_torrent_downloads_dir: "{{ app_media_root }}"
 cloud_torrent_config_path: "{{ cloud_torrent_working_dir }}/cloud-torrent.json"
 
-# Authentication (disabled per user request)
+# Autenticación (deshabilitada a pedido del usuario).
 cloud_torrent_enable_auth: false
 cloud_torrent_auth_user: ""
 cloud_torrent_auth_password: ""
 
-# Firewall settings
 cloud_torrent_firewall_zone: FedoraServer
 cloud_torrent_firewall_enabled: true
 
-# SELinux configuration
 cloud_torrent_manage_selinux: true

@@ -1,47 +1,40 @@
 ---
-# Default variables for FileBrowser role
-# Only essential installation and service configuration
-
-# Installation configuration
-# 'latest' auto-resolves the newest GitHub release on every run; or pin to an
-# exact tag like "v2.63.15" to freeze the version.
+# 'latest' resuelve automáticamente el release más nuevo de GitHub en cada
+# corrida; o pinear a un tag exacto como "v2.63.15" para congelar la versión.
 filebrowser_version: latest
 filebrowser_arch: amd64
 filebrowser_github_repo: filebrowser/filebrowser
 filebrowser_install_dir: /usr/local/bin
-# State (SQLite DB + config) lives on the appdata disk (app_data_root, defined in
-# group_vars/homeservers/storage.yml).
+# El estado (DB SQLite + config) vive en el disco de appdata (app_data_root,
+# definido en group_vars/homeservers/storage.yml).
 filebrowser_working_dir: "{{ app_data_root }}/filebrowser"
 filebrowser_user: ndelucca
 filebrowser_group: ndelucca
 
-# Service configuration
 filebrowser_service_name: filebrowser
 filebrowser_service_enabled: true
 filebrowser_service_state: started
 
-# Network configuration
 filebrowser_bind_address: 127.0.0.1
 filebrowser_port: 8080
 
-# Firewall settings (used by firewall role)
 filebrowser_firewall_zone: public
 
-# Root directory to serve — the disks mount root, so all disks are browsable
-# directly (no per-disk symlinks). Can override in inventory.
+# Directorio raíz a servir — los discos montan en root, así que todos los discos
+# son navegables directamente (sin symlinks por disco). Se puede sobrescribir en
+# el inventory.
 filebrowser_root_dir: /srv/disks
 
-# Database location
 filebrowser_database: "{{ filebrowser_working_dir }}/filebrowser.db"
 
-# Configuration file (optional - FileBrowser can use CLI flags instead)
+# Archivo de configuración (opcional: FileBrowser puede usar flags de CLI en su
+# lugar).
 filebrowser_use_config_file: true
 filebrowser_config_file: "{{ filebrowser_working_dir }}/config.json"
 
-# SELinux configuration
 filebrowser_manage_selinux: true
 
-# Initial admin credentials (override in host_vars or vault)
+# Credenciales iniciales del admin (sobrescribir en host_vars o vault).
 filebrowser_admin_username: ndelucca
 filebrowser_admin_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
@@ -51,10 +44,11 @@ filebrowser_admin_password: !vault |
   3664666236386631610a383134363334353463393961326163306263366539356363376239313731
   37373131336135326162383931663336303566313561393564326331643533383137
 
-# Opt-in admin password rotation. The seed only runs on first install (before the
-# service starts), so changing filebrowser_admin_password later has no effect by
-# itself. Set this true for ONE run to push the new password into the existing
-# DB (the role stops the service to take the bbolt lock, updates, then restarts),
-# then set it back to false. Off by default so normal converges never touch the
-# running server.
+# Rotación opt-in del password del admin. El seed solo corre en la primera
+# instalación (antes de que arranque el servicio), así que cambiar
+# filebrowser_admin_password después no tiene efecto por sí solo. Poner esto en
+# true por UNA corrida para empujar el nuevo password a la DB existente (el role
+# frena el servicio para tomar el lock de bbolt, actualiza y reinicia), y después
+# volverlo a false. Off por defecto para que los converges normales nunca toquen
+# el server corriendo.
 filebrowser_force_admin_password: false

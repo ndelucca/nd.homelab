@@ -1,33 +1,28 @@
 [Unit]
-# Do not start unless the appdata disk is mounted: if D-Draco is missing, fail
-# cleanly instead of writing onto the bare mountpoint on root.
+# No arrancar si el disco de appdata no está montado: si falta D-Draco, falla
+# limpiamente en vez de escribir sobre el mountpoint vacío en root.
 RequiresMountsFor={{ storage_appdata_disk }}
 
 [Service]
-# Override user and group
 User={{ jellyfin_user }}
 Group={{ jellyfin_group }}
 
-# Override working directory
 WorkingDirectory={{ jellyfin_data_dir }}
 
-# Clear original ExecStart
+# Limpia el ExecStart original (el ExecStart= vacío resetea el del unit base).
 ExecStart=
 
-# Set ExecStart with custom directories
 ExecStart=/usr/bin/jellyfin \
   --datadir {{ jellyfin_data_dir }} \
   --configdir {{ jellyfin_config_dir }} \
   --logdir {{ jellyfin_log_dir }} \
   --cachedir {{ jellyfin_cache_dir }}
 
-# Security hardening
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths={{ jellyfin_base_dir }} {{ jellyfin_data_dir }} {{ jellyfin_config_dir }} {{ jellyfin_cache_dir }} {{ jellyfin_log_dir }} {{ jellyfin_media_dir }}
 
-# Restart configuration
 Restart=on-failure
 RestartSec=5s

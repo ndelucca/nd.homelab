@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # {{ ansible_managed }}
-# Daily backup: consistent DB dumps -> restic backup -> restic forget.
-# Runs as {{ backup_user }} (rootless) via the backup.service user unit.
+# Backup diario: dumps consistentes de las DBs -> restic backup -> restic forget.
+# Corre como {{ backup_user }} (rootless) vía la user unit backup.service.
 set -euo pipefail
 
 export RESTIC_REPOSITORY="{{ backup_repo }}"
@@ -10,15 +10,14 @@ export RESTIC_PASSWORD_FILE="{{ backup_password_file }}"
 log() { echo "[backup] $*"; }
 die() { echo "[backup][ERROR] $*" >&2; exit 1; }
 
-# --- Mount guards -----------------------------------------------------------
-# RequiresMountsFor is unreliable for user units (system mounts aren't visible
-# to the user manager), so verify the mounts explicitly before touching them.
+# RequiresMountsFor no es confiable para user units (los mounts del sistema no
+# son visibles para el user manager), así que se verifican los mounts de forma
+# explícita antes de tocarlos.
 mountpoint -q "{{ storage_backup_disk }}" || die "backup disk {{ storage_backup_disk }} is not mounted"
 mountpoint -q "{{ storage_appdata_disk }}" || die "appdata disk {{ storage_appdata_disk }} is not mounted"
 
-# --- Consistent database dumps ---------------------------------------------
 {% if backup_immich_enabled %}
-# Immich PostgreSQL — logical dump from the running container (online, consistent).
+# Immich PostgreSQL: dump lógico desde el container en ejecución (online, consistente).
 IMMICH_DUMP="{{ app_data_root }}/immich/dumps/immich.sql.gz"
 if podman ps --format '{% raw %}{{.Names}}{% endraw %}' | grep -qx "{{ backup_immich_container }}"; then
   log "dumping Immich Postgres -> ${IMMICH_DUMP}"
@@ -36,7 +35,7 @@ else
 fi
 {% endif %}
 
-# SQLite databases — online .backup (safe while the app is running).
+# Bases SQLite: .backup online (seguro mientras la app está corriendo).
 {% for db in backup_sqlite_dbs %}
 SRC="{{ db.path }}"
 DEST="{{ app_data_root }}/{{ db.app }}/dumps/{{ db.app }}.db"
@@ -50,7 +49,7 @@ else
 fi
 {% endfor %}
 
-# BoltDB / single-file databases — consistent file copy (Bolt is transactional).
+# BoltDB / bases de un solo archivo: copia de archivo consistente (Bolt es transaccional).
 {% for db in backup_copy_dbs %}
 SRC="{{ db.path }}"
 DEST="{{ app_data_root }}/{{ db.app }}/dumps/{{ db.app }}.db"
@@ -64,7 +63,6 @@ else
 fi
 {% endfor %}
 
-# --- Snapshot ---------------------------------------------------------------
 log "running restic backup"
 set +e
 restic backup \
@@ -77,7 +75,7 @@ restic backup \
 {% endfor %}
 rc=$?
 set -e
-# restic exit codes: 0 = ok, 3 = some source files could not be read (warning).
+# exit codes de restic: 0 = ok, 3 = algunos archivos de origen no se pudieron leer (warning).
 if [ "${rc}" -eq 0 ]; then
   log "backup completed"
 elif [ "${rc}" -eq 3 ]; then
@@ -86,11 +84,12 @@ else
   die "restic backup failed (rc=${rc})"
 fi
 
-# --- Retention (forget only; prune runs weekly in maintenance) --------------
-# Scope retention to the 'automated' snapshots this script creates (and group by
-# that tag) so the policy is deterministic and never forgets/keeps ad-hoc or
-# future snapshots that use a different path set — without --tag, forget groups
-# by (host,paths) and a second path-set would silently change retention.
+# Retención (solo forget; el prune corre semanalmente en maintenance).
+# Se acota la retención a los snapshots 'automated' que crea este script (y se
+# agrupa por ese tag) para que la política sea determinística y nunca olvide/
+# conserve snapshots ad-hoc o futuros que usen otro conjunto de paths: sin --tag,
+# forget agrupa por (host,paths) y un segundo conjunto de paths cambiaría la
+# retención en silencio.
 log "applying retention policy"
 restic forget \
   --tag automated \

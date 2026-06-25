@@ -1,13 +1,13 @@
 ---
-# Shared SELinux step for rootless-Podman/Quadlet container roles. Included via
-# `include_role: { name: container_base, tasks_from: selinux }`.
+# Paso de SELinux compartido para roles de container con Podman rootless/Quadlet.
+# Se incluye vía `include_role: { name: container_base, tasks_from: selinux }`.
 #
-# Labels the role's volume dirs container_file_t and relabels them through the
-# shared `container apply selinux context` handler, which the service step
-# flushes before the container starts (so contexts exist on first run).
+# Etiqueta los dirs de volumes del role como container_file_t y los re-etiqueta a
+# través del handler compartido `container apply selinux context`, que el paso de
+# service flushea antes de que arranque el container (así los contextos existen en el primer run).
 #
-# Contract vars: container_selinux_paths (list of dirs), and optionally
-# container_selinux_booleans (list of seboolean names to enable, default []).
+# Variables del contrato: container_selinux_paths (lista de dirs), y opcionalmente
+# container_selinux_booleans (lista de nombres de seboolean a habilitar, default []).
 
 - name: Display SELinux status
   ansible.builtin.debug:

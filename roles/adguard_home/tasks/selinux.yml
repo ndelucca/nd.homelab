@@ -1,6 +1,4 @@
 ---
-# Configure SELinux for AdGuard Home native installation
-
 - name: Display SELinux status
   ansible.builtin.debug:
     msg: "SELinux is {{ ansible_selinux.mode | default('disabled') }}"
@@ -41,6 +39,6 @@
   when: ansible_selinux.mode | default('') == 'enforcing'
   changed_when: false
 
-# Note: binding to port 53 is granted by CAP_NET_BIND_SERVICE (setcap in
-# install.yml), so no SELinux boolean is needed. The old nis_enabled toggle was
-# cargo-cult — it is the NIS/ypbind boolean and had no real effect on port binding.
+# Nota: el bind al puerto 53 lo otorga CAP_NET_BIND_SERVICE (setcap en install.yml),
+# así que no hace falta ningún boolean de SELinux. El viejo toggle nis_enabled era
+# cargo-cult — es el boolean de NIS/ypbind y no tenía ningún efecto real sobre el bind del puerto.

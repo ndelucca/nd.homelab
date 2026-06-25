@@ -1,6 +1,6 @@
 ---
-# Configure the restic password, excludes, helper scripts and systemd user units,
-# then initialise the repository (idempotently).
+# Configura el password de restic, los excludes, los scripts auxiliares y las user
+# units de systemd, y luego inicializa el repositorio (de forma idempotente).
 
 - name: Ensure restic config directory exists
   ansible.builtin.file:

@@ -1,5 +1,5 @@
 ---
-# Fail early with a clear message if the role is misconfigured.
+# Falla temprano con un mensaje claro si el role está mal configurado.
 
 - name: Assert the deSEC API token is provided
   ansible.builtin.assert:

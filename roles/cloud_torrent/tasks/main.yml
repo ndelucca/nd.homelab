@@ -1,6 +1,4 @@
 ---
-# Main entry point for Cloud Torrent role
-
 - name: Include preflight checks
   ansible.builtin.import_tasks: preflight.yml
   tags: ['cloud_torrent', 'preflight']

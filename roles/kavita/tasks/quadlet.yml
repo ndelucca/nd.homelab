@@ -1,8 +1,8 @@
 ---
-# Deploy Quadlet unit files.
+# Despliega los archivos de unit de Quadlet.
 
-# Migration: the role previously shipped a .kube pod (kavita-pod.service). Stop
-# and remove the legacy unit so only the new kavita.service remains.
+# Migración: el role antes traía un pod .kube (kavita-pod.service). Se frena y elimina
+# la unit legacy para que solo quede la nueva kavita.service.
 - name: Stop legacy kavita-pod service if present
   ansible.builtin.systemd:
     name: kavita-pod.service

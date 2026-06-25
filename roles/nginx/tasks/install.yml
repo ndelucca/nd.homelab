@@ -1,6 +1,4 @@
 ---
-# Install NGINX and generate self-signed certificates
-
 - name: Install NGINX
   ansible.builtin.dnf:
     name: nginx
@@ -16,14 +14,15 @@
     group: root
   become: true
 
-# Always generate the self-signed cert at the FIXED nginx_selfsigned_* paths,
-# never at nginx_ssl_certificate (which resolves to the lego path in letsencrypt
-# mode). This guarantees the documented `nginx_tls_mode: selfsigned` fallback has
-# a cert on disk even when lego issuance has never run or has failed. `creates:`
-# keeps it idempotent.
-# NOTE: there is no renewal path for this floor cert — `creates:` means it is
-# generated once and never refreshed. The 10y (3650d) lifetime is deliberately
-# long so it outlives the host; if it ever expires, delete the file and re-run.
+# Generamos siempre el cert self-signed en las rutas FIJAS nginx_selfsigned_*,
+# nunca en nginx_ssl_certificate (que en modo letsencrypt resuelve a la ruta de
+# lego). Esto garantiza que el fallback documentado `nginx_tls_mode: selfsigned`
+# tenga un cert en disco aunque la emisión con lego nunca haya corrido o haya
+# fallado. `creates:` lo mantiene idempotente.
+# NOTA: este cert de piso no tiene ruta de renovación: `creates:` implica que se
+# genera una sola vez y nunca se refresca. La vigencia de 10 años (3650d) es
+# deliberadamente larga para que sobreviva al host; si llega a expirar, borrar el
+# archivo y volver a correr.
 - name: Generate self-signed SSL certificate (bootstrap floor)
   ansible.builtin.command:
     cmd: >

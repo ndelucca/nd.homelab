@@ -1,57 +1,58 @@
 ---
-# Default variables for the reusable ACME (lego) role.
-# Issues real, publicly-trusted TLS certificates using the ACME DNS-01 challenge
-# against deSEC. DNS-01 only creates a TXT record via the deSEC API, so the CA
-# never connects to this host -> no inbound ports, nothing exposed to internet.
+# Variables por defecto del role reutilizable de ACME (lego).
+# Emite certificados TLS reales y públicamente confiables usando el challenge DNS-01
+# de ACME contra deSEC. DNS-01 solo crea un registro TXT vía la API de deSEC, así que
+# la CA nunca se conecta a este host -> sin puertos entrantes, nada expuesto a internet.
 
 acme_enabled: true
 
-# ACME account contact (Let's Encrypt expiry notices). Override in group_vars.
+# Contacto de la cuenta ACME (avisos de vencimiento de Let's Encrypt). Sobrescribir en group_vars.
 acme_email: "ndelucca@protonmail.com"
 
-# DNS provider for the DNS-01 challenge. 'desec' is lego's provider id; it reads
-# the API token from the DESEC_TOKEN environment variable.
+# Proveedor de DNS para el challenge DNS-01. 'desec' es el id de proveedor de lego;
+# lee el token de la API desde la variable de entorno DESEC_TOKEN.
 acme_dns_provider: desec
-# acme_desec_token: supplied via vault, mapped in group_vars (vault_desec_token).
+# acme_desec_token: provisto vía vault, mapeado en group_vars (vault_desec_token).
 
-# Resolvers lego uses for apex/zone determination. A clean public resolver, NOT
-# the local AdGuard (127.0.0.1:53), which answers for the zone / negative-caches.
+# Resolvers que usa lego para determinar el apex/zona. Un resolver público limpio, NO
+# el AdGuard local (127.0.0.1:53), que responde por la zona / cachea negativos.
 acme_dns_resolvers: "1.1.1.1:53,8.8.8.8:53"
 
-# Skip lego's *recursive*-resolver propagation wait. That check polls public
-# resolvers (1.1.1.1, ...) which cache the _acme-challenge TXT for the record TTL
-# and return stale values — slow (2 min/domain) and flaky. The authoritative
-# check against deSEC's own nameservers stays on and is fresh instantly, so
-# issuance is both correct and fast. This is the right setting for deSEC.
+# Omite la espera de propagación de lego sobre resolvers *recursivos*. Ese chequeo
+# consulta resolvers públicos (1.1.1.1, ...) que cachean el TXT _acme-challenge por
+# el TTL del registro y devuelven valores viejos — lento (2 min/dominio) y poco
+# confiable. El chequeo autoritativo contra los propios nameservers de deSEC queda
+# activo y es fresco al instante, así la emisión es correcta y rápida. Es la
+# configuración correcta para deSEC.
 acme_dns_disable_rns: true
 
-# lego binary install. Version-aware and idempotent like the adguard role:
-#   acme_version: latest    -> newest stable GitHub release (pre-releases skipped)
-#   acme_version: vX.Y.Z     -> pin to an exact release.
+# Instalación del binario de lego. Consciente de la versión e idempotente, igual que el role adguard:
+#   acme_version: latest    -> release estable más nueva de GitHub (se omiten las pre-releases)
+#   acme_version: vX.Y.Z     -> fija a una release exacta.
 acme_version: latest
 acme_github_repo: go-acme/lego
 acme_install_dir: /usr/local/bin
 acme_lego_bin: "{{ acme_install_dir }}/lego"
 
-# Where lego keeps its account state and certificates (override per group).
-# Certs land in {{ acme_data_dir }}/certificates/<name>.crt (+ .key).
+# Dónde guarda lego el estado de la cuenta y los certificados (sobrescribir por grupo).
+# Los certs quedan en {{ acme_data_dir }}/certificates/<name>.crt (+ .key).
 acme_data_dir: /etc/ssl/lego
 
-# Certificates this host should manage. Each item:
-#   name    -> first/primary domain; lego names files <name>.crt / <name>.key
-#   domains -> full SAN list (e.g. apex + wildcard, or a single name)
+# Certificados que este host debe gestionar. Cada item:
+#   name    -> dominio principal/primero; lego nombra los archivos <name>.crt / <name>.key
+#   domains -> lista SAN completa (ej. apex + wildcard, o un único nombre)
 acme_certificates: []
 
-# Renewal behaviour.
-acme_renew_days: 30                  # renew when fewer than N days remain
-acme_staging: false                  # true -> Let's Encrypt staging CA (untrusted, no rate limits)
-acme_reload_service: nginx           # service reloaded after issuance/renewal
+# Comportamiento de renovación.
+acme_renew_days: 30                  # renueva cuando quedan menos de N días
+acme_staging: false                  # true -> CA de staging de Let's Encrypt (no confiable, sin rate limits)
+acme_reload_service: nginx           # servicio que se recarga tras la emisión/renovación
 
-# Failure alerting. lego-renew.service fires OnFailure=lego-renew-notify.service,
-# which logs to the journal (tag lego-renew) and, when a URL is set, pushes ntfy.
-# Defaults to the backup role's ntfy topic so one setting covers all alerts.
+# Alerting de fallas. lego-renew.service dispara OnFailure=lego-renew-notify.service,
+# que loguea en el journal (tag lego-renew) y, cuando hay una URL seteada, hace push a ntfy.
+# Por defecto usa el topic de ntfy del role de backup, así un solo setting cubre todas las alertas.
 acme_notify_script: "{{ acme_install_dir }}/acme-notify.sh"
 acme_notify_ntfy_url: "{{ backup_notify_ntfy_url | default('') }}"
 
-# SELinux (Fedora). Automatically skipped where SELinux is not enabled (e.g. the Pi).
+# SELinux (Fedora). Se omite automáticamente donde SELinux no está habilitado (ej. la Pi).
 acme_manage_selinux: true

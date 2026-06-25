@@ -1,40 +1,43 @@
 ---
-# On-demand update helper.
+# Helper de actualización a demanda.
 #
-# Container images are now PINNED in each role's defaults (immich_version,
-# home_assistant_version, monitoring_version, kavita_image digest, forgejo_version,
-# orcaslicer_image, ...). Updates are deliberate and tracked in git:
+# Las imágenes de contenedor ahora están FIJADAS en los defaults de cada rol
+# (immich_version, home_assistant_version, monitoring_version, digest de
+# kavita_image, forgejo_version, orcaslicer_image, ...). Las actualizaciones son
+# deliberadas y quedan registradas en git:
 #
-#   1. Bump the version/digest var in roles/<app>/defaults/main.yml
-#   2. Re-run the role:  ansible-playbook playbooks/site.yml -l ndelucca-server --tags <app>
+#   1. Subir la variable de versión/digest en roles/<app>/defaults/main.yml
+#   2. Re-correr el rol:  ansible-playbook playbooks/site.yml -l ndelucca-server --tags <app>
 #
-# This playbook only REPORTS whether newer images exist upstream (a dry-run); it
-# does not mutate anything, because AutoUpdate=registry was removed to keep the
-# deployed versions reproducible.
+# Este playbook solo REPORTA si existen imágenes más nuevas upstream (un dry-run);
+# no muta nada, porque se removió AutoUpdate=registry para mantener reproducibles
+# las versiones desplegadas.
 #
-# Native binaries (FileBrowser, AdGuard Home) self-update to the newest release
-# on a normal site.yml run (checksum-verified), so they are not covered here.
+# Los binarios nativos (FileBrowser, AdGuard Home) se auto-actualizan al último
+# release en una corrida normal de site.yml (verificado por checksum), así que no
+# se cubren acá.
 #
-# Usage:
+# Uso:
 #   ansible-playbook playbooks/update.yml -l ndelucca-server
 #
-# WARNING: Immich runs irreversible DB migrations on start. Back up its
-# database before a big version jump (see README / docs/RESTORE.md).
+# ADVERTENCIA: Immich corre migraciones de DB irreversibles al arrancar. Hacé
+# backup de su base de datos antes de un salto grande de versión (ver README /
+# docs/RESTORE.md).
 
 - name: Report available container image updates (read-only)
   hosts: homeservers
   gather_facts: true
 
   vars:
-    # uid of the user that owns the rootless containers (ndelucca = 1000)
+    # uid del usuario dueño de los contenedores rootless (ndelucca = 1000)
     podman_user_uid: "{{ ansible_user_uid | default(1000) }}"
 
   tasks:
     - name: Check upstream for newer images (dry-run; no changes made)
       ansible.builtin.command: podman auto-update --dry-run
-      # Rootless containers belong to the unprivileged service user, not root.
-      # ansible.cfg sets become=True globally; override it here so the command
-      # runs in the right user/runtime context.
+      # Los contenedores rootless pertenecen al usuario de servicio sin privilegios,
+      # no a root. ansible.cfg pone become=True de forma global; se sobrescribe acá
+      # para que el comando corra en el contexto de usuario/runtime correcto.
       become: false
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ podman_user_uid }}"

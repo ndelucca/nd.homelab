@@ -1,6 +1,4 @@
 ---
-# Configure SELinux for NGINX reverse proxy
-
 - name: Install SELinux Python bindings
   ansible.builtin.dnf:
     name:

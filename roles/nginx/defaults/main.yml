@@ -1,28 +1,30 @@
 ---
-# Default variables for NGINX reverse proxy role
+# Variables por defecto del role de reverse proxy NGINX
 
-# Domain configuration — host-specific, set the real value in host_vars.
-# This neutral default is only a fallback for the self-signed cert CN.
+# Configuración de dominio: específica del host, setear el valor real en host_vars.
+# Este default neutro es solo un fallback para el CN del cert self-signed.
 nginx_domain: localhost
 
-# SSL/TLS configuration
+# Configuración SSL/TLS
 nginx_ssl_certificate: /etc/pki/nginx/server.crt
 nginx_ssl_certificate_key: /etc/pki/nginx/server.key
 nginx_generate_selfsigned_cert: true
 
-# Shared TLS security-headers snippet, deployed by configure.yml and `include`d
-# by every HTTPS vhost (standard + bespoke) so the headers live in one place.
+# Snippet de headers de seguridad TLS compartido, desplegado por configure.yml e
+# `include`-ado por cada vhost HTTPS (estándar y a medida) para que los headers
+# vivan en un solo lugar.
 nginx_ssl_headers_snippet: /etc/nginx/snippets/ssl_headers.conf
 
-# Self-signed bootstrap floor. ALWAYS generated at these paths regardless of the
-# active TLS mode (letsencrypt vs selfsigned), so switching to
-# `nginx_tls_mode: selfsigned` has a real cert to fall back to if lego fails.
-# group_vars overrides nginx_ssl_certificate to the lego path in letsencrypt mode;
-# these two vars stay fixed so the floor never lands on the lego path.
+# Piso de bootstrap self-signed. Se genera SIEMPRE en estas rutas sin importar el
+# modo TLS activo (letsencrypt vs selfsigned), así al cambiar a
+# `nginx_tls_mode: selfsigned` hay un cert real al que recurrir si lego falla.
+# group_vars sobrescribe nginx_ssl_certificate con la ruta de lego en modo
+# letsencrypt; estas dos variables quedan fijas para que el piso nunca caiga en
+# la ruta de lego.
 nginx_selfsigned_cert: /etc/pki/nginx/server.crt
 nginx_selfsigned_key: /etc/pki/nginx/server.key
 
-# Backend service ports
+# Puertos de los servicios backend
 nginx_adguard_port: 8081
 nginx_filebrowser_port: 8080
 nginx_jellyfin_port: 8096
@@ -36,20 +38,20 @@ nginx_ndmarket_port: 28310
 nginx_forgejo_port: 3000
 nginx_uptime_kuma_port: 3011
 
-# --- Reverse-proxy vhosts ---------------------------------------------------
-# Standard vhosts rendered from this list by conf.d/10-services.conf.j2 (one
-# HTTP->HTTPS redirect + one HTTPS server block each, shared cert + security
-# headers + X-Forwarded-* set). The bespoke vhosts that need extra named
-# locations or an exotic upstream (jellyfin /socket + CSP, cloud-torrent SSE,
-# ndmarket SSE, orcaslicer https/no-http2) keep their own conf.d/*.conf.j2.
-# Per-entry knobs:
-#   subdomain         '' = apex ({{ nginx_domain }}), else <sub>.{{ nginx_domain }}
-#   port              loopback upstream port
-#   websocket         add Upgrade/Connection headers (default true)
-#   forwarded_proto   X-Forwarded-Proto value (default $scheme)
-#   client_max_body_size   optional upload cap
-#   server_snippet    raw lines injected at server level (before location /)
-#   location_snippet  raw lines injected inside location /
+# Vhosts de reverse proxy renderizados desde esta lista por
+# conf.d/10-services.conf.j2 (un redirect HTTP->HTTPS + un bloque server HTTPS
+# cada uno, con cert compartido + headers de seguridad + X-Forwarded-*). Los
+# vhosts a medida que necesitan locations nombradas extra o un upstream atípico
+# (jellyfin /socket + CSP, cloud-torrent SSE, ndmarket SSE, orcaslicer
+# https/no-http2) conservan su propio conf.d/*.conf.j2.
+# Parámetros por entrada:
+#   subdomain         '' = apex ({{ nginx_domain }}), si no <sub>.{{ nginx_domain }}
+#   port              puerto del upstream en loopback
+#   websocket         agrega headers Upgrade/Connection (default true)
+#   forwarded_proto   valor de X-Forwarded-Proto (default $scheme)
+#   client_max_body_size   límite de subida opcional
+#   server_snippet    líneas crudas inyectadas a nivel server (antes de location /)
+#   location_snippet  líneas crudas inyectadas dentro de location /
 nginx_vhosts:
   - {subdomain: "", port: "{{ nginx_adguard_port }}"}
   - {subdomain: "adguard", port: "{{ nginx_adguard_port }}"}
@@ -74,9 +76,9 @@ nginx_vhosts:
       proxy_buffering off;
       proxy_request_buffering off;
 
-# Firewall configuration
+# Configuración del firewall
 nginx_firewall_enabled: true
 nginx_firewall_zone: FedoraServer
 
-# SELinux configuration
+# Configuración de SELinux
 nginx_manage_selinux: true

@@ -1,27 +1,27 @@
 ---
-# ============================================================================
-# Centralized storage configuration — single source of truth for the disks.
-# ----------------------------------------------------------------------------
-# Philosophy:
-#   * root (xfs) holds ONLY the OS. It is reproducible 100% from this playbook,
-#     so a root/motherboard failure is recovered by reinstalling Fedora and
-#     re-running the playbook.
-#   * D-Draco (NVMe) is THE app-data disk: every app's STATE (databases, configs,
-#     caches) lives under {{ app_data_root }} and its MEDIA under {{ app_media_root }}.
-#     Because the irreplaceable data lives here (not on root), it survives an OS
-#     reinstall — re-running the playbook brings the apps back with their data.
-#   * D-Leo holds the personal archive (browsed via Filebrowser only; no app
-#     writes to it).
-#   * D-Ursa is the backup target (see the backup design, phase 2).
+# Configuración centralizada de almacenamiento: única fuente de verdad de los discos.
 #
-# Disks are addressed by FILESYSTEM UUID, which lives in the disk superblock and
-# therefore survives a motherboard/OS swap. Never address them by /dev/sdX —
-# those names are unstable across hardware and boots.
+# Filosofía:
+#   * root (xfs) contiene SOLO el SO. Es 100% reproducible desde este playbook,
+#     así que una falla de root/motherboard se recupera reinstalando Fedora y
+#     re-corriendo el playbook.
+#   * D-Draco (NVMe) es EL disco de datos de apps: el ESTADO de cada app (bases
+#     de datos, configs, caches) vive bajo {{ app_data_root }} y su MEDIA bajo
+#     {{ app_media_root }}. Como los datos irremplazables viven acá (no en root),
+#     sobreviven a una reinstalación del SO — re-correr el playbook devuelve las
+#     apps con sus datos.
+#   * D-Leo contiene el archivo personal (se navega solo vía Filebrowser; ninguna
+#     app le escribe).
+#   * D-Ursa es el destino de backup (ver el diseño de backup, fase 2).
 #
-# Exception: AdGuard Home (DNS/DHCP for the whole LAN) deliberately stays on root
-# (/opt/AdGuardHome). Its config is fully reproducible from this playbook, and
-# keeping it off the data disk means LAN DNS survives a D-Draco mount failure.
-# ============================================================================
+# Los discos se direccionan por UUID del FILESYSTEM, que vive en el superblock del
+# disco y por lo tanto sobrevive a un cambio de motherboard/SO. Nunca direccionarlos
+# por /dev/sdX — esos nombres son inestables entre hardware y arranques.
+#
+# Excepción: AdGuard Home (DNS/DHCP de toda la LAN) se queda deliberadamente en root
+# (/opt/AdGuardHome). Su config es totalmente reproducible desde este playbook, y
+# tenerlo fuera del disco de datos hace que el DNS de la LAN sobreviva a una falla
+# de montaje de D-Draco.
 
 storage_disks:
   - name: D-Draco
@@ -40,18 +40,19 @@ storage_disks:
     fstype: ext4
     role: backup
 
-# Semantic disk roles — roles reference THESE, never raw mount paths or /dev.
+# Roles semánticos de disco — los roles referencian ESTOS, nunca rutas de montaje
+# crudas ni /dev.
 storage_appdata_disk: /srv/disks/D-Draco
 storage_personal_disk: /srv/disks/D-Leo
 storage_backup_disk: /srv/disks/D-Ursa
 
-# Base dirs every app builds on (both live on the appdata disk).
-app_data_root: "{{ storage_appdata_disk }}/appdata"   # app STATE: DBs, configs, caches
-app_media_root: "{{ storage_appdata_disk }}/media"    # app MEDIA: Movies, Series, Gallery, Books
+# Directorios base sobre los que se apoya cada app (ambos en el disco de datos).
+app_data_root: "{{ storage_appdata_disk }}/appdata"   # ESTADO de las apps: DBs, configs, caches
+app_media_root: "{{ storage_appdata_disk }}/media"    # MEDIA de las apps: Movies, Series, Gallery, Books
 
-# Ownership for everything under the appdata disk (the rootless/service user).
-# The uid/gid are pinned so rootless Podman (UserNS=keep-id) and file ownership
-# stay valid across an OS reinstall.
+# Propietario de todo lo que cuelga del disco de datos (el usuario rootless/de
+# servicio). El uid/gid están fijados para que el Podman rootless (UserNS=keep-id)
+# y la propiedad de archivos sigan siendo válidos tras una reinstalación del SO.
 app_storage_user: ndelucca
 app_storage_group: ndelucca
 app_storage_uid: 1000

@@ -1,6 +1,4 @@
 ---
-# Configure systemd service
-
 - name: Deploy FileBrowser systemd service file
   ansible.builtin.template:
     src: filebrowser.service.j2

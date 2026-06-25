@@ -1,76 +1,74 @@
 ---
-# Default variables for the monitoring role.
+# Variables por defecto del role monitoring.
 #
-# Uptime-Kuma watches that every service (and the host) is actually up, from the
-# outside, and alerts when one goes down. It fits the rootless model cleanly: it
-# only makes outbound HTTP/TCP/DNS/ping checks, so it needs no host namespaces or
-# elevated privileges — unlike host-metric agents. System/disk metrics on demand
-# stay in Cockpit; the backup disk has its own usage alert in the backup role.
+# Uptime-Kuma vigila que cada servicio (y el host) esté realmente arriba, desde
+# afuera, y alerta cuando alguno se cae. Encaja limpiamente en el modelo rootless:
+# solo hace checks salientes HTTP/TCP/DNS/ping, así que no necesita namespaces del
+# host ni privilegios elevados, a diferencia de los agentes de métricas de host.
+# Las métricas de sistema/disco bajo demanda quedan en Cockpit; el disco de backup
+# tiene su propia alerta de uso en el role backup.
 
-# Service user configuration.
 monitoring_user: ndelucca
 monitoring_group: ndelucca
-monitoring_uid: 1000  # Resolved dynamically via getent in preflight
+monitoring_uid: 1000  # Se resuelve dinámicamente vía getent en preflight
 
-# Directory configuration — state on the appdata disk (app_data_root, defined in
+# El estado vive en el disco de appdata (app_data_root, definido en
 # group_vars/homeservers/storage.yml).
 monitoring_base_dir: "{{ app_data_root }}/uptime-kuma"
 monitoring_data_dir: "{{ monitoring_base_dir }}/data"
 
-# Podman configuration.
-monitoring_quadlet_dir: /etc/containers/systemd/users  # System-managed user containers
+monitoring_quadlet_dir: /etc/containers/systemd/users  # containers de usuario gestionados por el sistema
 
-# Network configuration — localhost only; NGINX handles external access.
-monitoring_port: 3011        # host port (3011 is free; 3001 is OrcaSlicer)
+# Solo localhost; NGINX maneja el acceso externo.
+monitoring_port: 3011        # puerto del host (3011 está libre; 3001 es OrcaSlicer)
 monitoring_container_port: 3001
 monitoring_host: 127.0.0.1
 
-# Application configuration. Pinned to an exact patch release (the :1 tag floats
-# across the 1.x line); bump monitoring_version to upgrade.
+# Fijado a un patch release exacto (el tag :1 flota a lo largo de la línea 1.x);
+# subí monitoring_version para actualizar.
 monitoring_version: "1.23.17"
 monitoring_image: "docker.io/louislam/uptime-kuma:{{ monitoring_version }}"
 
-# Service configuration. Deployed as a single .container quadlet, so the unit is
-# uptime-kuma.service (the old .kube produced uptime-kuma-pod.service; quadlet.yml
-# cleans up the legacy unit).
+# Desplegado como un único Quadlet .container, así que la unit es
+# uptime-kuma.service (el viejo .kube producía uptime-kuma-pod.service; quadlet.yml
+# limpia la unit legacy).
 monitoring_service_name: uptime-kuma
 monitoring_service_enabled: true
 monitoring_service_state: started
 
-# Firewall settings — closed; reachable only via NGINX.
+# Firewall cerrado; alcanzable solo vía NGINX.
 monitoring_firewall_zone: FedoraServer
 monitoring_firewall_enabled: false
 
-# SELinux configuration.
 monitoring_manage_selinux: true
 
-# --- What to monitor --------------------------------------------------------
-# The server's LAN IP (where NGINX listens) and the gateway, used for ping
-# checks and for resolving the service subdomains from inside the container.
+# La IP LAN del servidor (donde escucha NGINX) y el gateway, usadas para los
+# checks de ping y para resolver los subdominios de los servicios desde dentro del container.
 monitoring_host_ip: 192.168.10.10
 monitoring_gateway_ip: 192.168.10.1
 
-# Backend ports for the HTTP checks, defined ONCE here instead of buried as
-# literals inside each URL. Each maps to the owning role's listen port — keep it
-# in sync with that role's *_port default (noted alongside). They can't be a live
-# cross-reference because role vars are private to their role (private_role_vars);
-# filebrowser_port IS a group var (services.yml) so that one is referenced live.
+# Puertos de backend para los checks HTTP, definidos UNA SOLA VEZ acá en lugar de
+# enterrados como literales dentro de cada URL. Cada uno mapea al puerto de escucha
+# del role dueño; hay que mantenerlo en sync con el default *_port de ese role
+# (anotado al lado). No pueden ser una cross-reference viva porque las vars de role
+# son privadas a su role (private_role_vars); filebrowser_port SÍ es una group var
+# (services.yml), así que esa se referencia en vivo.
 monitoring_service_ports:
   forgejo: 3000                                          # forgejo_port
-  jellyfin: 8096                                         # Jellyfin's fixed HTTP port
-  immich: 2283                                           # immich containerPort
+  jellyfin: 8096                                         # puerto HTTP fijo de Jellyfin
+  immich: 2283                                           # containerPort de immich
   kavita: 5000                                           # kavita_port
   filebrowser: "{{ filebrowser_port | default(8080) }}"  # group var (services.yml)
   cloud_torrent: 9091                                    # cloud_torrent_port
   home_assistant: 8123                                   # home_assistant_port
-  cockpit: 9090                                          # Cockpit's fixed socket port
+  cockpit: 9090                                          # puerto fijo del socket de Cockpit
   adguard: 8081                                          # adguard_admin_port
   orcaslicer: 3001                                       # orcaslicer_port
-  nginx: 443                                             # NGINX HTTPS
+  nginx: 443                                             # HTTPS de NGINX
 
-# HTTP(S) checks, one per service, hit directly on the host loopback (the pod
-# runs with hostNetwork). This tests each backend itself, not just the proxy.
-# Redirects/auth pages are fine — accepted status codes span 200-399.
+# Checks HTTP(S), uno por servicio, golpeados directamente en el loopback del host
+# (el pod corre con hostNetwork). Esto prueba cada backend en sí, no solo el proxy.
+# Las redirecciones/páginas de auth están bien: los códigos de estado aceptados van de 200 a 399.
 monitoring_http_checks:
   - {name: "Forgejo (git)", url: "http://127.0.0.1:{{ monitoring_service_ports.forgejo }}"}
   - {name: "Jellyfin", url: "http://127.0.0.1:{{ monitoring_service_ports.jellyfin }}"}
@@ -81,43 +79,44 @@ monitoring_http_checks:
   - {name: "Home Assistant", url: "http://127.0.0.1:{{ monitoring_service_ports.home_assistant }}"}
   - {name: "Cockpit", url: "https://127.0.0.1:{{ monitoring_service_ports.cockpit }}"}
   - {name: "AdGuard Home", url: "http://127.0.0.1:{{ monitoring_service_ports.adguard }}"}
-  - {name: "OrcaSlicer", url: "https://127.0.0.1:{{ monitoring_service_ports.orcaslicer }}", accepted_codes: ["200-499"]}  # 401 = up, auth required
+  - {name: "OrcaSlicer", url: "https://127.0.0.1:{{ monitoring_service_ports.orcaslicer }}", accepted_codes: ["200-499"]}  # 401 = arriba, requiere auth
   - {name: "NGINX (reverse proxy)", url: "https://127.0.0.1:{{ monitoring_service_ports.nginx }}"}
 
-# Accepted HTTP status ranges (tolerate redirects to login/dashboards).
+# Rangos de códigos de estado HTTP aceptados (tolerar redirecciones a login/dashboards).
 monitoring_http_accepted_codes: ["200-399"]
 
-# Port checks (TCP) for non-HTTP services.
+# Checks de puerto (TCP) para los servicios no-HTTP.
 monitoring_port_checks:
   - {name: "AdGuard DNS", host: "127.0.0.1", port: 53}
 
-# Ping checks for raw host reachability.
+# Checks de ping para la alcanzabilidad básica del host.
 monitoring_ping_checks:
   - {name: "Server (host)", host: "{{ monitoring_host_ip }}"}
   - {name: "Router (gateway)", host: "{{ monitoring_gateway_ip }}"}
 
-# Monitor defaults applied to every check.
-monitoring_check_interval: 60     # seconds between checks
-monitoring_check_retries: 2       # failures before marking DOWN
+# Defaults de monitor aplicados a cada check.
+monitoring_check_interval: 60     # segundos entre checks
+monitoring_check_retries: 2       # fallas antes de marcar DOWN
 
-# Idempotently seed the monitors above straight into Uptime-Kuma's SQLite DB
-# (no API/password needed). Only missing monitors are added; the pod is briefly
-# stopped while the DB is written. Disable to manage monitors by hand in the UI.
+# Siembra de forma idempotente los monitors de arriba directo en la DB SQLite de
+# Uptime-Kuma (sin necesidad de API/password). Solo se agregan los monitors
+# faltantes; el pod se detiene brevemente mientras se escribe la DB. Deshabilitar
+# para gestionar los monitors a mano en la UI.
 #
-# FRAGILITY NOTE: seeding writes raw INSERTs into Uptime-Kuma's PRIVATE schema.
-# That schema can change between releases, so when you bump monitoring_version
-# RE-VERIFY that seeding still works (run with --tags monitoring,monitors and
-# check the dashboard); a schema change could make the INSERT fail or be
-# rejected. Already-seeded monitors are matched by name only and never updated —
-# edit URLs/intervals in the UI after the first seed.
+# NOTA DE FRAGILIDAD: la siembra escribe INSERTs crudos en el schema PRIVADO de
+# Uptime-Kuma. Ese schema puede cambiar entre releases, así que cuando subas
+# monitoring_version RE-VERIFICÁ que la siembra siga funcionando (corré con --tags
+# monitoring,monitors y revisá el dashboard); un cambio de schema podría hacer que
+# el INSERT falle o sea rechazado. Los monitors ya sembrados se matchean solo por
+# nombre y nunca se actualizan: editá URLs/intervalos en la UI después de la primera siembra.
 monitoring_configure_monitors: true
 
-# container_base contract — feeds the shared install + handlers (see container_base).
+# Contrato de container_base: alimenta el install + handlers compartidos (ver container_base).
 container_user: "{{ monitoring_user }}"
 container_uid: "{{ monitoring_uid }}"
 container_service_name: "{{ monitoring_service_name }}"
 container_selinux_paths: "{{ [monitoring_data_dir] }}"
-# container_base service-step contract (enable + wait_for).
+# Contrato del service-step de container_base (enable + wait_for).
 container_host: "{{ monitoring_host }}"
 container_port: "{{ monitoring_port }}"
 container_service_enabled: "{{ monitoring_service_enabled }}"

@@ -1,160 +1,166 @@
 # Fedora Home Server — Ansible
 
-Ansible automation for a Fedora home server: LAN DNS/DHCP, a reverse proxy with
-real TLS, and ~12 self-hosted apps as rootless Podman containers — all reachable
-on the LAN by name, with **nothing exposed to the internet**.
+Automatización con Ansible de un home server Fedora: DNS/DHCP de la LAN, un
+reverse proxy con TLS real y ~12 apps self-hosted como contenedores Podman
+rootless — todas accesibles por nombre en la LAN, con **nada expuesto a
+internet**.
 
-## Architecture at a glance
+## La arquitectura de un vistazo
 
-- **Split-horizon DNS + real certs.** AdGuard Home resolves the public domain
-  (`ndelucca.dedyn.io`, hosted at deSEC) *internally* to the server's LAN IP.
-  A wildcard Let's Encrypt cert is issued out-of-band via the **DNS-01**
-  challenge (`roles/acme`, lego + deSEC), so browsers see a trusted cert while
-  no port is ever opened to the internet.
-- **NGINX reverse proxy** terminates TLS for every app on `192.168.10.10` and
-  proxies to each backend on `127.0.0.1`. Apps bind to loopback only; only
-  `53` (DNS), `80/443` (NGINX), DHCP and Forgejo's git-SSH `2222` face the LAN.
-- **Rootless Podman + Quadlet.** Containerized apps run as the unprivileged
-  `ndelucca` user via systemd Quadlet units (`.container`, plus `.kube` for the
-  multi-container Immich pod).
-- **Storage that survives a reinstall.** All irreplaceable state lives on
-  UUID-mounted data disks, not on root. Root holds only the OS and is 100%
-  reproducible from this playbook; re-running it after a fresh install brings
-  the apps back with their data. See `inventory/group_vars/homeservers/storage.yml`.
+- **Split-horizon DNS + certs reales.** AdGuard Home resuelve el dominio público
+  (`ndelucca.dedyn.io`, alojado en deSEC) *internamente* a la IP de LAN del
+  servidor. Un cert wildcard de Let's Encrypt se emite fuera de banda vía el
+  challenge **DNS-01** (`roles/acme`, lego + deSEC), así el browser ve un cert
+  confiable sin abrir jamás un puerto a internet.
+- **Reverse proxy NGINX** termina el TLS de cada app en `192.168.10.10` y hace
+  proxy a cada backend en `127.0.0.1`. Las apps escuchan solo en loopback; solo
+  `53` (DNS), `80/443` (NGINX), DHCP y el git-SSH `2222` de Forgejo dan a la LAN.
+- **Podman rootless + Quadlet.** Las apps en contenedor corren como el usuario sin
+  privilegios `ndelucca` vía units de systemd Quadlet (`.container`, más `.kube`
+  para el pod multi-contenedor de Immich).
+- **Almacenamiento que sobrevive a una reinstalación.** Todo el estado
+  irremplazable vive en discos de datos montados por UUID, no en root. Root
+  contiene solo el SO y es 100% reproducible desde este playbook; re-correrlo
+  tras una instalación limpia devuelve las apps con sus datos. Ver
+  `inventory/group_vars/homeservers/storage.yml`.
 
-## Services
+## Servicios
 
-| Subdomain (`*.ndelucca.dedyn.io`) | App | Role | Deploy |
+| Subdominio (`*.ndelucca.dedyn.io`) | App | Role | Deploy |
 |---|---|---|---|
-| `adguard.` / apex | AdGuard Home (DNS + DHCP) | `adguard_home` | native binary |
-| `cockpit.` | Cockpit (web admin) | `cockpit` | host (localhost + NGINX) |
-| `files.` | FileBrowser | `filebrowser` | native binary |
-| `jellyfin.` | Jellyfin (media) | `jellyfin` | package |
-| `torrent.` | Cloud Torrent | `cloud_torrent` | native binary |
-| `gallery.` | Immich (photos) | `immich` | Podman `.kube` pod |
-| `books.` | Kavita (reading) | `kavita` | Podman `.container` |
+| `adguard.` / apex | AdGuard Home (DNS + DHCP) | `adguard_home` | binario nativo |
+| `cockpit.` | Cockpit (admin web) | `cockpit` | host (localhost + NGINX) |
+| `files.` | FileBrowser | `filebrowser` | binario nativo |
+| `jellyfin.` | Jellyfin (media) | `jellyfin` | paquete |
+| `torrent.` | Cloud Torrent | `cloud_torrent` | binario nativo |
+| `gallery.` | Immich (fotos) | `immich` | pod Podman `.kube` |
+| `books.` | Kavita (lectura) | `kavita` | Podman `.container` |
 | `slicer.` | OrcaSlicer (web) | `orcaslicer` | Podman `.container` |
 | `home.` | Home Assistant | `home_assistant` | Podman `.container` |
 | `git.` | Forgejo (+ git SSH :2222) | `forgejo` | Podman `.container` |
 | `status.` | Uptime-Kuma | `monitoring` | Podman `.container` |
-| `market.` | nd.markets | (external app) | reverse-proxied only |
+| `market.` | nd.markets | (app externa) | solo reverse-proxy |
 
-Cross-cutting roles: `storage` (disks), `acme` (TLS), `nginx` (proxy),
+Roles transversales: `storage` (discos), `acme` (TLS), `nginx` (proxy),
 `firewall` (firewalld), `backup` (restic → D-Ursa), `service_maintenance`
-(AdGuard cold-boot watchdog).
+(watchdog de arranque en frío de AdGuard).
 
-## Repository layout
+## Estructura del repositorio
 
 ```
-ansible.cfg                         # project config (vault password file, SSH, become)
-requirements.yml                    # Galaxy collections (ansible.posix, community.general)
+ansible.cfg                         # config del proyecto (archivo de vault password, SSH, become)
+requirements.yml                    # colecciones de Galaxy (ansible.posix, community.general)
 inventory/
-  hosts.yml                         # homeservers / printers / clients groups
+  hosts.yml                         # grupos homeservers / printers / clients
   group_vars/
-    all/{main,vault}.yml            # base_domain + shared secrets
-    homeservers/{services,storage,vault}.yml   # app/network config, disk layout, secrets
+    all/{main,vault}.yml            # base_domain + secretos compartidos
+    homeservers/{services,storage,vault}.yml   # config de app/red, layout de discos, secretos
 playbooks/
-  site.yml                          # full orchestration (run this); one service via --tags <role>
-  printers.yml, mainsailos_update.yml  # Raspberry Pi printer plays (hosts: printers)
-  hosts.yml                         # manage /etc/hosts entries
-  remove_adguard.yml                # tear down the AdGuard install
-  update.yml                        # report available container image updates
-roles/<role>/                       # one role per concern: tasks/ defaults/ templates/ handlers/ meta/
+  site.yml                          # orquestación completa (correr este); un servicio con --tags <role>
+  printers.yml, mainsailos_update.yml  # plays de la impresora Raspberry Pi (hosts: printers)
+  hosts.yml                         # gestionar entradas de /etc/hosts
+  remove_adguard.yml                # desmontar la instalación de AdGuard
+  update.yml                        # reportar actualizaciones disponibles de imágenes de contenedor
+roles/<role>/                       # un role por incumbencia: tasks/ defaults/ templates/ handlers/ meta/
 docs/                               # BOOTSTRAP, RESTORE, TLS-AND-DNS, ADGUARD_CONFIG_SETUP
 ```
 
-Roles follow a consistent skeleton: `preflight → install → [configure] →
-quadlet → selinux → service`. The rootless-Podman/Quadlet container roles
-(kavita, immich, forgejo, home_assistant, orcaslicer, monitoring) share their
-**install + handlers, SELinux step and service step** via the **`container_base`**
-role: each pulls them in by name (`include_role … tasks_from: install` /
-`selinux` / `service`) and exposes the contract vars (`container_user`,
-`container_uid`, `container_service_name`, `container_selinux_paths`,
-`container_host`, `container_port`) in its `defaults/main.yml`. Only `preflight`
-(role-specific dirs) and `quadlet` (the role's own `.container`/`.kube` template)
-stay per-role.
+Los roles siguen un esqueleto consistente: `preflight → install → [configure] →
+quadlet → selinux → service`. Los roles de contenedores rootless-Podman/Quadlet
+(kavita, immich, forgejo, home_assistant, orcaslicer, monitoring) comparten su
+**install + handlers, el paso de SELinux y el paso de service** vía el role
+**`container_base`**: cada uno los incluye por nombre (`include_role … tasks_from:
+install` / `selinux` / `service`) y expone las variables de contrato
+(`container_user`, `container_uid`, `container_service_name`,
+`container_selinux_paths`, `container_host`, `container_port`) en su
+`defaults/main.yml`. Solo `preflight` (directorios específicos del role) y
+`quadlet` (el template `.container`/`.kube` propio del role) quedan por role.
 
-## Prerequisites
+## Prerequisitos
 
-- **Control node:** Ansible 2.14+, Python 3.8+, and the collections:
+- **Nodo de control:** Ansible 2.14+, Python 3.8+, y las colecciones:
   `ansible-galaxy collection install -r requirements.yml`
-- **Target:** Fedora Server, SSH key auth, sudo. The control node connects as
-  `ndelucca` with `~/.ssh/id_rsa` (see `ansible.cfg`).
-- **Vault password:** in `.vault_pass` (gitignored). Keep a copy escrowed
-  off-box — see [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md).
+- **Target:** Fedora Server, autenticación SSH por clave, sudo. El nodo de
+  control se conecta como `ndelucca` con `~/.ssh/id_rsa` (ver `ansible.cfg`).
+- **Vault password:** en `.vault_pass` (gitignored). Mantené una copia en
+  custodia fuera del equipo — ver [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md).
 
-## Usage
+## Uso
 
 ```bash
-# Connectivity check
+# Chequeo de conectividad
 ansible -l ndelucca-server homeservers -m ping
 
-# Full setup / converge (idempotent — safe to re-run)
+# Setup completo / converge (idempotente — seguro de re-correr)
 ansible-playbook -l ndelucca-server playbooks/site.yml
 
 # Dry run
 ansible-playbook -l ndelucca-server playbooks/site.yml --check --diff
 
-# One service via tags (e.g. just NGINX, or just AdGuard)
+# Un solo servicio vía tags (ej. solo NGINX, o solo AdGuard)
 ansible-playbook -l ndelucca-server playbooks/site.yml --tags nginx
 ansible-playbook -l ndelucca-server playbooks/site.yml --tags adguard
 ```
 
-> **Always pass `-l ndelucca-server`** so you never touch the Raspberry printer
-> or the Acer client by accident.
+> **Pasá siempre `-l ndelucca-server`** para no tocar nunca la impresora
+> Raspberry ni el cliente Acer por accidente.
 
-Each role is tagged with its name plus topic aliases (`dns`, `media`, `tls`,
-`photos`, `books`, `backup`, …) and the cross-cutting stage tags
-(`preflight`, `install`, `service`, `selinux`, `firewall`).
+Cada role está tagueado con su nombre más alias temáticos (`dns`, `media`, `tls`,
+`photos`, `books`, `backup`, …) y los tags de etapa transversales (`preflight`,
+`install`, `service`, `selinux`, `firewall`).
 
-## Configuration & secrets
+## Configuración y secretos
 
-- Non-secret config: `inventory/group_vars/homeservers/services.yml`
-  (network, DNS rewrites, DHCP, per-app settings) and `storage.yml` (disks).
-- The single source of truth for the domain is `base_domain` in
-  `group_vars/all/main.yml`; everything derives from it.
-- Secrets live in `vault.yml` files as inline `!vault` values. Edit with:
+- Config no secreta: `inventory/group_vars/homeservers/services.yml`
+  (red, rewrites de DNS, DHCP, ajustes por app) y `storage.yml` (discos).
+- La única fuente de verdad del dominio es `base_domain` en
+  `group_vars/all/main.yml`; todo lo demás se deriva de él.
+- Los secretos viven en archivos `vault.yml` como valores `!vault` inline.
+  Editar con:
   ```bash
   ansible-vault edit inventory/group_vars/homeservers/vault.yml
-  # or encrypt a single value:
+  # o encriptar un solo valor:
   ansible-vault encrypt_string --name <var> '<value>'
   ```
-- **Container images are pinned** (explicit tag, or digest for Kavita) so
-  deployments are reproducible. Upgrade by bumping the version var in the role's
-  `defaults/main.yml` and re-running with that role's tag. `playbooks/update.yml`
-  reports when newer images are available upstream.
+- **Las imágenes de contenedor están pinned** (tag explícito, o digest para
+  Kavita) para que los despliegues sean reproducibles. Actualizá subiendo la
+  variable de versión en el `defaults/main.yml` del role y re-corriendo con el
+  tag de ese role. `playbooks/update.yml` reporta cuándo hay imágenes más nuevas
+  disponibles upstream.
 
-## Backups & disaster recovery
+## Backups y recuperación ante desastres
 
-The `backup` role takes encrypted restic snapshots of the irreplaceable data
-(app state + DB dumps, the Immich gallery, books, the D-Leo archive) to
-**D-Ursa**, on a daily systemd user timer. Weekly maintenance prunes and runs
-`restic check`; a **monthly restore drill** restores the latest DB dumps to a
-temp dir to prove the repo is restorable. Failures surface via `OnFailure=` to
-the journal, and to ntfy if `backup_notify_ntfy_url` is set in `services.yml`
-(the same topic also receives TLS-renewal-failure alerts).
+El role `backup` toma snapshots restic encriptados de los datos irremplazables
+(estado de las apps + dumps de DB, la galería de Immich, los libros, el archivo
+de D-Leo) hacia **D-Ursa**, en un timer de usuario de systemd diario. El
+mantenimiento semanal hace prune y corre `restic check`; un **restore drill
+mensual** restaura los últimos dumps de DB a un directorio temporal para probar
+que el repo es restaurable. Las fallas se hacen visibles vía `OnFailure=` en el
+journal, y en ntfy si `backup_notify_ntfy_url` está seteada en `services.yml`
+(el mismo topic también recibe los avisos de falla de renovación de TLS).
 
-- [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md) — rebuild the host from scratch.
-- [docs/RESTORE.md](docs/RESTORE.md) — restore data from D-Ursa.
-- [docs/TLS-AND-DNS.md](docs/TLS-AND-DNS.md) — Let's Encrypt / DNS design.
-- [docs/ADGUARD_CONFIG_SETUP.md](docs/ADGUARD_CONFIG_SETUP.md) — AdGuard setup notes.
+- [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md) — reconstruir el host desde cero.
+- [docs/RESTORE.md](docs/RESTORE.md) — restaurar datos desde D-Ursa.
+- [docs/TLS-AND-DNS.md](docs/TLS-AND-DNS.md) — diseño de Let's Encrypt / DNS.
+- [docs/ADGUARD_CONFIG_SETUP.md](docs/ADGUARD_CONFIG_SETUP.md) — notas de setup de AdGuard.
 
 ```bash
-# Run a backup / restore drill now (as the service user):
+# Correr un backup / restore drill ahora (como el usuario de servicio):
 systemctl --user -M ndelucca@ start backup.service
 systemctl --user -M ndelucca@ start backup-restore-drill.service
 ```
 
-## Adding a service
+## Agregar un servicio
 
-Create `roles/<service>/` following an existing container role (e.g. `kavita`
-for a single container, `immich` for a pod) — reuse `container_base` for the
-Podman install and the shared handlers, and just supply the `container_*`
-contract vars in the new role's `defaults/main.yml`. Add it to `playbooks/site.yml`,
-drop an NGINX vhost at `roles/nginx/templates/conf.d/<service>.conf.j2` (auto-
-discovered), an AdGuard DNS rewrite in `services.yml`, and — only if it must
-face the LAN directly — an entry in the firewall role's `firewall_open_ports`.
+Creá `roles/<service>/` siguiendo un role de contenedor existente (ej. `kavita`
+para un solo contenedor, `immich` para un pod) — reutilizá `container_base` para
+el install de Podman y los handlers compartidos, y solo proveé las variables de
+contrato `container_*` en el `defaults/main.yml` del nuevo role. Agregalo a
+`playbooks/site.yml`, dejá un vhost de NGINX en
+`roles/nginx/templates/conf.d/<service>.conf.j2` (autodescubierto), un rewrite de
+DNS de AdGuard en `services.yml` y — solo si debe dar a la LAN directamente — una
+entrada en `firewall_open_ports` del role firewall.
 
-## License
+## Licencia
 
 MIT

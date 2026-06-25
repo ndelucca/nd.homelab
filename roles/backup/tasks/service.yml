@@ -1,6 +1,6 @@
 ---
-# Enable and start the backup timers (user scope). The .service units are
-# oneshot and triggered by their timers, so only the timers are enabled.
+# Habilita e inicia los timers de backup (user scope). Las units .service son
+# oneshot y las disparan sus timers, así que solo se habilitan los timers.
 
 - name: Enable and start backup timers
   ansible.builtin.systemd:

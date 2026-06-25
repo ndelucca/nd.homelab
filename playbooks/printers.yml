@@ -1,11 +1,11 @@
 ---
-# TLS for the MainsailOS 3D-printer Pi: issue its own real certificate via the
-# ACME DNS-01 challenge (deSEC) and serve the Mainsail UI over HTTPS.
+# TLS para la Pi con MainsailOS (impresora 3D): emite su propio certificado real
+# vía el challenge ACME DNS-01 (deSEC) y sirve la UI de Mainsail sobre HTTPS.
 #
-# DNS-01 only creates a TXT record through the deSEC API, so nothing is exposed
-# to the internet and the Pi does not depend on the Fedora server.
+# DNS-01 solo crea un registro TXT mediante la API de deSEC, así que nada queda
+# expuesto a internet y la Pi no depende del servidor Fedora.
 #
-# ALWAYS limit to the printer; never the Fedora server:
+# SIEMPRE limitar a la impresora; nunca al servidor Fedora:
 #   ansible-playbook playbooks/printers.yml -l ndelucca-raspberry-printer
 #   ansible-playbook playbooks/printers.yml -l ndelucca-raspberry-printer --tags acme
 #   ansible-playbook playbooks/printers.yml -l ndelucca-raspberry-printer --check
@@ -15,7 +15,7 @@
   gather_facts: true
 
   roles:
-    # Issue the cert first so mainsail_tls finds it on disk.
+    # Emitir el cert primero para que mainsail_tls lo encuentre en disco.
     - role: acme
       tags: ['acme', 'tls']
       when: acme_enabled | default(false) | bool

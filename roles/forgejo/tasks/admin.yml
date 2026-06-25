@@ -1,8 +1,8 @@
 ---
-# Create the initial Forgejo admin user (idempotent)
-# Runs `forgejo admin user create` inside the running container as the
-# rootless service user. Tolerates re-runs: an already-existing user is
-# reported but not treated as a failure.
+# Crea el usuario admin inicial de Forgejo (idempotente).
+# Corre `forgejo admin user create` dentro del container en ejecución, como el
+# usuario de servicio rootless. Tolera re-ejecuciones: un usuario ya existente se
+# reporta pero no se trata como error.
 
 - name: Ensure admin password is set
   ansible.builtin.assert:
@@ -10,10 +10,10 @@
       - forgejo_admin_password | length > 0
     fail_msg: "forgejo_admin_password must be set (use Ansible Vault in host_vars)"
 
-# The password is forwarded into the container via `podman exec --env NAME`
-# (pass-through: podman reads NAME from its own environment, which Ansible sets
-# below) and referenced as $FORGEJO_ADMIN_PASSWORD inside an `sh -c`, so the
-# cleartext never appears in the host process table / argv.
+# La contraseña se pasa al container vía `podman exec --env NAME` (pass-through:
+# podman lee NAME de su propio entorno, que Ansible setea abajo) y se referencia como
+# $FORGEJO_ADMIN_PASSWORD dentro de un `sh -c`, así el texto plano nunca aparece en
+# la tabla de procesos / argv del host.
 - name: Create Forgejo admin user
   ansible.builtin.command:
     argv:
@@ -43,9 +43,10 @@
     - "'name is already used' not in forgejo_admin_create.stderr"
   no_log: true
 
-# `admin user create` is skipped once the user exists, so the password can drift
-# from the vault value. Enforce it on every deploy so the API (basic auth) works.
-# Same env pass-through trick to keep the secret out of the host argv.
+# `admin user create` se saltea una vez que el usuario existe, así que la contraseña
+# puede divergir del valor del vault. Se fuerza en cada deploy para que la API (basic
+# auth) funcione. Mismo truco de pass-through por entorno para mantener el secreto
+# fuera del argv del host.
 - name: Enforce Forgejo admin password
   ansible.builtin.command:
     argv:
@@ -67,7 +68,7 @@
     XDG_RUNTIME_DIR: "/run/user/{{ forgejo_uid }}"
     FORGEJO_ADMIN_PASSWORD: "{{ forgejo_admin_password }}"
   register: forgejo_admin_password_set
-  # Forgejo reports success whether or not the password actually differed, so we
-  # cannot detect a real change; treat this as an idempotent state-enforcing step.
+  # Forgejo reporta éxito haya diferido o no la contraseña, así que no podemos detectar
+  # un cambio real; se trata como un paso idempotente que fuerza el estado.
   changed_when: false
   no_log: true

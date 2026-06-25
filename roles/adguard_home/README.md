@@ -1,108 +1,109 @@
-# AdGuard Home Ansible Role
+# Role de Ansible: AdGuard Home
 
-This role installs and configures AdGuard Home DNS server as a native binary on Fedora systems.
+Este role instala y configura el servidor DNS AdGuard Home como binario nativo en
+sistemas Fedora.
 
-## Features
+## Características
 
-- Native binary installation (not containerized)
-- Full configuration management via Ansible variables
-- DHCP server configuration with static leases
-- DNS rewrites (custom local DNS entries)
-- Comprehensive DNS filtering options
-- Automatic systemd-resolved conflict resolution
-- SELinux and firewall configuration
+- Instalación como binario nativo (no en contenedor)
+- Gestión completa de la configuración vía variables de Ansible
+- Configuración del servidor DHCP con leases estáticos
+- Rewrites de DNS (entradas de DNS local personalizadas)
+- Opciones completas de filtrado de DNS
+- Resolución automática de conflictos con systemd-resolved
+- Configuración de SELinux y firewall
 
-## Requirements
+## Requisitos
 
-- Fedora 38 or higher
+- Fedora 38 o superior
 - Ansible 2.14+
-- Collections:
+- Colecciones:
   - ansible.posix
   - community.general
 
-## Role Variables
+## Variables del role
 
-### Basic Configuration
+### Configuración básica
 
-| Variable | Default | Description |
+| Variable | Default | Descripción |
 |----------|---------|-------------|
-| `adguard_version` | `v0.107.77` | Pinned AdGuard Home version (keep in sync with `adguard_schema_version`) |
-| `adguard_install_dir` | `/usr/local/bin` | Binary installation directory |
-| `adguard_working_dir` | `/opt/AdGuardHome` | Working directory for data and config |
-| `adguard_user` | `ndelucca` | System user for AdGuard Home |
-| `adguard_group` | `ndelucca` | System group for AdGuard Home |
-| `adguard_configure_app` | `false` | Deploy custom configuration (set to true in inventory to manage config) |
+| `adguard_version` | `v0.107.77` | Versión pinned de AdGuard Home (mantener en sync con `adguard_schema_version`) |
+| `adguard_install_dir` | `/usr/local/bin` | Directorio de instalación del binario |
+| `adguard_working_dir` | `/opt/AdGuardHome` | Directorio de trabajo para datos y config |
+| `adguard_user` | `ndelucca` | Usuario de sistema para AdGuard Home |
+| `adguard_group` | `ndelucca` | Grupo de sistema para AdGuard Home |
+| `adguard_configure_app` | `false` | Desplegar configuración propia (poner en true en el inventario para gestionar la config) |
 
-### Network Configuration
+### Configuración de red
 
-| Variable | Default | Description |
+| Variable | Default | Descripción |
 |----------|---------|-------------|
-| `adguard_bind_host` | `127.0.0.1` | IP address to bind HTTP admin interface (behind NGINX) |
-| `adguard_admin_port` | `8081` | Admin web interface port |
-| `adguard_dns_port` | `53` | DNS server port |
-| `adguard_dns_over_tls_port` | `853` | DNS-over-TLS port |
-| `adguard_dns_over_quic_port` | `853` | DNS-over-QUIC port |
-| `adguard_dns_over_https_port` | `443` | DNS-over-HTTPS port |
+| `adguard_bind_host` | `127.0.0.1` | IP donde escucha la interfaz de admin HTTP (detrás de NGINX) |
+| `adguard_admin_port` | `8081` | Puerto de la interfaz web de admin |
+| `adguard_dns_port` | `53` | Puerto del servidor DNS |
+| `adguard_dns_over_tls_port` | `853` | Puerto de DNS-over-TLS |
+| `adguard_dns_over_quic_port` | `853` | Puerto de DNS-over-QUIC |
+| `adguard_dns_over_https_port` | `443` | Puerto de DNS-over-HTTPS |
 
-### DNS Configuration
+### Configuración de DNS
 
-| Variable | Default | Description |
+| Variable | Default | Descripción |
 |----------|---------|-------------|
-| `adguard_upstream_dns` | AdGuard + Quad9 | List of upstream DNS servers |
-| `adguard_bootstrap_dns` | Multiple providers | Bootstrap DNS for resolving upstream hostnames |
-| `adguard_cache_enabled` | `true` | Enable DNS cache |
+| `adguard_upstream_dns` | AdGuard + Quad9 | Lista de servidores DNS upstream |
+| `adguard_bootstrap_dns` | Varios providers | DNS de bootstrap para resolver los hostnames upstream |
+| `adguard_cache_enabled` | `true` | Habilitar la cache de DNS |
 
-> Note: upstream mode (`parallel`) and cache size (4 MB) are fixed in the
-> config template, not exposed as variables. Edit `templates/AdGuardHome.yaml.j2`
-> to change them.
+> Nota: el modo upstream (`parallel`) y el tamaño de cache (4 MB) están fijos en el
+> template de config, no expuestos como variables. Editá
+> `templates/AdGuardHome.yaml.j2` para cambiarlos.
 
-### DHCP Configuration
+### Configuración de DHCP
 
-| Variable | Default | Description |
+| Variable | Default | Descripción |
 |----------|---------|-------------|
-| `adguard_dhcp_enabled` | `false` | Enable DHCP server |
-| `adguard_dhcp_interface_name` | `eth0` | Network interface for DHCP |
-| `adguard_dhcp_gateway_ip` | `192.168.1.1` | Gateway IP address |
-| `adguard_dhcp_range_start` | `192.168.1.100` | DHCP range start |
-| `adguard_dhcp_range_end` | `192.168.1.200` | DHCP range end |
-| `adguard_dhcp_lease_duration` | `86400` | Lease duration in seconds (24h) |
-| `adguard_dhcp_static_leases` | `[]` | List of static DHCP leases |
+| `adguard_dhcp_enabled` | `false` | Habilitar el servidor DHCP |
+| `adguard_dhcp_interface_name` | `eth0` | Interfaz de red para DHCP |
+| `adguard_dhcp_gateway_ip` | `192.168.1.1` | IP del gateway |
+| `adguard_dhcp_range_start` | `192.168.1.100` | Inicio del rango DHCP |
+| `adguard_dhcp_range_end` | `192.168.1.200` | Fin del rango DHCP |
+| `adguard_dhcp_lease_duration` | `86400` | Duración del lease en segundos (24h) |
+| `adguard_dhcp_static_leases` | `[]` | Lista de leases estáticos de DHCP |
 
-### DNS Rewrites
+### Rewrites de DNS
 
-| Variable | Default | Description |
+| Variable | Default | Descripción |
 |----------|---------|-------------|
-| `adguard_dns_rewrites` | `[]` | Custom local DNS entries |
+| `adguard_dns_rewrites` | `[]` | Entradas de DNS local personalizadas |
 
-### Filters
+### Filtros
 
-| Variable | Default | Description |
+| Variable | Default | Descripción |
 |----------|---------|-------------|
-| `adguard_filters` | AdGuard DNS filter | List of filter lists to enable |
-| `adguard_filtering_enabled` | `true` | Enable DNS filtering |
-| `adguard_protection_enabled` | `true` | Enable protection features |
+| `adguard_filters` | filtro AdGuard DNS | Lista de listas de filtros a habilitar |
+| `adguard_filtering_enabled` | `true` | Habilitar el filtrado de DNS |
+| `adguard_protection_enabled` | `true` | Habilitar las funciones de protección |
 
-## Example Configurations
+## Configuraciones de ejemplo
 
-### Basic Installation (Manual Web Setup)
+### Instalación básica (setup manual por web)
 
 ```yaml
-# Disable automatic configuration to use web UI for setup
+# Deshabilitar la configuración automática para usar la UI web en el setup
 adguard_configure_app: false
 ```
 
-### Configured Installation with DHCP
+### Instalación configurada con DHCP
 
 ```yaml
 # inventory/host_vars/myserver.yml
 adguard_configure_app: true
 
-# User with hashed password
+# Usuario con contraseña hasheada
 adguard_users:
   - name: admin
-    password: $2a$10$... # Generate with: htpasswd -nbB "" "password" | cut -d ":" -f 2
+    password: $2a$10$... # Generar con: htpasswd -nbB "" "password" | cut -d ":" -f 2
 
-# DHCP server
+# Servidor DHCP
 adguard_dhcp_enabled: true
 adguard_dhcp_interface_name: eth0
 adguard_dhcp_gateway_ip: 192.168.1.1
@@ -110,7 +111,7 @@ adguard_dhcp_subnet_mask: 255.255.255.0
 adguard_dhcp_range_start: 192.168.1.100
 adguard_dhcp_range_end: 192.168.1.200
 
-# Static DHCP leases
+# Leases estáticos de DHCP
 adguard_dhcp_static_leases:
   - ip: 192.168.1.10
     hostname: server
@@ -119,7 +120,7 @@ adguard_dhcp_static_leases:
     hostname: workstation
     mac: "11:22:33:44:55:66"
 
-# DNS rewrites (local DNS entries)
+# Rewrites de DNS (entradas de DNS local)
 adguard_dns_rewrites:
   - domain: server.local
     answer: 192.168.1.10
@@ -129,10 +130,10 @@ adguard_dns_rewrites:
     enabled: true
 ```
 
-### Custom DNS Configuration
+### Configuración de DNS personalizada
 
 ```yaml
-# Use custom upstream DNS servers
+# Usar servidores DNS upstream propios
 adguard_upstream_dns:
   - https://dns.cloudflare.com/dns-query
   - https://dns.google/dns-query
@@ -140,42 +141,43 @@ adguard_upstream_dns:
   - 8.8.8.8
 ```
 
-## Usage
+## Uso
 
-### Run Complete Installation
+### Correr la instalación completa
 
 ```bash
 ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard
 ```
 
-### Run Only Configuration Update
+### Correr solo la actualización de configuración
 
 ```bash
-# Update configuration without reinstalling
+# Actualizar la configuración sin reinstalar
 ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard,configure
 ```
 
-### Skip Configuration (Manual Setup)
+### Saltear la configuración (setup manual)
 
 ```bash
-# Install binary and service only, configure via web UI
+# Instalar solo binario y service, configurar vía UI web
 ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard -e "adguard_configure_app=false"
 ```
 
-## Password Management
+## Gestión de la contraseña
 
-AdGuard Home requires bcrypt-hashed passwords in the configuration file.
+AdGuard Home requiere contraseñas hasheadas con bcrypt en el archivo de
+configuración.
 
-### Generate a Password Hash
+### Generar un hash de contraseña
 
 ```bash
-# Using htpasswd (from apache2-utils package)
+# Usando htpasswd (del paquete apache2-utils)
 htpasswd -nbB "" "yourpassword" | cut -d ":" -f 2
 
-# Example output: $2a$10$A/PkUdTvjpRlqwtFvEYEX.L8ypXT3saCpsxE0/XzsUTV6SRZAwJ.a
+# Ejemplo de salida: $2a$10$A/PkUdTvjpRlqwtFvEYEX.L8ypXT3saCpsxE0/XzsUTV6SRZAwJ.a
 ```
 
-Then add to your inventory:
+Luego agregalo a tu inventario:
 
 ```yaml
 adguard_users:
@@ -183,35 +185,36 @@ adguard_users:
     password: $2a$10$A/PkUdTvjpRlqwtFvEYEX.L8ypXT3saCpsxE0/XzsUTV6SRZAwJ.a
 ```
 
-## Configuration Files
+## Archivos de configuración
 
-When `adguard_configure_app: true`, the role manages:
+Cuando `adguard_configure_app: true`, el role gestiona:
 
-- `/opt/AdGuardHome/AdGuardHome.yaml` - Main configuration file
-- `/opt/AdGuardHome/data/leases.json` - DHCP static leases
+- `/opt/AdGuardHome/AdGuardHome.yaml` - Archivo de configuración principal
+- `/opt/AdGuardHome/data/leases.json` - Leases estáticos de DHCP
 
-Existing files are backed up with `.backup` extension before modification.
+Los archivos existentes se respaldan con extensión `.backup` antes de
+modificarlos.
 
 ## Tags
 
-| Tag | Description |
+| Tag | Descripción |
 |-----|-------------|
-| `adguard` | All AdGuard Home tasks |
-| `preflight` | Pre-installation checks |
-| `install` | Binary installation |
-| `configure` | Application configuration |
-| `service` | Systemd service setup |
-| `firewall` | Firewall rules |
-| `selinux` | SELinux contexts |
+| `adguard` | Todas las tasks de AdGuard Home |
+| `preflight` | Chequeos previos a la instalación |
+| `install` | Instalación del binario |
+| `configure` | Configuración de la aplicación |
+| `service` | Setup del service de systemd |
+| `firewall` | Reglas de firewall |
+| `selinux` | Contextos de SELinux |
 
-## Dependencies
+## Dependencias
 
-None
+Ninguna
 
-## License
+## Licencia
 
 MIT
 
-## Author
+## Autor
 
 Nicolas Delucca

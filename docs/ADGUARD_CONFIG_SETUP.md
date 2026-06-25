@@ -1,62 +1,69 @@
-# AdGuard Home Configuration Management Setup
+# Gestión de la configuración de AdGuard Home
 
-This document describes the configuration management system that has been added to the AdGuard Home Ansible role.
+Este documento describe el sistema de gestión de configuración que se agregó al
+role de Ansible de AdGuard Home.
 
-## What Was Done
+## Qué se hizo
 
-### 1. Fetched Current Configuration
-Your current AdGuard Home configuration was fetched from `ndelucca-server` including:
-- Main configuration file (`AdGuardHome.yaml`)
-- DHCP static leases (`data/leases.json`)
+### 1. Se obtuvo la configuración actual
+La configuración actual de AdGuard Home se obtuvo de `ndelucca-server`,
+incluyendo:
+- El archivo de configuración principal (`AdGuardHome.yaml`)
+- Los leases estáticos de DHCP (`data/leases.json`)
 
-### 2. Created Jinja2 Templates
+### 2. Se crearon templates Jinja2
 
 **`roles/adguard_home/templates/AdGuardHome.yaml.j2`**
-- Complete AdGuard Home configuration template
-- All settings parameterized via Ansible variables
-- Supports DNS, DHCP, filtering, rewrites, and more
+- Template completo de configuración de AdGuard Home
+- Todos los ajustes parametrizados vía variables de Ansible
+- Soporta DNS, DHCP, filtrado, rewrites y más
 
 **`roles/adguard_home/templates/leases.json.j2`**
-- DHCP static leases template
-- Manages static IP assignments for your devices
+- Template de los leases estáticos de DHCP
+- Gestiona las asignaciones de IP estática de tus dispositivos
 
-### 3. Updated Role Variables
+### 3. Se actualizaron las variables del role
 
 **`roles/adguard_home/defaults/main.yml`**
-Added 100+ configuration variables including:
-- User authentication settings
-- DNS upstream servers and modes
-- DHCP server configuration
-- DNS rewrites (local DNS entries)
-- Filter lists
-- Query logging and statistics
-- TLS/encryption settings
-- And many more...
+Se agregaron 100+ variables de configuración, incluyendo:
+- Ajustes de autenticación de usuario
+- Servidores y modos de DNS upstream
+- Configuración del servidor DHCP
+- Rewrites de DNS (entradas de DNS local)
+- Listas de filtros
+- Logging de queries y estadísticas
+- Ajustes de TLS/encriptación
+- Y muchos más...
 
-### 4. Created Configuration Task
+### 4. Se creó la task de configuración
 
 **`roles/adguard_home/tasks/configure.yml`**
-- Deploys configuration templates to the server
-- Creates backups before modifying files
-- Restarts AdGuard Home when needed
-- Can be run independently with `--tags configure`
+- Despliega los templates de configuración al servidor
+- Crea backups antes de modificar archivos
+- Reinicia AdGuard Home cuando hace falta
+- Se puede correr de forma independiente con `--tags configure`
 
-### 5. Created Host-Specific Configuration
+### 5. Dónde vive la configuración
 
-**`inventory/host_vars/ndelucca-server.yml`**
-Contains your current configuration:
-- User: ndelucca (with existing password hash)
-- DHCP enabled on enp6s0
-- IP range: 192.168.10.100-200
+La configuración no secreta del servidor vive en
+**`inventory/group_vars/homeservers/services.yml`** (los secretos, como el hash de
+la contraseña del usuario admin, viven en `vault.yml`). Incluye:
+- Usuario: ndelucca (con el hash de contraseña existente, en `vault.yml`)
+- DHCP habilitado en enp6s0
+- Rango de IP: 192.168.10.100-200
 - Gateway: 192.168.10.1
-- 7 static DHCP leases for your devices
-- 3 DNS rewrites for local domain names
+- Leases estáticos de DHCP de tus dispositivos
+- Rewrites de DNS para los nombres de dominio locales
 
-## Your Current Configuration
+> El archivo `inventory/host_vars/ndelucca-server.yml` quedó vacío a propósito:
+> `ndelucca-server` es el único miembro del grupo `homeservers`, así que toda su
+> config vive ahora a nivel de grupo en `group_vars/homeservers/`.
 
-### DHCP Static Leases
-| IP | Hostname | MAC Address |
-|----|----------|-------------|
+## Tu configuración actual
+
+### Leases estáticos de DHCP
+| IP | Hostname | Dirección MAC |
+|----|----------|---------------|
 | 192.168.10.10 | ndelucca-server | 4c:cc:6a:d3:fc:a1 |
 | 192.168.10.11 | ndelucca-raspberry-printer | b8:27:eb:f1:af:50 |
 | 192.168.10.12 | ndelucca-raspberry-printer-wireless | b8:27:eb:a4:fa:05 |
@@ -65,161 +72,163 @@ Contains your current configuration:
 | 192.168.10.21 | ndelucca-pixel-8-5ghz | 1e:9c:15:ee:48:26 |
 | 192.168.10.22 | ndelucca-pixel-8-2.4ghz | ca:61:9f:ce:53:ce |
 
-### DNS Rewrites
-| Domain | IP Address |
-|--------|------------|
+### Rewrites de DNS
+| Dominio | IP |
+|---------|----|
 | ndelucca.dedyn.io | 192.168.10.10 |
 | ndelucca-acer.com | 192.168.10.13 |
 | printer.ndelucca.dedyn.io | 192.168.10.12 |
 
-> The printer is reached over WiFi (.12), the active path — `ansible_host`, the
-> `printer.` rewrite and its TLS cert all point at .12. The .11 ethernet lease is
-> dormant (cable down). The full, authoritative rewrite list lives in
-> `inventory/group_vars/homeservers/services.yml`; this table is illustrative.
+> La impresora se accede por WiFi (.12), la ruta activa — `ansible_host`, el
+> rewrite `printer.` y su cert TLS apuntan todos a .12. El lease ethernet .11 está
+> inactivo (cable caído). La lista de rewrites completa y autoritativa vive en
+> `inventory/group_vars/homeservers/services.yml`; esta tabla es ilustrativa.
 
-### DNS Settings
-- **Upstream DNS**: AdGuard unfiltered, Quad9
-- **Mode**: Load balance
-- **Filters**: AdGuard DNS filter (enabled)
-- **Cache**: Enabled, 4MB
+### Ajustes de DNS
+- **DNS upstream**: AdGuard sin filtrar, Quad9
+- **Modo**: Load balance
+- **Filtros**: filtro AdGuard DNS (habilitado)
+- **Cache**: habilitado, 4MB
 
-## How to Use
+## Cómo usarlo
 
-### Apply Full Configuration
+### Aplicar la configuración completa
 ```bash
-# Deploy everything (binary, config, service)
+# Desplegar todo (binario, config, service)
 ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard
 ```
 
-### Update Configuration Only
+### Actualizar solo la configuración
 ```bash
-# Update just the configuration without reinstalling
+# Actualizar solo la configuración sin reinstalar
 ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard
 ```
 
-### Skip Configuration (Manual Setup via Web UI)
+### Saltear la configuración (setup manual vía UI web)
 ```bash
-# Install binary and service, but don't deploy config
+# Instalar binario y service, pero no desplegar config
 ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard -e "adguard_configure_app=false"
 ```
 
-## Modifying Configuration
+## Modificar la configuración
 
-### Option 1: Edit Host Variables
-Edit `inventory/host_vars/ndelucca-server.yml` to change settings:
+### Opción 1: Editar las variables del grupo
+Editá `inventory/group_vars/homeservers/services.yml` para cambiar los ajustes:
 
 ```yaml
-# Add a new static lease
+# Agregar un nuevo lease estático
 adguard_dhcp_static_leases:
   - ip: 192.168.10.30
     hostname: new-device
     mac: "aa:bb:cc:dd:ee:ff"
 
-# Add a new DNS rewrite
+# Agregar un nuevo rewrite de DNS
 adguard_dns_rewrites:
   - domain: newdevice.local
     answer: 192.168.10.30
     enabled: true
 ```
 
-### Option 2: Edit Default Variables
-Edit `roles/adguard_home/defaults/main.yml` to change defaults for all servers.
+### Opción 2: Editar las variables por defecto
+Editá `roles/adguard_home/defaults/main.yml` para cambiar los defaults de todos
+los servidores.
 
-### Option 3: Use Extra Vars
-Override variables at runtime:
+### Opción 3: Usar extra vars
+Sobrescribir variables en tiempo de ejecución:
 
 ```bash
 ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard -e "adguard_dhcp_range_end=192.168.10.250"
 ```
 
-## Password Management
+## Gestión de la contraseña
 
-AdGuard Home uses bcrypt-hashed passwords. To change the password:
+AdGuard Home usa contraseñas hasheadas con bcrypt. Para cambiar la contraseña:
 
-1. **Generate a hash**:
+1. **Generar un hash**:
    ```bash
    htpasswd -nbB "" "your-new-password" | cut -d ":" -f 2
    ```
 
-2. **Update the hash** in `inventory/host_vars/ndelucca-server.yml`:
+2. **Actualizar el hash** en `vault.yml` (`adguard_users`), editando con
+   `ansible-vault edit inventory/group_vars/homeservers/vault.yml`:
    ```yaml
    adguard_users:
      - name: ndelucca
        password: $2a$10$NEW_HASH_HERE
    ```
 
-3. **Apply the change**:
+3. **Aplicar el cambio**:
    ```bash
    ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard
    ```
 
-## Configuration Files Managed
+## Archivos de configuración gestionados
 
-When `adguard_configure_app: true` (default for ndelucca-server):
+Cuando `adguard_configure_app: true` (default para ndelucca-server):
 
-| File | Purpose | Backup |
-|------|---------|--------|
-| `/opt/AdGuardHome/AdGuardHome.yaml` | Main configuration | Yes (.backup) |
-| `/opt/AdGuardHome/data/leases.json` | Static DHCP leases | Yes (.backup) |
+| Archivo | Propósito | Backup |
+|---------|-----------|--------|
+| `/opt/AdGuardHome/AdGuardHome.yaml` | Configuración principal | Sí (.backup) |
+| `/opt/AdGuardHome/data/leases.json` | Leases estáticos de DHCP | Sí (.backup) |
 
-## Important Notes
+## Notas importantes
 
-1. **Backups**: Original files are backed up automatically before modification
-2. **Service Restart**: AdGuard Home is restarted when configuration changes
-3. **Idempotent**: Safe to run multiple times - only changes when needed
-4. **Templated**: All settings are now managed via Ansible variables
-5. **Version Control**: Configuration is now tracked in Git
+1. **Backups**: los archivos originales se respaldan automáticamente antes de modificarlos
+2. **Reinicio del service**: AdGuard Home se reinicia cuando cambia la configuración
+3. **Idempotente**: seguro de correr varias veces — solo cambia cuando hace falta
+4. **Templated**: todos los ajustes se gestionan ahora vía variables de Ansible
+5. **Control de versiones**: la configuración queda registrada en Git
 
-## Available Tags
+## Tags disponibles
 
-| Tag | Purpose |
-|-----|---------|
-| `configure` | Deploy configuration only |
-| `install` | Install binary only |
-| `service` | Configure service only |
-| `firewall` | Configure firewall only |
-| `selinux` | Configure SELinux only |
+| Tag | Propósito |
+|-----|-----------|
+| `configure` | Desplegar solo la configuración |
+| `install` | Instalar solo el binario |
+| `service` | Configurar solo el service |
+| `firewall` | Configurar solo el firewall |
+| `selinux` | Configurar solo SELinux |
 
-## Examples
+## Ejemplos
 
-### Add a New Device
+### Agregar un dispositivo nuevo
 ```yaml
-# In inventory/host_vars/ndelucca-server.yml
+# En inventory/group_vars/homeservers/services.yml
 adguard_dhcp_static_leases:
-  # ... existing leases ...
+  # ... leases existentes ...
   - ip: 192.168.10.25
     hostname: laptop
     mac: "12:34:56:78:9a:bc"
 
 adguard_dns_rewrites:
-  # ... existing rewrites ...
+  # ... rewrites existentes ...
   - domain: laptop.local
     answer: 192.168.10.25
     enabled: true
 ```
 
-Then apply:
+Luego aplicar:
 ```bash
 ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard
 ```
 
-### Change DNS Upstream Servers
+### Cambiar los servidores de DNS upstream
 ```yaml
-# In inventory/host_vars/ndelucca-server.yml
+# En inventory/group_vars/homeservers/services.yml
 adguard_upstream_dns:
   - https://dns.cloudflare.com/dns-query
   - https://dns.google/dns-query
 ```
 
-### Enable More Filters
+### Habilitar más filtros
 ```yaml
-# In inventory/host_vars/ndelucca-server.yml
+# En inventory/group_vars/homeservers/services.yml
 adguard_filters:
   - enabled: true
     url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
     name: AdGuard DNS filter
     id: 1
-  - enabled: true  # Changed from false to true
+  - enabled: true  # Cambiado de false a true
     url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt
     name: AdAway Default Blocklist
     id: 2
@@ -227,47 +236,47 @@ adguard_filters:
 
 ## Troubleshooting
 
-### Configuration Not Applied
+### La configuración no se aplicó
 ```bash
-# Check if configure task ran
+# Chequear si la task configure corrió
 ansible-playbook playbooks/site.yml -l ndelucca-server --tags adguard -vv
 
-# Verify configuration file
+# Verificar el archivo de configuración
 ansible ndelucca-server -m shell -a "cat /opt/AdGuardHome/AdGuardHome.yaml | head -20" --become
 ```
 
-### Service Won't Start After Config Change
+### El service no arranca tras un cambio de config
 ```bash
-# Check service status
+# Chequear el estado del service
 ansible ndelucca-server -m shell -a "systemctl status AdGuardHome" --become
 
-# Check service logs
+# Chequear los logs del service
 ansible ndelucca-server -m shell -a "journalctl -u AdGuardHome -n 50" --become
 
-# Validate YAML syntax
+# Validar la sintaxis YAML
 ansible ndelucca-server -m shell -a "python3 -c 'import yaml; yaml.safe_load(open(\"/opt/AdGuardHome/AdGuardHome.yaml\"))'" --become
 ```
 
-### Restore Previous Configuration
+### Restaurar la configuración anterior
 ```bash
-# Find backup files
+# Encontrar los archivos de backup
 ansible ndelucca-server -m shell -a "ls -la /opt/AdGuardHome/*.backup*" --become
 
-# Restore from backup
+# Restaurar desde el backup
 ansible ndelucca-server -m shell -a "cp /opt/AdGuardHome/AdGuardHome.yaml.backup /opt/AdGuardHome/AdGuardHome.yaml" --become
 ansible ndelucca-server -m shell -a "systemctl restart AdGuardHome" --become
 ```
 
-## Next Steps
+## Próximos pasos
 
-1. **Review Configuration**: Check `inventory/host_vars/ndelucca-server.yml` to verify settings
-2. **Test Update**: Try updating configuration with `--tags configure`
-3. **Add More Devices**: Add static leases and DNS rewrites as needed
-4. **Customize Filters**: Enable/disable filter lists based on your needs
-5. **Version Control**: Commit changes to Git to track configuration history
+1. **Revisar la configuración**: chequeá `inventory/group_vars/homeservers/services.yml` para verificar los ajustes
+2. **Probar una actualización**: probá actualizar la configuración con `--tags configure`
+3. **Agregar más dispositivos**: agregá leases estáticos y rewrites de DNS según haga falta
+4. **Personalizar los filtros**: habilitá/deshabilitá listas de filtros según tus necesidades
+5. **Control de versiones**: commiteá los cambios a Git para registrar el historial de configuración
 
-## Documentation
+## Documentación
 
-- Role README: `roles/adguard_home/README.md`
-- Full variable reference: `roles/adguard_home/defaults/main.yml`
+- README del role: `roles/adguard_home/README.md`
+- Referencia completa de variables: `roles/adguard_home/defaults/main.yml`
 - Templates: `roles/adguard_home/templates/`

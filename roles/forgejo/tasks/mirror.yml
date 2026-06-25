@@ -1,9 +1,9 @@
 ---
-# Configure pull mirrors: Forgejo mirrors all of the user's GitHub repositories
-# and keeps them up to date with periodic fetches. The home-server is not
-# reachable from GitHub, but GitHub is always reachable from the server, so the
-# sync is outbound (Forgejo pulls). GitHub is the source of truth; these repos
-# are read-only mirrors in Forgejo (overwritten on each sync).
+# Configura los pull mirrors: Forgejo replica todos los repositorios de GitHub del
+# usuario y los mantiene al día con fetches periódicos. El home-server no es accesible
+# desde GitHub, pero GitHub siempre lo es desde el server, así que la sincronización es
+# saliente (Forgejo hace pull). GitHub es la fuente de verdad; estos repos son mirrors
+# de solo lectura en Forgejo (se sobreescriben en cada sync).
 
 - name: Configure GitHub pull mirrors
   when: forgejo_pull_mirror_enabled | bool
@@ -30,7 +30,7 @@
       register: forgejo_github_pages
       changed_when: false
       no_log: true
-      check_mode: false  # read-only GET; must run so enumeration works in --check
+      check_mode: false  # GET de solo lectura; debe correr para que la enumeración funcione en --check
 
     - name: Warn if GitHub repository pagination may be truncated
       ansible.builtin.fail:

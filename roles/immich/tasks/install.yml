@@ -1,6 +1,6 @@
 ---
-# Install Podman and dependencies (shared scaffolding in container_base), then
-# the Immich CLI on top. include_role also brings in the shared container handlers.
+# Instala Podman y dependencias (andamiaje compartido en container_base) y encima el
+# CLI de Immich. include_role también trae los handlers compartidos de container.
 
 - name: Install the rootless Podman runtime and shared container handlers
   ansible.builtin.include_role:
@@ -20,7 +20,7 @@
   register: immich_cli_current
   changed_when: false
   failed_when: false
-  check_mode: false  # read-only; must run so the guard below is accurate in --check
+  check_mode: false  # solo lectura; debe correr para que el guard de abajo sea correcto en --check
 
 - name: Install Immich CLI at the pinned version (only when missing or mismatched)
   ansible.builtin.command: npm install -g @immich/cli@{{ immich_cli_version }}

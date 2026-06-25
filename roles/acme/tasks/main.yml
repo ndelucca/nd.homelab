@@ -1,6 +1,4 @@
 ---
-# Main entry point for the ACME (lego) role
-
 - name: Preflight checks
   ansible.builtin.import_tasks: preflight.yml
   tags: ['acme', 'tls', 'preflight']

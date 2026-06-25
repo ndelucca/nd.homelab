@@ -1,6 +1,4 @@
 ---
-# Deploy Podman Quadlet configuration for OrcaSlicer
-
 - name: Ensure systemd user directory exists
   ansible.builtin.file:
     path: "{{ orcaslicer_quadlet_dir }}/{{ orcaslicer_uid }}"
@@ -15,10 +13,11 @@
     src: orcaslicer.container.j2
     dest: "{{ orcaslicer_quadlet_dir }}/{{ orcaslicer_uid }}/{{ orcaslicer_service_name }}.container"
     owner: root
-    # Group-readable by the rootless service user (NOT world): the unit inlines
-    # the OrcaSlicer web password, but the per-user Quadlet generator runs AS
-    # this user and must read the file to generate the .service — 0600 root:root
-    # would hide it from the user and the unit would never be generated.
+    # Legible por el grupo del usuario rootless del servicio (NO por todos): el
+    # unit incrusta el password web de OrcaSlicer, pero el generador de Quadlet
+    # por usuario corre COMO este usuario y necesita leer el archivo para generar
+    # el .service — 0600 root:root se lo ocultaría al usuario y el unit nunca se
+    # generaría.
     group: "{{ orcaslicer_group }}"
     mode: '0640'
   become: true

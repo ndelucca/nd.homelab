@@ -1,39 +1,38 @@
 ---
-# ============================================================================
-# container_base — input contract (no values set here on purpose).
-# ----------------------------------------------------------------------------
-# This role owns the boilerplate shared by every rootless-Podman/Quadlet app
-# role: the Podman install + shared handlers, and the SELinux and service steps.
-# It is NOT used standalone; a consuming role pulls each step in by name:
+# container_base — contrato de entrada (a propósito no se setea ningún valor acá).
+#
+# Este role concentra el boilerplate compartido por todos los roles de apps con
+# Podman rootless/Quadlet: el install de Podman + los handlers compartidos, y los
+# pasos de SELinux y de servicio. NO se usa de forma standalone; un role consumidor
+# incluye cada paso por nombre:
 #
 #   - include_role: { name: container_base, tasks_from: install }   # + handlers
-#   - include_role: { name: container_base, tasks_from: selinux }   # label volumes
-#   - include_role: { name: container_base, tasks_from: service }   # enable + wait
+#   - include_role: { name: container_base, tasks_from: selinux }   # etiqueta los volumes
+#   - include_role: { name: container_base, tasks_from: service }   # habilita + espera
 #
-# (preflight and quadlet stay per-role: they create role-specific dirs and deploy
-# the role's own .container/.kube template, which `template:` resolves against
-# the consuming role's templates/, not this one.)
+# (preflight y quadlet quedan por-role: crean directorios específicos del role y
+# despliegan el template .container/.kube propio del role, que `template:` resuelve
+# contra el templates/ del role consumidor, no el de este.)
 #
-# include_role also makes this role's handlers available to the consumer. The
-# consumer MUST define these vars in its own defaults/main.yml (kept here as a
-# checklist; deliberately UNSET so the consumer's value always wins and there is
-# no role-defaults precedence ambiguity):
+# include_role también deja disponibles los handlers de este role en el consumidor.
+# El consumidor DEBE definir estas variables en su propio defaults/main.yml (acá se
+# dejan como checklist; deliberadamente SIN valor para que el del consumidor siempre
+# gane y no haya ambigüedad de precedencia con los defaults del role):
 #
-#   container_user            # the rootless service user (e.g. "{{ kavita_user }}")
-#   container_uid             # its uid, for XDG_RUNTIME_DIR (e.g. "{{ kavita_uid }}")
-#   container_service_name    # systemd --user unit (e.g. "{{ kavita_service_name }}")
-#   container_selinux_paths   # list of dirs to label/restorecon ([config, library])
-#   container_host            # wait_for host (e.g. "{{ kavita_host }}")
-#   container_port            # wait_for port (e.g. "{{ kavita_port }}")
+#   container_user            # el usuario rootless del servicio (ej. "{{ kavita_user }}")
+#   container_uid             # su uid, para XDG_RUNTIME_DIR (ej. "{{ kavita_uid }}")
+#   container_service_name    # unit systemd --user (ej. "{{ kavita_service_name }}")
+#   container_selinux_paths   # lista de dirs a etiquetar/restorecon ([config, library])
+#   container_host            # host del wait_for (ej. "{{ kavita_host }}")
+#   container_port            # puerto del wait_for (ej. "{{ kavita_port }}")
 #
-# Optional (sensible defaults in the service/selinux tasks):
+# Opcionales (con defaults sensatos en las tasks de service/selinux):
 #   container_service_enabled # default true
 #   container_service_state   # default 'started'
 #   container_wait_delay      # default 10
 #   container_wait_timeout    # default 120
-#   container_selinux_booleans# default [] (e.g. ['container_use_devices'])
+#   container_selinux_booleans# default [] (ej. ['container_use_devices'])
 #
-# Because every consuming role flushes its own handlers within the role, the
-# vars resolve to that role's values even when several container roles run in
-# one play (verified under private_role_vars=True).
-# ============================================================================
+# Como cada role consumidor flushea sus propios handlers dentro del role, las
+# variables resuelven a los valores de ese role incluso cuando varios roles de
+# container corren en un mismo play (verificado con private_role_vars=True).

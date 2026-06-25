@@ -1,10 +1,9 @@
 ---
-# Configure Jellyfin directories and initial setup
-
-# Top-level only, no recurse: Jellyfin runs as {{ jellyfin_user }} and creates
-# everything under these dirs as that user, so ownership is already correct.
-# A recursive chown/chmod here would walk thousands of metadata/cache files on
-# every run (slow, churny) for no benefit — same reasoning as the media dir below.
+# Solo el nivel superior, sin recursión: Jellyfin corre como {{ jellyfin_user }} y
+# crea todo bajo estos dirs como ese usuario, así que la propiedad ya es correcta.
+# Un chown/chmod recursivo acá recorrería miles de archivos de metadata/cache en
+# cada corrida (lento y ruidoso) sin beneficio — mismo razonamiento que el dir de
+# medios más abajo.
 - name: Ensure Jellyfin's own state directories exist with correct ownership
   ansible.builtin.file:
     path: "{{ item }}"
@@ -19,11 +18,11 @@
     - "{{ jellyfin_cache_dir }}"
     - "{{ jellyfin_log_dir }}"
 
-# The media root is shared with other apps (immich, filebrowser, …) and is
-# created/owned by the storage role. Only ensure the top-level dir exists — do
-# NOT recurse: a recursive chown/chmod here would rewrite ownership and force
-# 0755 on every media file on every run (slow, churny, and would clobber the
-# other apps' files under the shared tree).
+# El media root es compartido con otras apps (immich, filebrowser, …) y lo
+# crea/posee el role storage. Solo se asegura que exista el dir de nivel superior;
+# NO recursivo: un chown/chmod recursivo acá reescribiría la propiedad y forzaría
+# 0755 sobre cada archivo de medios en cada corrida (lento, ruidoso, y pisaría los
+# archivos de las otras apps bajo el árbol compartido).
 - name: Ensure the media directory exists (top-level only, no recurse)
   ansible.builtin.file:
     path: "{{ jellyfin_media_dir }}"

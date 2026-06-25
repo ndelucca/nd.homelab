@@ -1,9 +1,9 @@
 ---
-# Install / update the lego binary. Version-aware and idempotent:
-#   acme_version: latest  -> newest stable GitHub release (pre-releases skipped),
-#                            (re)installed only when it differs from the binary.
-#   acme_version: vX.Y.Z   -> pins to that exact release.
-# Portable across architectures (amd64 server, arm64/armv7 Raspberry Pi).
+# Instala / actualiza el binario de lego. Consciente de la versión e idempotente:
+#   acme_version: latest  -> release estable más nueva de GitHub (se omiten las pre-releases),
+#                            se (re)instala solo cuando difiere del binario actual.
+#   acme_version: vX.Y.Z   -> fija a esa release exacta.
+# Portable entre arquitecturas (amd64 en el server, arm64/armv7 en la Raspberry Pi).
 
 - name: Map host architecture to a lego release arch
   ansible.builtin.set_fact:
@@ -27,7 +27,7 @@
   register: acme_lego_installed_raw
   changed_when: false
   failed_when: false
-  check_mode: false  # read-only; must run so the version check works in --check
+  check_mode: false  # solo lectura; debe correr para que el chequeo de versión funcione en --check
   when: acme_lego_stat.stat.exists
 
 - name: Resolve latest lego release from GitHub

@@ -1,6 +1,4 @@
 ---
-# Main entry point for FileBrowser role
-
 - name: Include preflight checks
   ansible.builtin.import_tasks: preflight.yml
   tags: ['filebrowser', 'preflight']
@@ -14,8 +12,9 @@
   tags: ['filebrowser', 'configure']
   when: filebrowser_use_config_file | bool
 
-# Seed the initial admin into the DB before the service starts (users live in
-# the DB, not config.json). Runs regardless of filebrowser_use_config_file.
+# Siembra el admin inicial en la DB antes de que arranque el servicio (los
+# usuarios viven en la DB, no en config.json). Corre sin importar el valor de
+# filebrowser_use_config_file.
 - name: Seed the initial admin user
   ansible.builtin.import_tasks: admin.yml
   tags: ['filebrowser', 'admin']

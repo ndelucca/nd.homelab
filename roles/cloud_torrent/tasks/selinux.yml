@@ -1,6 +1,4 @@
 ---
-# Configure SELinux for Cloud Torrent
-
 - name: Set SELinux file contexts for Cloud Torrent
   community.general.sefcontext:
     target: "{{ item.target }}"

@@ -1,7 +1,7 @@
 # Managed by Ansible (cockpit role).
-# Bind Cockpit to localhost only: it is reachable solely through the NGINX 443
-# vhost (cockpit.{{ nginx_domain | default('') }}), never directly on the LAN.
-# The empty ListenStream= first clears the unit's default 0.0.0.0:9090.
+# Bindea Cockpit solo a localhost: es alcanzable únicamente a través del vhost 443
+# de NGINX (cockpit.{{ nginx_domain | default('') }}), nunca directamente en la LAN.
+# El ListenStream= vacío primero limpia el default 0.0.0.0:9090 de la unit.
 [Socket]
 ListenStream=
 ListenStream=127.0.0.1:{{ cockpit_port }}

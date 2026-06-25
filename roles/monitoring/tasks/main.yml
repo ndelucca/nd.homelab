@@ -1,5 +1,5 @@
 ---
-# Main entry point for the monitoring role (Uptime-Kuma).
+# Punto de entrada principal del role monitoring (Uptime-Kuma).
 
 - name: Include preflight checks
   ansible.builtin.import_tasks: preflight.yml
@@ -13,8 +13,8 @@
   ansible.builtin.import_tasks: quadlet.yml
   tags: ['monitoring', 'quadlet']
 
-# Apply SELinux contexts before the container starts so an enforcing host does
-# not deny volume access on the first run.
+# Aplica los contextos SELinux antes de que arranque el container para que un host
+# en enforcing no deniegue el acceso al volumen en la primera corrida.
 - name: Configure SELinux (shared container_base step)
   ansible.builtin.include_role:
     name: container_base

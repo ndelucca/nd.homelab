@@ -1,56 +1,49 @@
 ---
-# Default variables for Kavita role
+# Variables por defecto del role Kavita
 
-# Service user configuration
 kavita_user: ndelucca
 kavita_group: ndelucca
-kavita_uid: 1000  # Obtained dynamically via getent in preflight
+kavita_uid: 1000  # Se obtiene dinámicamente vía getent en preflight
 
-# Directory configuration — state on the appdata disk (app_data_root, defined in
+# Directorios — el estado vive en el disco de appdata (app_data_root, definido en
 # group_vars/homeservers/storage.yml).
 kavita_base_dir: "{{ app_data_root }}/kavita"
 kavita_config_dir: "{{ kavita_base_dir }}/config"
 kavita_library_dir: "{{ kavita_base_dir }}/library"
 
-# Additional library paths to mount (list of paths)
+# Rutas de bibliotecas adicionales a montar (lista de rutas)
 kavita_extra_libraries: []
 
-# Podman configuration
-kavita_quadlet_dir: /etc/containers/systemd/users  # System-managed user containers
+kavita_quadlet_dir: /etc/containers/systemd/users  # Containers de usuario gestionados por el sistema
 
-# Network configuration
 kavita_port: 5000
 kavita_host: 127.0.0.1
 
-# Application configuration
 kavita_timezone: America/Los_Angeles
 
-# Service configuration. Deployed as a single .container quadlet, so the unit is
-# kavita.service (the old .kube produced kavita-pod.service; quadlet.yml cleans
-# up the legacy unit).
+# Desplegado como un único quadlet .container, así que la unit es kavita.service (el
+# viejo .kube producía kavita-pod.service; quadlet.yml limpia la unit legacy).
 kavita_service_name: kavita
 kavita_service_enabled: true
 kavita_service_state: started
 
-# Firewall settings
 kavita_firewall_zone: FedoraServer
-kavita_firewall_enabled: false  # False because NGINX handles external access
+kavita_firewall_enabled: false  # false porque NGINX maneja el acceso externo
 
-# SELinux configuration
 kavita_manage_selinux: true
 
-# container_base contract — feeds the shared install + handlers (see container_base).
+# Contrato de container_base — alimenta el install + handlers compartidos (ver container_base).
 container_user: "{{ kavita_user }}"
 container_uid: "{{ kavita_uid }}"
 container_service_name: "{{ kavita_service_name }}"
 container_selinux_paths: "{{ [kavita_config_dir, kavita_library_dir] + (kavita_extra_libraries | map(attribute='path') | list) }}"
-# container_base service-step contract (enable + wait_for).
+# Contrato del service-step de container_base (enable + wait_for).
 container_host: "{{ kavita_host }}"
 container_port: "{{ kavita_port }}"
 container_service_enabled: "{{ kavita_service_enabled }}"
 container_service_state: "{{ kavita_service_state }}"
 
-# Podman image. The upstream :latest tag floats, so we pin by digest for
-# reproducibility. To upgrade: pull the new image and update the digest here
-# (the digest below was the image running when this was pinned).
+# Imagen de Podman. El tag :latest de upstream flota, así que pineamos por digest por
+# reproducibilidad. Para actualizar: pullear la imagen nueva y actualizar el digest acá
+# (el digest de abajo era la imagen que corría cuando se pineó).
 kavita_image: "docker.io/jvmilazz0/kavita@sha256:ca6af7a18d7124d014702983c2364e485294f808c1552e9555f2595b7cda7982"

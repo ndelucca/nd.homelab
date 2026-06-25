@@ -1,37 +1,33 @@
 ---
-# Default variables for service maintenance role
-# Fixes AdGuard DHCP not working after power outage / cold boot
+# Corrige el DHCP de AdGuard que no funciona tras un corte de luz / cold boot.
 #
-# Two-pronged approach:
-# 1. AdGuard drop-in: Wait for network before starting, auto-restart on failure
-# 2. Post-boot timer: Restart AdGuard once after boot as safety net
+# Enfoque en dos frentes:
+# 1. Drop-in de AdGuard: espera a la red antes de arrancar y se reinicia ante fallos.
+# 2. Timer post-boot: reinicia AdGuard una vez tras el boot como red de seguridad.
 
-# Enable the post-boot watchdog timer
 service_maintenance_enabled: true
 
-# How long after boot to restart services (gives router time to come up)
+# Cuánto esperar tras el boot antes de reiniciar servicios (le da tiempo al router a levantar).
 service_maintenance_boot_delay: 2min
 
-# Services to restart after boot
 service_maintenance_restart_services:
   - AdGuardHome
 
-# DNS health probe: a name AdGuard is configured to resolve to an answer (the
-# apex rewrite -> the server's LAN IP). The watchdog queries this and requires a
-# non-empty answer, so a wedged-but-listening AdGuard (answers NXDOMAIN/REFUSED)
-# is detected as unhealthy — unlike querying a bogus name, where any reply counts
-# as "up". Set to '' to skip the DNS probe and check only the unit's active state.
+# Probe de salud del DNS: un nombre que AdGuard está configurado para resolver con
+# respuesta (el rewrite del apex -> IP LAN del server). El watchdog lo consulta y
+# exige una respuesta no vacía, así un AdGuard trabado-pero-escuchando (responde
+# NXDOMAIN/REFUSED) se detecta como no saludable, a diferencia de consultar un
+# nombre inexistente donde cualquier respuesta cuenta como "arriba". Setear en ''
+# para omitir el probe de DNS y chequear solo el estado activo de la unit.
 service_maintenance_dns_probe_name: "{{ base_domain | default('') }}"
 
-# AdGuard drop-in configuration
-# Bounded readiness gate before AdGuard starts: ping the LAN gateway up to N
-# times (1s each), proceeding as soon as it answers. Replaces a fixed blind
-# sleep. Gateway defaults to the AdGuard DHCP gateway if defined.
+# Gate de readiness acotado antes de que AdGuard arranque: pinguea el gateway de la
+# LAN hasta N veces (1s cada una), avanzando apenas responde. Reemplaza un sleep
+# ciego fijo. El gateway toma por defecto el del DHCP de AdGuard si está definido.
 service_maintenance_gateway_ip: "{{ adguard_dhcp_gateway_ip | default('192.168.10.1') }}"
 service_maintenance_network_wait_tries: 30
-# Delay before auto-restart on failure (seconds)
+# Retardo antes del auto-reinicio ante fallos (segundos).
 service_maintenance_adguard_restart_delay: 30
 
-# Systemd unit configuration
 service_maintenance_unit_name: service-watchdog
 service_maintenance_unit_description: "Post-boot service watchdog"

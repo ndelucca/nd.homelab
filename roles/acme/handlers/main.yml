@@ -1,6 +1,4 @@
 ---
-# Handlers for the ACME role
-
 - name: reload acme service
   ansible.builtin.systemd:
     name: "{{ acme_reload_service }}"

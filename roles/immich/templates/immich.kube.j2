@@ -8,16 +8,14 @@ After=network-online.target
 Wants=network-online.target
 
 [Kube]
-# Path to Kubernetes YAML
 Yaml={{ immich_config_dir }}/immich-pod.yaml
 
-# Run the unit from the YAML's directory. NOTE: this does NOT relabel volumes;
-# SELinux labeling is handled by the role's selinux.yml (container_file_t on the
-# data dirs). Image is pinned via immich_version; no AutoUpdate (reproducible).
+# Corre la unit desde el directorio del YAML. NOTA: esto NO hace relabel de los volúmenes;
+# el labeling de SELinux lo maneja el selinux.yml del role (container_file_t sobre los
+# directorios de datos). La imagen está pineada vía immich_version; sin AutoUpdate (reproducible).
 SetWorkingDirectory=yaml
 
 [Service]
-# Restart policy
 Restart=on-failure
 RestartSec=30
 TimeoutStartSec=300

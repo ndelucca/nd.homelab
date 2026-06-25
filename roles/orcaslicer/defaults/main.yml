@@ -1,54 +1,46 @@
 ---
-# Default variables for OrcaSlicer role
-
-# Service user configuration
 orcaslicer_user: ndelucca
 orcaslicer_group: ndelucca
 orcaslicer_uid: 1000
 
-# Directory configuration — state on the appdata disk (app_data_root, defined in
+# El estado vive en el disco de appdata (app_data_root, definido en
 # group_vars/homeservers/storage.yml).
 orcaslicer_base_dir: "{{ app_data_root }}/orcaslicer"
 orcaslicer_config_dir: "{{ orcaslicer_base_dir }}/config"
 
-# Podman/Quadlet configuration
 orcaslicer_quadlet_dir: /etc/containers/systemd/users
-# Pinned tag for reproducible deploys (was ':latest').
-# Newer releases: https://hub.docker.com/r/linuxserver/orcaslicer/tags
+# Tag pineado para deploys reproducibles (antes era ':latest').
+# Releases más nuevos: https://hub.docker.com/r/linuxserver/orcaslicer/tags
 orcaslicer_image: lscr.io/linuxserver/orcaslicer:2.4.0
 
-# Network configuration
 orcaslicer_port: 3001
 orcaslicer_host: 127.0.0.1
 
-# Application configuration
 orcaslicer_timezone: America/Los_Angeles
 
-# Authentication (password must be set in host_vars - vault encrypted)
+# Autenticación (el password debe setearse en host_vars, encriptado con vault).
 orcaslicer_custom_user: ndelucca
 orcaslicer_password: ""
 
-# GPU acceleration (disabled - GeForce 210 not supported)
+# Aceleración por GPU (deshabilitada: la GeForce 210 no está soportada).
 orcaslicer_gpu_enabled: false
 
-# Service configuration
 orcaslicer_service_name: orcaslicer
 orcaslicer_service_enabled: true
 orcaslicer_service_state: started
 
-# Firewall settings
 orcaslicer_firewall_zone: FedoraServer
 orcaslicer_firewall_enabled: false
 
-# SELinux configuration
 orcaslicer_manage_selinux: true
 
-# container_base contract — feeds the shared install + handlers (see container_base).
+# Contrato de container_base — alimenta el install + handlers compartidos (ver
+# container_base).
 container_user: "{{ orcaslicer_user }}"
 container_uid: "{{ orcaslicer_uid }}"
 container_service_name: "{{ orcaslicer_service_name }}"
 container_selinux_paths: "{{ [orcaslicer_config_dir] }}"
-# container_base service-step contract (enable + wait_for).
+# Contrato del service-step de container_base (enable + wait_for).
 container_host: "{{ orcaslicer_host }}"
 container_port: "{{ orcaslicer_port }}"
 container_service_enabled: "{{ orcaslicer_service_enabled }}"

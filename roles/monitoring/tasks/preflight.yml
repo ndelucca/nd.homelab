@@ -1,5 +1,5 @@
 ---
-# Preflight checks for the monitoring role.
+# Chequeos de preflight del role monitoring.
 
 - name: Verify running on Fedora
   ansible.builtin.assert:
@@ -29,8 +29,8 @@
   ansible.builtin.debug:
     msg: "Port {{ monitoring_port }} is {{ port_check.stdout }}"
 
-# A warning, not a failure: on a re-run the port is expected to be held by
-# Uptime-Kuma itself (consistent with the other container roles).
+# Un warning, no una falla: en una re-corrida se espera que el puerto lo tenga
+# tomado el propio Uptime-Kuma (consistente con los otros roles de container).
 - name: Warn if port is occupied
   ansible.builtin.debug:
     msg: "WARNING: port {{ monitoring_port }} is already in use (expected if Uptime-Kuma is already running)"

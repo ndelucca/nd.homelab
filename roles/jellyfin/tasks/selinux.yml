@@ -1,6 +1,4 @@
 ---
-# Configure SELinux for Jellyfin
-
 - name: Display SELinux status
   ansible.builtin.debug:
     msg: "SELinux is {{ ansible_selinux.mode | default('disabled') }}"

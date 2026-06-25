@@ -10,7 +10,6 @@ spec:
   restartPolicy: Always
 
   containers:
-  # Immich Server
   - name: immich-server
     image: {{ immich_server_image }}
     ports:
@@ -40,7 +39,6 @@ spec:
     - name: model-cache
       mountPath: /cache
 
-  # Immich Machine Learning
   - name: immich-machine-learning
     image: {{ immich_ml_image }}
     env:
@@ -50,11 +48,9 @@ spec:
     - name: model-cache
       mountPath: /cache
 
-  # Redis (Valkey)
   - name: redis
     image: {{ immich_redis_image }}
 
-  # PostgreSQL Database
   - name: database
     image: {{ immich_postgres_image }}
     env:
@@ -68,10 +64,10 @@ spec:
       value: "--data-checksums"
     - name: TZ
       value: "{{ immich_timezone }}"
-    # Health probe (pg_isready): Podman runs livenessProbe as the container's
-    # healthcheck, so a wedged Postgres is detected and restarted on its own
-    # instead of the whole pod bounce-looping. The long initialDelay covers the
-    # first-boot initdb (--data-checksums) so the cold start isn't flagged early.
+    # Health probe (pg_isready): Podman corre el livenessProbe como el healthcheck del
+    # container, así un Postgres trabado se detecta y se reinicia solo en lugar de hacer
+    # rebotar al pod entero en loop. El initialDelay largo cubre el initdb del primer
+    # arranque (--data-checksums) para que el arranque en frío no se marque antes de tiempo.
     livenessProbe:
       exec:
         command: ["pg_isready", "-U", "{{ immich_db_username }}", "-d", "{{ immich_db_database }}"]

@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # {{ ansible_managed }}
-# Monthly restore drill. A backup you have never restored is a hypothesis, not a
-# backup — so this proves the repo is actually restorable by restoring the
-# (small, authoritative) DB dumps from the latest snapshot into a throwaway dir
-# and checking they came back non-empty. It restores ONLY the dumps, never the
-# live data, and touches nothing outside its temp dir.
+# Restore drill mensual. Un backup que nunca restauraste es una hipótesis, no un
+# backup, así que esto prueba que el repo es realmente restaurable: restaura los
+# dumps (chicos y autoritativos) de las DBs del último snapshot a un directorio
+# descartable y verifica que vuelvan no vacíos. Restaura SOLO los dumps, nunca los
+# datos vivos, y no toca nada fuera de su directorio temporal.
 #
-# SCOPE (deliberate): this verifies restic can read+decrypt the repo and that the
-# dumps come back non-empty — NOT that each dump loads cleanly into a fresh DB
-# engine. Validating restore-into-DB (PRAGMA integrity_check / pg_restore) was
-# intentionally left out: this is a single-admin home-lab and the priority is
-# simply HAVING a second, restorable copy, not enterprise-grade verification.
+# ALCANCE (deliberado): esto verifica que restic puede leer+desencriptar el repo y
+# que los dumps vuelven no vacíos, NO que cada dump cargue limpiamente en un motor
+# de DB nuevo. Validar el restore-into-DB (PRAGMA integrity_check / pg_restore) se
+# dejó afuera a propósito: es un home-lab de un solo admin y la prioridad es
+# simplemente TENER una segunda copia restaurable, no una verificación de nivel
+# enterprise.
 set -uo pipefail
 
 export RESTIC_REPOSITORY="{{ backup_repo }}"
@@ -42,7 +43,7 @@ if ! restic restore latest --target "${tmp}" "${includes[@]}"; then
   fail "restic restore returned an error"
 fi
 
-# Prove something real came back: at least one non-empty dump file.
+# Probar que volvió algo real: al menos un archivo de dump no vacío.
 found="$(find "${tmp}" -type f -size +0c | wc -l)"
 if [ "${found}" -eq 0 ]; then
   fail "no non-empty dump files were restored from the latest snapshot"

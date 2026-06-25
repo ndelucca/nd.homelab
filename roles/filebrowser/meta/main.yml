@@ -1,6 +1,4 @@
 ---
-# Metadata for FileBrowser role
-
 galaxy_info:
   author: Naza
   description: Install and configure FileBrowser web file manager

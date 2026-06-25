@@ -1,8 +1,8 @@
 ---
-# Install / update the Cloud Torrent binary. Version-aware and idempotent:
-# re-downloads only when the installed binary's version differs from
-# cloud_torrent_version. Presence alone is NOT enough — bumping the pinned
-# version/sha in defaults must actually trigger a reinstall.
+# Instala / actualiza el binario de Cloud Torrent. Consciente de la versión e
+# idempotente: solo re-descarga cuando la versión del binario instalado difiere de
+# cloud_torrent_version. La sola presencia NO alcanza — subir la versión/sha
+# pineada en defaults debe disparar una reinstalación de verdad.
 
 - name: Check if Cloud Torrent is already installed
   ansible.builtin.stat:

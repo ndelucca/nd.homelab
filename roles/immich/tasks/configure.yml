@@ -1,6 +1,6 @@
 ---
-# Configure Immich pod. All env vars are inlined into the pod YAML below, so no
-# separate env file is generated.
+# Configura el pod de Immich. Todas las variables de entorno van inline en el YAML del
+# pod de abajo, así que no se genera un archivo .env aparte.
 
 - name: Generate Kubernetes YAML pod definition
   ansible.builtin.template:
@@ -8,8 +8,8 @@
     dest: "{{ immich_config_dir }}/immich-pod.yaml"
     owner: "{{ immich_user }}"
     group: "{{ immich_group }}"
-    # 0600: the pod YAML inlines the Postgres password, so it must not be
-    # world-readable.
+    # 0600: el YAML del pod incluye la contraseña de Postgres inline, así que no debe
+    # ser legible por todo el mundo.
     mode: '0600'
   become: true
   notify: container restart

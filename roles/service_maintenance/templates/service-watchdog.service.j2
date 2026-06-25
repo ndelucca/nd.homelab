@@ -7,15 +7,15 @@ Wants=network-online.target
 Type=oneshot
 
 {% for service in service_maintenance_restart_services %}
-# Only restart {{ service }} if it is NOT healthy — a blind restart on every boot
-# drops LAN DNS/DHCP for no reason when the service came up fine. Healthy = unit
-# active AND (no probe name OR dig absent OR a query for the probe name returns a
-# NON-EMPTY answer on 127.0.0.1). Requiring an answer means a wedged-but-listening
-# resolver (NXDOMAIN/REFUSED/timeout) is caught, not treated as up.
+# Reinicia {{ service }} solo si NO está healthy: un reinicio ciego en cada boot
+# tira el DNS/DHCP de la LAN sin motivo cuando el servicio levantó bien. Healthy =
+# unit activa Y (sin probe name O dig ausente O una consulta por el probe name
+# devuelve una respuesta NO VACÍA en 127.0.0.1). Exigir respuesta hace que un
+# resolver trabado-pero-escuchando (NXDOMAIN/REFUSED/timeout) se detecte en vez de
+# darlo por arriba.
 ExecStart=/bin/sh -c 'svc={{ service }}; probe="{{ service_maintenance_dns_probe_name }}"; if systemctl is-active --quiet "$svc" && { [ -z "$probe" ] || ! command -v dig >/dev/null 2>&1 || [ -n "$(dig +time=2 +tries=1 +short @127.0.0.1 "$probe" 2>/dev/null)" ]; }; then echo "$svc healthy, no restart"; else echo "$svc unhealthy, restarting"; systemctl restart "$svc"; fi'
 {% endfor %}
 
-# Logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier={{ service_maintenance_unit_name }}

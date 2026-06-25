@@ -1,11 +1,12 @@
 ---
-# Idempotently seed the monitors into Uptime-Kuma's SQLite DB. The pod is only
-# stopped/started when monitors are actually missing, so re-runs are no-ops.
+# Siembra de forma idempotente los monitors en la DB SQLite de Uptime-Kuma. El pod
+# solo se detiene/inicia cuando realmente faltan monitors, así que las re-corridas son no-ops.
 
-# Uptime-Kuma creates kuma.db asynchronously a moment after first start, slightly
-# after its port opens. Without this wait the FIRST deploy would stat the DB
-# before it exists and skip seeding entirely (needing a second run). Best-effort:
-# don't fail the play if Kuma never creates it — the stat+block below still skips.
+# Uptime-Kuma crea kuma.db de forma asíncrona un momento después del primer
+# arranque, un poco después de que abra su puerto. Sin esta espera, el PRIMER
+# deploy haría stat de la DB antes de que exista y saltearía la siembra por
+# completo (necesitando una segunda corrida). Best-effort: no falla el play si
+# Kuma nunca la crea; el stat+block de abajo igual se saltea.
 - name: Wait for Uptime-Kuma to create its database (first boot is async)
   ansible.builtin.wait_for:
     path: "{{ monitoring_data_dir }}/kuma.db"

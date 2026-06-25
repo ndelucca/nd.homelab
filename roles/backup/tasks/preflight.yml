@@ -1,5 +1,5 @@
 ---
-# Preflight checks for the backup role.
+# Chequeos de preflight del role backup.
 
 - name: Verify running on Fedora
   ansible.builtin.assert:

@@ -1,5 +1,5 @@
 ---
-# Preflight checks for Immich installation
+# Chequeos de preflight para la instalación de Immich
 
 - name: Verify running on Fedora
   ansible.builtin.assert:
@@ -38,10 +38,10 @@
   ansible.builtin.debug:
     msg: "Port {{ immich_port }} is {{ port_check.stdout }}"
 
-# A warning, not a failure: on a re-run the port is expected to be held by
-# Immich itself. `fail` + `ignore_errors` was a no-op guard that never aborted;
-# an explicit warning states the intent honestly (consistent with the other
-# container roles).
+# Es una advertencia, no un error: en una re-ejecución se espera que el puerto lo tenga
+# ocupado el propio Immich. `fail` + `ignore_errors` era un guard no-op que nunca
+# abortaba; una advertencia explícita expresa la intención honestamente (consistente
+# con los demás roles de container).
 - name: Warn if port is occupied
   ansible.builtin.debug:
     msg: "WARNING: port {{ immich_port }} is already in use (expected if Immich is already running)"

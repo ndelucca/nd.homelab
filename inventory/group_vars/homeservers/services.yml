@@ -1,20 +1,14 @@
 ---
-# ============================================================================
-# Non-secret configuration for the homeservers group.
-# ----------------------------------------------------------------------------
-# Everything here is group-level config for the home server (network, DNS/DHCP,
-# reverse proxy and per-app settings). Secrets live next to this file in
-# vault.yml; the disk layout lives in storage.yml.
-# ============================================================================
+# Configuración no secreta del grupo homeservers: ajustes de red, DNS/DHCP,
+# reverse proxy y configuración por aplicación. Los secretos viven junto a este
+# archivo en vault.yml; el layout de discos vive en storage.yml.
 
-# --- Firewall ---------------------------------------------------------------
-# The firewall role auto-detects the LAN interface's zone; see roles/firewall.
+# El rol firewall autodetecta la zona de la interfaz LAN; ver roles/firewall.
 firewall_enabled: true
 
-# --- AdGuard Home (DNS + DHCP for the LAN) ----------------------------------
 adguard_configure_app: true
 
-# Allowed domains (whitelist rules).
+# Dominios permitidos (reglas de whitelist).
 adguard_user_rules:
   - "@@||events.launchdarkly.com^"
   - "@@||clientstream.launchdarkly.com^"
@@ -22,7 +16,6 @@ adguard_user_rules:
   - "@@||www.google-analytics.com^"
   - "@@||api.amplitude.com^"
 
-# DHCP configuration.
 adguard_dhcp_enabled: true
 adguard_dhcp_interface_name: enp6s0
 adguard_dhcp_local_domain: lan
@@ -32,22 +25,20 @@ adguard_dhcp_range_start: 192.168.10.100
 adguard_dhcp_range_end: 192.168.10.200
 adguard_dhcp_lease_duration: 86400
 
-# DHCP static leases.
 adguard_dhcp_static_leases:
   - ip: 192.168.10.10
     hostname: ndelucca-server
     mac: "4c:cc:6a:d3:fc:a1"
-  # Raspberry printer — two NICs, two reservations. The printer is currently
-  # reached over WiFi (.12): ansible_host (inventory/hosts.yml) and the
-  # printer.<domain> DNS rewrite both point at .12. The .11 ethernet reservation
-  # is dormant (cable down). If/when ethernet returns, move ansible_host and the
-  # printer. rewrite to .11 together so the canonical name and the IP in use stay
-  # in sync.
+  # La impresora Raspberry tiene dos NICs, dos reservas. Hoy se accede por WiFi
+  # (.12): ansible_host (inventory/hosts.yml) y el rewrite DNS printer.<domain>
+  # apuntan ambos a .12. La reserva ethernet .11 está inactiva (cable caído). Si
+  # vuelve el ethernet, mover juntos ansible_host y el rewrite printer. a .11 para
+  # que el nombre canónico y la IP en uso sigan sincronizados.
   - ip: 192.168.10.11
-    hostname: ndelucca-raspberry-printer            # ethernet (dormant)
+    hostname: ndelucca-raspberry-printer            # ethernet (inactivo)
     mac: "b8:27:eb:f1:af:50"
   - ip: 192.168.10.12
-    hostname: ndelucca-raspberry-printer-wireless   # WiFi — active path (printer. -> .12)
+    hostname: ndelucca-raspberry-printer-wireless   # WiFi — ruta activa (printer. -> .12)
     mac: "b8:27:eb:a4:fa:05"
   - ip: 192.168.10.13
     hostname: ndelucca-acer
@@ -62,12 +53,12 @@ adguard_dhcp_static_leases:
     hostname: ndelucca-pixel-8-2.4ghz
     mac: "ca:61:9f:ce:53:ce"
 
-# Local DNS rewrites. The real public domain (ndelucca.dedyn.io, hosted at deSEC)
-# is resolved *internally* by AdGuard to LAN IPs; the matching wildcard TLS cert
-# is issued out-of-band via DNS-01 (roles/acme), so browsers see a trusted cert
-# while nothing is exposed to the internet.
+# Rewrites DNS locales. El dominio público real (ndelucca.dedyn.io, alojado en
+# deSEC) se resuelve *internamente* a IPs de la LAN vía AdGuard; el wildcard TLS
+# correspondiente se emite fuera de banda con DNS-01 (roles/acme), así el browser
+# ve un cert confiable sin exponer nada a internet.
 adguard_dns_rewrites:
-  # Server apps — reverse-proxied by NGINX on .10 (wildcard *.{{ nginx_domain }}).
+  # Apps del servidor — reverse-proxy de NGINX en .10 (wildcard *.{{ nginx_domain }}).
   - domain: "{{ nginx_domain }}"
     answer: 192.168.10.10
     enabled: true
@@ -107,78 +98,70 @@ adguard_dns_rewrites:
   - domain: "status.{{ nginx_domain }}"
     answer: 192.168.10.10
     enabled: true
-  # Raspberry printer (.12) — serves its OWN TLS cert (printer.{{ nginx_domain }}).
+  # Impresora Raspberry (.12) — sirve su PROPIO cert TLS (printer.{{ nginx_domain }}).
   - domain: "printer.{{ nginx_domain }}"
     answer: 192.168.10.12
     enabled: true
-  # Acer client alias — no web service, no cert (kept as-is).
+  # Alias del cliente Acer — sin servicio web ni cert (se deja como está).
   - domain: ndelucca-acer.com
     answer: 192.168.10.13
     enabled: true
 
-# --- NGINX reverse proxy ----------------------------------------------------
 nginx_firewall_enabled: true
-# Derived from base_domain (group_vars/all/main.yml); drives every vhost
-# server_name and the wildcard cert.
+# Derivado de base_domain (group_vars/all/main.yml); define el server_name de
+# cada vhost y el cert wildcard.
 nginx_domain: "{{ base_domain }}"
 
-# --- TLS mode (real Let's Encrypt cert vs self-signed fallback) --------------
-# letsencrypt = trusted wildcard issued by the acme role (default).
-# selfsigned  = manual fallback if issuance ever fails: set this, re-run
-#               `--tags nginx`, and NGINX serves the self-signed cert that the
-#               nginx role always keeps as a bootstrap floor. No downtime.
+# Modo TLS: letsencrypt = wildcard confiable emitido por el rol acme (default).
+# selfsigned = fallback manual si la emisión falla alguna vez: setear esto,
+# re-correr `--tags nginx` y NGINX sirve el cert self-signed que el rol nginx
+# siempre mantiene como piso de bootstrap. Sin downtime.
 nginx_tls_mode: letsencrypt
 
-# Self-signed bootstrap floor (always generated by the nginx role).
+# Piso de bootstrap self-signed (siempre lo genera el rol nginx).
 nginx_selfsigned_cert: /etc/pki/nginx/server.crt
 nginx_selfsigned_key: /etc/pki/nginx/server.key
 
-# Wildcard cert issued by lego (roles/acme) — see acme_certificates below.
+# Cert wildcard emitido por lego (roles/acme) — ver acme_certificates abajo.
 acme_cert_fullchain: "{{ acme_data_dir }}/certificates/{{ nginx_domain }}.crt"
 acme_cert_key: "{{ acme_data_dir }}/certificates/{{ nginx_domain }}.key"
 
-# Cert actually consumed by every vhost (server_name uses {{ nginx_domain }}).
+# Cert que realmente consume cada vhost (server_name usa {{ nginx_domain }}).
 nginx_ssl_certificate: "{{ acme_cert_fullchain if nginx_tls_mode == 'letsencrypt' else nginx_selfsigned_cert }}"
 nginx_ssl_certificate_key: "{{ acme_cert_key if nginx_tls_mode == 'letsencrypt' else nginx_selfsigned_key }}"
 
-# --- ACME / Let's Encrypt (roles/acme) --------------------------------------
 acme_enabled: "{{ nginx_tls_mode == 'letsencrypt' }}"
 acme_email: ndelucca@protonmail.com
 acme_desec_token: "{{ vault_desec_token }}"
 acme_data_dir: /etc/pki/nginx/lego
 acme_reload_service: nginx
-# Wildcard covers every app subdomain; apex listed first so lego names the file
-# {{ nginx_domain }}.crt (matches acme_cert_fullchain above).
+# El wildcard cubre cada subdominio de app; el apex va primero para que lego
+# nombre el archivo {{ nginx_domain }}.crt (coincide con acme_cert_fullchain).
 acme_certificates:
   - name: "{{ nginx_domain }}"
     domains:
       - "{{ nginx_domain }}"
       - "*.{{ nginx_domain }}"
 
-# --- FileBrowser ------------------------------------------------------------
 filebrowser_port: 8080
 filebrowser_firewall_zone: FedoraServer
 filebrowser_root_dir: /srv/disks
 
-# --- Immich -----------------------------------------------------------------
 immich_upload_location: "{{ app_media_root }}/Gallery"
 
-# --- Kavita -----------------------------------------------------------------
 kavita_extra_libraries:
   - name: books
     path: "{{ app_media_root }}/Books"
 
-# --- Forgejo pull mirrors ---------------------------------------------------
-# Forgejo mirrors all GitHub repos (GitHub = source of truth). The PAT lives in
-# vault.yml as forgejo_github_token. Add repo names below for a one-time
-# delete+recreate as a mirror, then empty the list again.
+# Forgejo espeja todos los repos de GitHub (GitHub = fuente de verdad). El PAT
+# vive en vault.yml como forgejo_github_token. Agregar nombres de repos abajo
+# para un delete+recreate único como mirror, luego vaciar la lista otra vez.
 forgejo_pull_mirror_enabled: true
 forgejo_mirror_force_recreate: []
 
-# --- Failure alerting (ntfy) ------------------------------------------------
-# One ntfy topic drives ALL failure pushes: backup failures / disk-full
-# (journalctl -t restic-backup) AND Let's Encrypt renewal failures
-# (journalctl -t lego-renew; acme_notify_ntfy_url defaults to this var). Leave
-# commented to rely on the journal alerts only. To enable phone pushes, set it
-# to your private topic URL:
+# Un único topic de ntfy maneja TODOS los avisos de falla: fallas de backup /
+# disco lleno (journalctl -t restic-backup) Y fallas de renovación de Let's
+# Encrypt (journalctl -t lego-renew; acme_notify_ntfy_url toma este valor por
+# defecto). Dejar comentado para depender solo de los avisos del journal. Para
+# habilitar los push al teléfono, setearlo a la URL de tu topic privado:
 # backup_notify_ntfy_url: "https://ntfy.sh/your-private-topic"

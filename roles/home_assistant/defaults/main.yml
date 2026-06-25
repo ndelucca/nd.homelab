@@ -1,48 +1,42 @@
 ---
-# Default variables for Home Assistant role
+# Variables por defecto del role Home Assistant
 
-# Service user configuration
 home_assistant_user: ndelucca
 home_assistant_group: ndelucca
 home_assistant_uid: 1000
 
-# Directory configuration — state on the appdata disk (app_data_root, defined in
+# Directorios — el estado vive en el disco de appdata (app_data_root, definido en
 # group_vars/homeservers/storage.yml).
 home_assistant_base_dir: "{{ app_data_root }}/home_assistant"
 home_assistant_config_dir: "{{ home_assistant_base_dir }}/config"
 
-# Podman/Quadlet configuration. Pin to an exact release for reproducibility;
-# bump home_assistant_version to upgrade (HA ships breaking changes regularly).
+# Se pinea a un release exacto por reproducibilidad; bumpear home_assistant_version
+# para actualizar (HA suele traer cambios incompatibles seguido).
 home_assistant_quadlet_dir: /etc/containers/systemd/users
 home_assistant_version: "2026.6.4"
 home_assistant_image: "ghcr.io/home-assistant/home-assistant:{{ home_assistant_version }}"
 
-# Network configuration
 home_assistant_port: 8123
 home_assistant_host: 127.0.0.1
 
-# Application configuration
 home_assistant_timezone: America/Los_Angeles
 
-# Service configuration
 home_assistant_service_name: home_assistant
 home_assistant_service_enabled: true
 home_assistant_service_state: started
 
-# Firewall settings
 home_assistant_firewall_zone: FedoraServer
 home_assistant_firewall_enabled: false
 
-# SELinux configuration
 home_assistant_manage_selinux: true
 
-# container_base contract — feeds the shared install + handlers (see container_base).
+# Contrato de container_base — alimenta el install + handlers compartidos (ver container_base).
 container_user: "{{ home_assistant_user }}"
 container_uid: "{{ home_assistant_uid }}"
 container_service_name: "{{ home_assistant_service_name }}"
 container_selinux_paths: "{{ [home_assistant_config_dir] }}"
-# container_base service-step contract (enable + wait_for). HA takes a bit to
-# come up, so use a longer initial delay and timeout.
+# Contrato del service-step de container_base (enable + wait_for). HA tarda un poco en
+# levantar, así que se usa un delay inicial y un timeout más largos.
 container_host: "{{ home_assistant_host }}"
 container_port: "{{ home_assistant_port }}"
 container_service_enabled: "{{ home_assistant_service_enabled }}"

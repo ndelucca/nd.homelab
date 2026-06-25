@@ -1,8 +1,8 @@
 [Unit]
 # {{ ansible_managed }}
-# Triggered via OnFailure= from lego-renew.service when a cert renewal fails.
-# Without this, an expired/revoked token or a deSEC outage would let certs lapse
-# silently until every app throws TLS errors.
+# Se dispara vía OnFailure= desde lego-renew.service cuando falla la renovación de un cert.
+# Sin esto, un token expirado/revocado o una caída de deSEC dejaría que los certs venzan
+# en silencio hasta que cada app tire errores de TLS.
 Description=Alert that Let's Encrypt renewal failed
 
 [Service]

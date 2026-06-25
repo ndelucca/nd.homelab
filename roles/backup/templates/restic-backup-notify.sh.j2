@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # {{ ansible_managed }}
-# Emit a backup alert. Always logs to the journal at error priority so the
-# failure is visible in `journalctl -t restic-backup`; additionally pushes to
-# ntfy when a topic URL is configured. Alerting must never fail the caller, so
-# every push is best-effort.
-# Usage: restic-backup-notify.sh "<title>" "<message>"
+# Emite una alerta de backup. Siempre loguea al journal con prioridad de error
+# para que la falla sea visible en `journalctl -t restic-backup`; además hace
+# push a ntfy cuando hay una URL de topic configurada. La alerta nunca debe hacer
+# fallar al caller, así que cada push es best-effort.
+# Uso: restic-backup-notify.sh "<title>" "<message>"
 set -uo pipefail
 
 title="${1:-Backup alert}"
 message="${2:-(no details)}"
 
-# 1) Journal (always). Tagged so it is easy to grep or build journald alerts on.
+# 1) Journal (siempre). Tagueado para que sea fácil hacer grep o armar alertas de journald.
 logger -t restic-backup -p user.err -- "${title}: ${message}" 2>/dev/null \
   || echo "[restic-backup][ERROR] ${title}: ${message}" >&2
 
-# 2) ntfy push (best-effort).
+# 2) push a ntfy (best-effort).
 {% if backup_notify_ntfy_url %}
 curl -fsS --max-time 15 \
   -H "Title: ${title}" \

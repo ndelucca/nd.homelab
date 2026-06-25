@@ -1,6 +1,4 @@
 ---
-# Preflight checks and setup
-
 - name: Verify we're running on Fedora
   ansible.builtin.assert:
     that:

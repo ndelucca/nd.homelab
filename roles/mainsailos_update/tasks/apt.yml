@@ -1,5 +1,5 @@
 ---
-# Upgrade Debian OS packages. 'safe' upgrade by default (never removes packages).
+# Upgrade de paquetes del SO Debian. Por defecto upgrade 'safe' (nunca elimina paquetes).
 
 - name: Update the apt cache
   ansible.builtin.apt:

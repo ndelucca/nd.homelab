@@ -1,6 +1,4 @@
 ---
-# Metadata for the mainsail_tls role
-
 galaxy_info:
   author: Naza
   description: Serves the MainsailOS web UI over HTTPS with a real (DNS-01) certificate.

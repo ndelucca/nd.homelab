@@ -4,9 +4,9 @@ Description=Daily lego certificate renewal check
 
 [Timer]
 OnCalendar=daily
-# Spread load and avoid hammering the ACME CA at the same instant every day.
+# Distribuye la carga y evita golpear a la CA de ACME en el mismo instante todos los días.
 RandomizedDelaySec=3600
-# Catch up if the machine was off at the scheduled time.
+# Recupera la ejecución si la máquina estaba apagada en el horario programado.
 Persistent=true
 
 [Install]

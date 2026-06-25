@@ -1,7 +1,7 @@
 ---
-# Issue any certificate that does not yet exist. Renewals are handled by the
-# systemd timer (see service.yml), so this stays idempotent: on re-runs every
-# cert already exists and nothing happens here.
+# Emite cualquier certificado que todavía no exista. Las renovaciones las maneja el
+# timer de systemd (ver service.yml), así que esto se mantiene idempotente: en re-runs
+# cada cert ya existe y acá no pasa nada.
 
 - name: Ensure the lego data directory exists
   ansible.builtin.file:
@@ -20,9 +20,9 @@
     label: "{{ item.name }}"
   register: acme_cert_stat
 
-# argv (list) form avoids any shell quoting issues with the '*' in wildcards.
-# lego v5: a single `run` command obtains (and can renew) certs; the subcommand
-# must come first, with all flags after it.
+# La forma argv (lista) evita problemas de quoting del shell con el '*' de los wildcards.
+# lego v5: un único comando `run` obtiene (y puede renovar) certs; el subcomando
+# debe ir primero, con todos los flags después.
 - name: Issue missing certificates via lego (DNS-01 / {{ acme_dns_provider }})
   ansible.builtin.command:
     argv: >-

@@ -1,6 +1,4 @@
 ---
-# Configure NGINX reverse proxy
-
 - name: Deploy main NGINX configuration
   ansible.builtin.template:
     src: nginx.conf.j2
@@ -30,9 +28,10 @@
     mode: '0755'
   become: true
 
-# Deploy the shared headers snippet BEFORE the vhosts that `include` it, so the
-# final `nginx -t` has it on disk. It lives outside conf.d/*.conf so NGINX does
-# not auto-load it as a standalone (http-level) block.
+# Desplegamos el snippet de headers compartido ANTES que los vhosts que lo
+# `include`-an, así el `nginx -t` final lo tiene en disco. Vive fuera de
+# conf.d/*.conf para que NGINX no lo auto-cargue como un bloque suelto (a nivel
+# http).
 - name: Deploy shared TLS security-headers snippet
   ansible.builtin.template:
     src: ssl_headers.inc.j2
@@ -43,8 +42,9 @@
   become: true
   register: nginx_ssl_headers
 
-# Auto-discover every service vhost template so adding a service is just a matter
-# of dropping a conf.d/<service>.conf.j2 into this role — no edit here required.
+# Auto-descubre cada template de vhost de servicio, así agregar un servicio es
+# solo cuestión de dejar un conf.d/<service>.conf.j2 en este role, sin tener que
+# editar acá.
 - name: Discover service vhost templates
   ansible.builtin.find:
     paths: "{{ role_path }}/templates/conf.d"
@@ -66,12 +66,13 @@
     label: "{{ item.path | basename }}"
   register: nginx_service_configs
 
-# Prune vhost files left behind when a service template is removed from the role
-# (e.g. the vhosts folded into 10-services.conf). We track exactly what the role
-# deployed in a manifest and only remove files that WERE in our own previous
-# manifest but no longer are — so a .conf placed in conf.d by anything other than
-# this role is never touched (the old string-reconstruction approach pruned over
-# every *.conf and could match unrelated files).
+# Limpia los archivos de vhost que quedan huérfanos cuando se elimina un template
+# de servicio del role (p. ej. los vhosts absorbidos en 10-services.conf).
+# Registramos en un manifiesto exactamente lo que el role desplegó y solo
+# borramos los archivos que ESTABAN en nuestro manifiesto anterior pero ya no:
+# así un .conf puesto en conf.d por algo distinto a este role nunca se toca (el
+# enfoque viejo de reconstrucción por string barría sobre cada *.conf y podía
+# matchear archivos no relacionados).
 - name: Compute the set of vhost files this run manages
   ansible.builtin.set_fact:
     nginx_managed_vhosts: >-
@@ -118,9 +119,9 @@
            or (nginx_ssl_headers.changed | default(false))
            or (nginx_stale_removed.changed | default(false)) }}
 
-# Reload so config changes actually take effect. Only when already running:
-# on a fresh host NGINX is started later (after AdGuard frees port 53), and
-# `state: reloaded` would fail on a stopped unit.
+# Recargamos para que los cambios de config tomen efecto. Solo si ya está
+# corriendo: en un host nuevo NGINX se arranca más tarde (después de que AdGuard
+# libera el puerto 53), y `state: reloaded` fallaría sobre un unit detenido.
 - name: Check whether NGINX is already running
   ansible.builtin.systemd:
     name: nginx

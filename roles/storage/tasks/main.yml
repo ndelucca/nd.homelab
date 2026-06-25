@@ -1,12 +1,12 @@
 ---
-# Storage role: pin the service user, mount the data disks by UUID, and lay out
-# the app-data skeleton. Runs first in site.yml so every mountpoint and base dir
-# exists before any app role deploys.
+# Role storage: pinea el usuario del servicio, monta los discos de datos por UUID
+# y arma el esqueleto de app-data. Corre primero en site.yml para que todo
+# mountpoint y dir base exista antes de que despliegue cualquier role de app.
 
-# --- Service user identity (DR-critical) ------------------------------------
-# Rootless Podman (UserNS=keep-id) and the ownership of every file on the data
-# disk assume this exact uid/gid. Pinning them keeps the data valid after an OS
-# reinstall.
+# Identidad del usuario del servicio (crítica para DR). Rootless Podman
+# (UserNS=keep-id) y la propiedad de cada archivo en el disco de datos asumen este
+# uid/gid exacto. Pinearlos mantiene los datos válidos tras una reinstalación del
+# OS.
 - name: Ensure service group has the fixed gid
   ansible.builtin.group:
     name: "{{ app_storage_group }}"
@@ -22,12 +22,13 @@
     state: present
   become: true
 
-# --- Mounts (the source of truth for /etc/fstab) ----------------------------
-# By UUID so the mounts survive a board/OS swap. nofail keeps the box bootable
-# if a disk is missing; the mountpoint dir is created root-owned, which is also
-# the "missing mount" guard: if a disk fails to mount, the (root-owned) empty
-# mountpoint is not writable by the service user, so rootless apps fail to write
-# there instead of silently shadowing data onto the root filesystem.
+# Mounts (la fuente de verdad para /etc/fstab). Por UUID para que los mounts
+# sobrevivan un cambio de board/OS. nofail mantiene la máquina booteable si falta
+# un disco; el dir del mountpoint se crea con propiedad de root, lo que también es
+# la guarda de "mount faltante": si un disco no monta, el mountpoint vacío (de
+# root) no es escribible por el usuario del servicio, así que las apps rootless
+# fallan al escribir ahí en vez de shadowear silenciosamente los datos sobre el
+# filesystem root.
 - name: Mount data disks by UUID (managed fstab)
   ansible.posix.mount:
     path: "{{ item.mount }}"
@@ -40,20 +41,19 @@
   loop_control:
     label: "{{ item.name }} -> {{ item.mount }}"
 
-# --- Mount guard ------------------------------------------------------------
-# Fail fast if the appdata disk did not actually mount. With `nofail`, a missing
-# disk would otherwise let the skeleton dirs below land on the root filesystem
-# under the empty mountpoint — defeating the "missing mount" guard above and
-# silently shadowing data onto root. findmnt --mountpoint returns non-zero
-# unless the path is a real mountpoint.
+# Guarda de mount. Falla rápido si el disco de appdata no llegó a montarse. Con
+# `nofail`, un disco faltante dejaría que los dirs del esqueleto de abajo
+# aterricen en el filesystem root bajo el mountpoint vacío — anulando la guarda de
+# "mount faltante" de arriba y shadoweando silenciosamente los datos sobre root.
+# findmnt --mountpoint devuelve non-zero salvo que el path sea un mountpoint real.
 - name: Assert the appdata disk is mounted before creating the skeleton
   ansible.builtin.command: "findmnt --mountpoint {{ storage_appdata_disk }}"
   become: true
   changed_when: false
 
-# --- App-data skeleton ------------------------------------------------------
-# Created after mounting so they land on the appdata disk, owned by the service
-# user. Each app role creates its own subdir under these.
+# Esqueleto de app-data. Se crean después de montar para que aterricen en el disco
+# de appdata, con propiedad del usuario del servicio. Cada role de app crea su
+# propio subdir bajo estos.
 - name: Create appdata/media roots on the data disk
   ansible.builtin.file:
     path: "{{ item }}"

@@ -8,9 +8,9 @@ Image={{ orcaslicer_image }}
 ContainerName=orcaslicer
 PublishPort={{ orcaslicer_host }}:{{ orcaslicer_port }}:3001
 
-# Config volume (container home directory). No :Z here — selinux.yml labels this
-# dir container_file_t (a persistent label); adding :Z would apply a conflicting
-# per-container MCS category and fight that labeling.
+# Volume de config (home dir del container). Sin :Z acá — selinux.yml etiqueta
+# este dir como container_file_t (una etiqueta persistente); agregar :Z aplicaría
+# una categoría MCS por container que entraría en conflicto con ese etiquetado.
 Volume={{ orcaslicer_config_dir }}:/config
 
 Environment=PUID={{ orcaslicer_uid }}
@@ -19,7 +19,7 @@ Environment=TZ={{ orcaslicer_timezone }}
 Environment=CUSTOM_USER={{ orcaslicer_custom_user }}
 Environment=PASSWORD={{ orcaslicer_password }}
 
-# Force CPU encoding (GPU not supported on this hardware)
+# Fuerza encoding por CPU (la GPU no está soportada en este hardware).
 Environment=SELKIES_USE_CPU=true
 Environment=DISABLE_DRI3=true
 

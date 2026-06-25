@@ -1,9 +1,9 @@
 ---
-# Install / update the FileBrowser binary.
-# Version-aware and idempotent:
-#   - filebrowser_version: latest  -> resolves the newest GitHub release and
-#     (re)installs only when it differs from the installed binary.
-#   - filebrowser_version: vX.Y.Z  -> pins to that exact release.
+# Instala / actualiza el binario de FileBrowser.
+# Consciente de la versión e idempotente:
+#   - filebrowser_version: latest  -> resuelve el release más nuevo de GitHub y
+#     (re)instala solo cuando difiere del binario instalado.
+#   - filebrowser_version: vX.Y.Z  -> pinea a ese release exacto.
 
 - name: Check if FileBrowser is already installed
   ansible.builtin.stat:

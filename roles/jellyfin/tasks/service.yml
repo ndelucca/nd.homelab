@@ -1,6 +1,4 @@
 ---
-# Configure Jellyfin systemd service
-
 - name: Create systemd override directory for Jellyfin
   ansible.builtin.file:
     path: /etc/systemd/system/{{ jellyfin_service_name }}.service.d

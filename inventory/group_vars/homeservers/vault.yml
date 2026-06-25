@@ -1,15 +1,13 @@
 ---
-# ============================================================================
-# Secrets for the homeservers group (Ansible Vault, AES256).
-# ----------------------------------------------------------------------------
-# Only encrypted values live here, separated from the plaintext config in
-# services.yml / storage.yml. Edit with:
+# Secretos del grupo homeservers (Ansible Vault, AES256).
+#
+# Acá viven solo los valores encriptados, separados de la config en texto plano de
+# services.yml / storage.yml. Editar con:
 #   ansible-vault edit inventory/group_vars/homeservers/vault.yml
-# or re-encrypt a single value with:
+# o re-encriptar un solo valor con:
 #   ansible-vault encrypt_string --name <var> '<value>'
-# ============================================================================
 
-# AdGuard Home admin user (password stored as a bcrypt hash).
+# Usuario admin de AdGuard Home (contraseña guardada como hash bcrypt).
 adguard_users:
   - name: ndelucca
     password: !vault |
@@ -22,8 +20,9 @@ adguard_users:
       36366537316262663635643064653632643930643038363866353665323861663438656138303631
       366239623336396434326132306337613435
 
-# Immich Postgres password. Pinned to the password the running Postgres already
-# uses, so re-runs stop regenerating it (which would break auth on pod recreate).
+# Contraseña de Postgres de Immich. Fijada a la que ya usa el Postgres en
+# ejecución, para que las re-corridas dejen de regenerarla (lo que rompería la
+# autenticación al recrear el pod).
 immich_db_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   30386330353164663531393462323862316533643066656161346439373965343739633834633065
@@ -33,7 +32,7 @@ immich_db_password: !vault |
   62666335613061373462623563323237346562303930353863333239396332343738376434633836
   3865323965396231346465633532653233643837383763306136
 
-# OrcaSlicer web UI password.
+# Contraseña de la UI web de OrcaSlicer.
 orcaslicer_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   36353761663964306164333766643233396261323465633462636232306262323834616639386139
@@ -42,7 +41,7 @@ orcaslicer_password: !vault |
   3938636661316230630a626362646539333262376636326133346564353466393530353737643430
   36306232366131663761356230363832623538343133616466353862343830363264
 
-# Forgejo admin password.
+# Contraseña de admin de Forgejo.
 forgejo_admin_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   33663564313962633930383837663837333233343166623839333063313462383032376466353262
@@ -51,8 +50,8 @@ forgejo_admin_password: !vault |
   6236366566323239650a656464373631323066323666633466666164376261626238323237333861
   39306437373332356665623933323236373838376139666239366237343563306630
 
-# Forgejo GitHub PAT for pull mirrors (classic scope 'repo', or fine-grained
-# Contents+Metadata read).
+# PAT de GitHub para los pull mirrors de Forgejo (scope clásico 'repo', o
+# fine-grained con lectura de Contents+Metadata).
 forgejo_github_token: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   39363065663939633837316536386431383631326461626465333061313435383936626339306138
@@ -62,9 +61,10 @@ forgejo_github_token: !vault |
   61303438336162643130623565653364663562363665326637393266313838653038646465306234
   3531346336626535653634383937303736323564646362393938
 
-# Backup (restic -> D-Ursa). restic always encrypts; this password is stored here
-# AND written to a 0600 file on the box, so DR needs nothing memorised. It is not
-# a secret to guard (the backup disk is local to the same machine).
+# Backup (restic -> D-Ursa). restic siempre encripta; esta contraseña se guarda
+# acá Y se escribe en un archivo 0600 en el equipo, así el DR no necesita nada
+# memorizado. No es un secreto a custodiar (el disco de backup es local a la
+# misma máquina).
 backup_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   38363134303330306665626236633966633461303736373636323337353664323564353135343235

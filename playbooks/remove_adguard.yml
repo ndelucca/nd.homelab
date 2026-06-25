@@ -1,15 +1,14 @@
 ---
-# Remove AdGuard Home (native binary) playbook
-# This playbook removes AdGuard Home installed as a native binary
+# Playbook para remover AdGuard Home instalado como binario nativo.
 #
-# Usage: ansible-playbook playbooks/remove_adguard.yml
+# Uso: ansible-playbook playbooks/remove_adguard.yml
 
 - name: Remove AdGuard Home (native binary)
   hosts: homeservers
   become: true
 
   vars:
-    # Match variables from the role
+    # Replicar las variables del rol.
     adguard_service_name: AdGuardHome
     adguard_install_dir: /usr/local/bin
     adguard_working_dir: /opt/AdGuardHome
@@ -17,8 +16,7 @@
     adguard_group: adguard
     adguard_firewall_zone: public
 
-    # Removal options
-    remove_data: true  # Set to false to keep configuration and data
+    remove_data: true  # Poner en false para conservar configuración y datos
 
   tasks:
     - name: Check if AdGuard Home binary exists
@@ -68,8 +66,8 @@
         immediate: true
         state: disabled
       loop:
-        - 3000/tcp  # Web UI (initial setup)
-        - 80/tcp    # Web UI (admin interface)
+        - 3000/tcp  # UI web (setup inicial)
+        - 80/tcp    # UI web (interfaz de admin)
         - 53/tcp    # DNS
         - 53/udp    # DNS
         - 853/tcp   # DNS-over-TLS
@@ -107,9 +105,10 @@
         - "{{ adguard_working_dir }}(/.*)?"
       failed_when: false
 
-    # The service_maintenance role deploys an AdGuard cold-boot watchdog and a
-    # wait-for-network drop-in. Tear them down too, or they keep firing and log
-    # failures trying to restart a service that no longer exists.
+    # El rol service_maintenance despliega un watchdog de arranque en frío para
+    # AdGuard y un drop-in de espera de red. Hay que desmontarlos también, o
+    # seguirán disparándose y registrando fallas al intentar reiniciar un servicio
+    # que ya no existe.
     - name: Stop and disable the AdGuard service watchdog timer
       ansible.builtin.systemd:
         name: service-watchdog.timer

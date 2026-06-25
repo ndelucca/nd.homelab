@@ -1,10 +1,8 @@
 ---
-# Configure AdGuard Home with custom settings
-
-# Seed-once for users/passwords: the admin password is editable in the web UI,
-# which writes the new bcrypt hash back into AdGuardHome.yaml. To avoid clobbering
-# it on every converge, read the live config and reuse its users if it already
-# has any; only fall back to the vault-seeded adguard_users on first deploy.
+# Siembra-una-vez de usuarios/passwords: la password de admin se puede editar en la
+# web UI, que escribe el nuevo hash bcrypt de vuelta en AdGuardHome.yaml. Para no
+# pisarla en cada converge, se lee el config vivo y se reutilizan sus usuarios si ya
+# tiene alguno; solo se cae al adguard_users sembrado por vault en el primer deploy.
 - name: Check for an existing AdGuard Home config
   ansible.builtin.stat:
     path: "{{ adguard_working_dir }}/AdGuardHome.yaml"
@@ -74,9 +72,9 @@
     - adguard_dhcp_static_leases | length > 0
   notify: restart adguardhome
 
-# Reconcile: if static leases were configured before but the list is now empty
-# (or DHCP turned off), remove the stale leases.json instead of leaving the old
-# reservations on disk.
+# Reconciliación: si antes había leases estáticos configurados pero ahora la lista
+# está vacía (o se apagó DHCP), se borra el leases.json viejo en vez de dejar las
+# reservas antiguas en disco.
 - name: Remove stale DHCP leases file when no static leases are configured
   ansible.builtin.file:
     path: "{{ adguard_working_dir }}/data/leases.json"

@@ -2,7 +2,7 @@
 Description=FileBrowser - Web File Browser
 Documentation=https://filebrowser.org
 After=network.target
-# Do not start unless the appdata disk (where the SQLite DB lives) is mounted.
+# No arrancar si el disco de appdata (donde vive la DB SQLite) no está montado.
 RequiresMountsFor={{ storage_appdata_disk }}
 
 [Service]
@@ -26,7 +26,6 @@ ExecStart={{ filebrowser_install_dir }}/filebrowser \
 Restart=on-failure
 RestartSec=5s
 
-# Security hardening
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

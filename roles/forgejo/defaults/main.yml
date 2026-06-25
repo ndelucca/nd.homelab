@@ -1,81 +1,75 @@
 ---
-# Default variables for Forgejo role
+# Variables por defecto del role Forgejo
 
-# Service user configuration
 forgejo_user: ndelucca
 forgejo_group: ndelucca
-forgejo_uid: 1000  # Obtained dynamically via getent in preflight
+forgejo_uid: 1000  # Se obtiene dinámicamente vía getent en preflight
 
-# Directory configuration — state on the appdata disk (app_data_root, defined in
+# Directorios — el estado vive en el disco de appdata (app_data_root, definido en
 # group_vars/homeservers/storage.yml).
 forgejo_base_dir: "{{ app_data_root }}/forgejo"
 forgejo_data_dir: "{{ forgejo_base_dir }}/data"      # -> /var/lib/gitea
 forgejo_config_dir: "{{ forgejo_base_dir }}/config"  # -> /etc/gitea (app.ini)
 
-# Podman/Quadlet configuration
-forgejo_quadlet_dir: /etc/containers/systemd/users  # System-managed user containers
+forgejo_quadlet_dir: /etc/containers/systemd/users  # Containers de usuario gestionados por el sistema
 forgejo_container_name: forgejo
 
-# Network configuration
-forgejo_port: 3000          # HTTP, bound to localhost, served via NGINX
+forgejo_port: 3000          # HTTP, bindeado a localhost, servido vía NGINX
 forgejo_host: 127.0.0.1
-forgejo_ssh_port: 2222      # git over SSH, exposed on the LAN (container's own sshd)
-# Bind git-SSH to the LAN IP, not 0.0.0.0, so it is reachable on the LAN but not
-# on any other interface (e.g. a future VPN/WAN). Defaults to the host's primary
-# IPv4; override in host_vars if the LAN NIC isn't the default route.
+forgejo_ssh_port: 2222      # git sobre SSH, expuesto en la LAN (sshd propio del container)
+# Se bindea git-SSH a la IP de la LAN, no a 0.0.0.0, para que sea accesible en la LAN
+# pero no en ninguna otra interfaz (ej. una futura VPN/WAN). Por defecto toma la IPv4
+# primaria del host; sobreescribir en host_vars si la NIC de la LAN no es la ruta por defecto.
 forgejo_ssh_host: "{{ ansible_default_ipv4.address }}"
 
-# Application configuration
-# The -rootless image variant runs directly as the git user (no s6/root drop),
-# which is the supported way to run under rootless Podman with UserNS=keep-id.
-forgejo_version: "11.0.1-rootless"   # Pinned image tag
+# La variante de imagen -rootless corre directamente como el usuario git (sin s6/drop
+# de root), que es la forma soportada de correr bajo Podman rootless con UserNS=keep-id.
+forgejo_version: "11.0.1-rootless"   # Tag de imagen pineado
 forgejo_image: "codeberg.org/forgejo/forgejo:{{ forgejo_version }}"
 forgejo_domain: "git.{{ nginx_domain }}"
 forgejo_root_url: "https://{{ forgejo_domain }}/"
 forgejo_timezone: America/Los_Angeles
 forgejo_disable_registration: true
 
-# Admin user (created post-deploy). Password MUST be set via vault in host_vars.
+# Usuario admin (creado tras el deploy). La contraseña DEBE setearse vía vault en host_vars.
 forgejo_admin_user: ndelucca
 forgejo_admin_email: ndelucca@protonmail.com
 forgejo_admin_password: ""
 
-# Service configuration
 forgejo_service_name: forgejo  # unit forgejo.container -> forgejo.service
 forgejo_service_enabled: true
 forgejo_service_state: started
 
-# Firewall settings
 forgejo_firewall_zone: FedoraServer
-forgejo_firewall_enabled: true  # true: the git SSH port must be opened
+forgejo_firewall_enabled: true  # true: hay que abrir el puerto de git SSH
 
-# SELinux configuration
 forgejo_manage_selinux: true
 
-# Pull mirrors: Forgejo mirrors remote repos (GitHub) with periodic fetch.
-# The home-server is not reachable from GitHub, but GitHub is always reachable
-# from the server, so syncing is outbound (Forgejo pulls). GitHub is the source
-# of truth; the Forgejo repos are read-only mirrors (overwritten on each sync).
-forgejo_pull_mirror_enabled: false                  # master switch (turn on in host_vars)
+# Pull mirrors: Forgejo replica repos remotos (GitHub) con fetch periódico.
+# El home-server no es accesible desde GitHub, pero GitHub siempre lo es desde el
+# server, así que la sincronización es saliente (Forgejo hace pull). GitHub es la
+# fuente de verdad; los repos en Forgejo son mirrors de solo lectura (se sobreescriben
+# en cada sync).
+forgejo_pull_mirror_enabled: false                  # interruptor maestro (activar en host_vars)
 forgejo_mirror_interval: "8h0m0s"                   # >= [mirror].MIN_INTERVAL (10m)
-forgejo_github_user: "{{ forgejo_admin_user }}"     # whose GitHub repos to enumerate
-forgejo_mirror_owner: "{{ forgejo_admin_user }}"    # owner of the mirrors inside Forgejo
+forgejo_github_user: "{{ forgejo_admin_user }}"     # de quién enumerar los repos de GitHub
+forgejo_mirror_owner: "{{ forgejo_admin_user }}"    # dueño de los mirrors dentro de Forgejo
 forgejo_mirror_include_forks: true
 forgejo_mirror_include_archived: true
-forgejo_mirror_max_pages: 5                          # pagination cap (5*100=500 repos); warns if full
-forgejo_mirror_force_recreate: []                   # repos to delete+recreate as mirror (destructive, one-time)
+forgejo_mirror_max_pages: 5                          # tope de paginación (5*100=500 repos); avisa si se llena
+forgejo_mirror_force_recreate: []                   # repos a borrar+recrear como mirror (destructivo, una sola vez)
 
-# GitHub Personal Access Token (classic: scope 'repo'; or fine-grained: Contents
-# Read + Metadata Read). REQUIRED when forgejo_pull_mirror_enabled — set via vault.
+# GitHub Personal Access Token (classic: scope 'repo'; o fine-grained: Contents
+# Read + Metadata Read). REQUERIDO cuando forgejo_pull_mirror_enabled — setear vía vault.
 forgejo_github_token: ""
 
-# container_base contract — feeds the shared install + handlers (see container_base).
+# Contrato de container_base — alimenta el install + handlers compartidos (ver container_base).
 container_user: "{{ forgejo_user }}"
 container_uid: "{{ forgejo_uid }}"
 container_service_name: "{{ forgejo_service_name }}"
 container_selinux_paths: "{{ [forgejo_data_dir, forgejo_config_dir] }}"
-# container_base service-step contract (enable + wait_for). Forgejo's first
-# start can be slow, so allow a longer wait timeout.
+# Contrato del service-step de container_base (enable + wait_for). El primer arranque
+# de Forgejo puede ser lento, así que se permite un timeout de espera más largo.
 container_host: "{{ forgejo_host }}"
 container_port: "{{ forgejo_port }}"
 container_service_enabled: "{{ forgejo_service_enabled }}"

@@ -1,5 +1,5 @@
 ---
-# Deploy Quadlet unit files
+# Despliega los archivos de unit de Quadlet
 
 - name: Deploy Immich Quadlet .kube unit
   ansible.builtin.template:

@@ -1,5 +1,5 @@
 # {{ ansible_managed }}
-# restic exclude patterns — regenerable or inconsistent-at-rest data.
+# Patrones de exclusión de restic: datos regenerables o inconsistentes en reposo.
 {% for pattern in backup_excludes %}
 {{ pattern }}
 {% endfor %}

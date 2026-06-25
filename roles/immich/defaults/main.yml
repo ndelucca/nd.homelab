@@ -1,65 +1,58 @@
 ---
-# Default variables for Immich role
+# Variables por defecto del role Immich
 
-# Service user configuration
 immich_user: ndelucca
 immich_group: ndelucca
-immich_uid: 1000  # Obtained dynamically via getent in preflight
+immich_uid: 1000  # Se obtiene dinámicamente vía getent en preflight
 
-# Directory configuration — state on the appdata disk, photo library on the
-# shared app media root (both defined in group_vars/homeservers/storage.yml).
+# Directorios — el estado vive en el disco de appdata, la biblioteca de fotos en el
+# media root compartido de las apps (ambos definidos en group_vars/homeservers/storage.yml).
 immich_base_dir: "{{ app_data_root }}/immich"
 immich_upload_location: "{{ app_media_root }}/Gallery"
 immich_db_data_location: "{{ immich_base_dir }}/postgres"
 immich_config_dir: "{{ immich_base_dir }}/config"
 immich_model_cache: "{{ immich_base_dir }}/model-cache"
 
-# Podman configuration
 immich_pod_name: immich
-immich_quadlet_dir: /etc/containers/systemd/users  # System-managed user containers
+immich_quadlet_dir: /etc/containers/systemd/users  # Containers de usuario gestionados por el sistema
 
-# Network configuration
 immich_port: 2283
 immich_host: 127.0.0.1
 
-# Application configuration. Pin to an exact release for reproducibility; bump
-# this (and immich_cli_version to match) to upgrade. See the upstream releases.
+# Se pinea a un release exacto por reproducibilidad; bumpear esto (y immich_cli_version
+# para que coincida) para actualizar. Ver los releases de upstream.
 immich_version: v2.7.5
-immich_cli_version: "2.7.5"  # keep in sync with immich_version
+immich_cli_version: "2.7.5"  # mantener en sync con immich_version
 immich_timezone: America/Los_Angeles
 
-# Database configuration. immich_db_password MUST be supplied via vault
-# (see group_vars/homeservers/vault.yml); preflight asserts it is set. We do NOT
-# generate a random default — that would silently rotate the Postgres password
-# on every run and lock the app out of its own database.
+# immich_db_password DEBE proveerse vía vault (ver group_vars/homeservers/vault.yml);
+# preflight verifica que esté seteada. NO generamos un default aleatorio — eso rotaría
+# silenciosamente la contraseña de Postgres en cada corrida y dejaría a la app afuera
+# de su propia base de datos.
 immich_db_username: immich
 immich_db_database: immich
 immich_db_password: ""
 
-# Service configuration
 immich_service_name: immich-pod
 immich_service_enabled: true
 immich_service_state: started
 
-# Firewall settings
 immich_firewall_zone: FedoraServer
-immich_firewall_enabled: false  # False because NGINX handles external access
+immich_firewall_enabled: false  # false porque NGINX maneja el acceso externo
 
-# SELinux configuration
 immich_manage_selinux: true
 
-# Podman images
 immich_server_image: "ghcr.io/immich-app/immich-server:{{ immich_version }}"
 immich_ml_image: "ghcr.io/immich-app/immich-machine-learning:{{ immich_version }}"
 immich_redis_image: docker.io/valkey/valkey:9-alpine
 immich_postgres_image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
 
-# container_base contract — feeds the shared install + handlers (see container_base).
+# Contrato de container_base — alimenta el install + handlers compartidos (ver container_base).
 container_user: "{{ immich_user }}"
 container_uid: "{{ immich_uid }}"
 container_service_name: "{{ immich_service_name }}"
 container_selinux_paths: "{{ [immich_upload_location, immich_db_data_location, immich_model_cache] }}"
-# container_base service-step contract (enable + wait_for).
+# Contrato del service-step de container_base (enable + wait_for).
 container_host: "{{ immich_host }}"
 container_port: "{{ immich_port }}"
 container_service_enabled: "{{ immich_service_enabled }}"

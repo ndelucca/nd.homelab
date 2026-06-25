@@ -1,16 +1,12 @@
-# ========================================
-# CLOUD TORRENT SUBDOMAIN
-# ========================================
-# Uses Server-Sent Events (SSE) on /sync, not WebSockets — no upgrade headers.
+# Usa Server-Sent Events (SSE) en /sync, no WebSockets, así que no lleva headers
+# de upgrade.
 
-# HTTP - redirect to HTTPS
 server {
     listen 80;
     server_name torrent.{{ nginx_domain }};
     return 301 https://$host$request_uri;
 }
 
-# HTTPS
 server {
     listen 443 ssl;
     http2 on;
@@ -19,7 +15,7 @@ server {
     ssl_certificate {{ nginx_ssl_certificate }};
     ssl_certificate_key {{ nginx_ssl_certificate_key }};
 
-    # Shared TLS security headers (single source: ssl_headers.inc.j2)
+    # Headers de seguridad TLS compartidos (fuente única: ssl_headers.inc.j2)
     include {{ nginx_ssl_headers_snippet }};
 
     location / {
@@ -32,7 +28,7 @@ server {
         proxy_http_version 1.1;
     }
 
-    # Server-Sent Events (SSE) endpoint for real-time updates
+    # Endpoint de Server-Sent Events (SSE) para actualizaciones en tiempo real
     location /sync {
         proxy_pass http://127.0.0.1:{{ nginx_cloud_torrent_port }}/sync;
         proxy_set_header Host $host;
@@ -40,7 +36,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        # SSE specific settings
+        # Ajustes específicos de SSE
         proxy_buffering off;
         proxy_cache off;
         proxy_read_timeout 3600s;

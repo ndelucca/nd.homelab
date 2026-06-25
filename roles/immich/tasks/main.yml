@@ -1,5 +1,5 @@
 ---
-# Main entry point for Immich role
+# Punto de entrada principal del role Immich
 
 - name: Include preflight checks
   ansible.builtin.import_tasks: preflight.yml
@@ -17,9 +17,9 @@
   ansible.builtin.import_tasks: quadlet.yml
   tags: ['immich', 'quadlet']
 
-# SELinux contexts must be applied BEFORE the container starts: the immich pod
-# mounts hostPath volumes with no :Z relabel, so on an enforcing host the first
-# start is denied access unless the file contexts already exist.
+# Los contextos SELinux deben aplicarse ANTES de que arranque el container: el pod de
+# immich monta volúmenes hostPath sin relabel :Z, así que en un host en modo enforcing
+# el primer arranque se queda sin acceso a menos que los contextos de archivo ya existan.
 - name: Configure SELinux (shared container_base step)
   ansible.builtin.include_role:
     name: container_base

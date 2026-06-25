@@ -1,6 +1,4 @@
 ---
-# Configure SELinux for FileBrowser
-
 - name: Install SELinux policy packages
   ansible.builtin.dnf:
     name:

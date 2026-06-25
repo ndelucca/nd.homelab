@@ -1,11 +1,11 @@
 ---
-# Install restic and the tools the backup script relies on.
+# Instala restic y las herramientas de las que depende el script de backup.
 
 - name: Install restic and SQLite client
   ansible.builtin.dnf:
     name:
-      - restic    # backup engine (dedup + snapshots + retention)
-      - sqlite    # sqlite3 CLI for consistent online .backup of app DBs
+      - restic    # motor de backup (dedup + snapshots + retención)
+      - sqlite    # CLI sqlite3 para el .backup online consistente de las DBs de las apps
     state: present
   become: true
 

@@ -1,8 +1,8 @@
 ---
-# Deploy Quadlet unit files.
+# Despliega los archivos de unit de Quadlet.
 
-# Migration: the role previously shipped a .kube pod (uptime-kuma-pod.service).
-# Stop and remove the legacy unit so only the new uptime-kuma.service remains.
+# Migración: el role antes shippeaba un pod .kube (uptime-kuma-pod.service).
+# Se detiene y elimina la unit legacy para que solo quede el nuevo uptime-kuma.service.
 - name: Stop legacy uptime-kuma-pod service if present
   ansible.builtin.systemd:
     name: uptime-kuma-pod.service

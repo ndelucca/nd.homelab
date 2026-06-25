@@ -1,12 +1,12 @@
 ---
-# Manage NGINX service (enable but do NOT start yet)
+# Gestiona el servicio NGINX (lo habilita pero NO lo arranca todavía).
 
 - name: Enable NGINX service
   ansible.builtin.systemd:
     name: nginx
     enabled: true
   become: true
-  # Enable only — do NOT start here. NGINX is started by site.yml post_tasks,
-  # after AdGuard has been configured (its admin moves to 127.0.0.1:8081, freeing
-  # the ports). Centralizing the start there keeps the ordering explicit instead
-  # of relying on a cross-role handler in the AdGuard role.
+  # Solo habilitar, NO arrancar acá. NGINX lo arrancan los post_tasks de
+  # site.yml, después de configurar AdGuard (su admin se muda a 127.0.0.1:8081,
+  # liberando los puertos). Centralizar el arranque ahí mantiene el orden
+  # explícito en vez de depender de un handler cross-role del role de AdGuard.

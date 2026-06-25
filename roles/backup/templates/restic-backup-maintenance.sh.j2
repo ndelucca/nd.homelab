@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # {{ ansible_managed }}
-# Weekly maintenance: prune unreferenced data and verify repository integrity.
-# Prune is expensive and locks the repo, so it runs off-peak, separate from the
-# daily backup.
+# Mantenimiento semanal: prune de datos no referenciados y verificación de la
+# integridad del repositorio. El prune es costoso y bloquea el repo, así que
+# corre fuera de horario pico, separado del backup diario.
 set -euo pipefail
 
 export RESTIC_REPOSITORY="{{ backup_repo }}"
@@ -16,19 +16,20 @@ mountpoint -q "{{ storage_backup_disk }}" || die "backup disk {{ storage_backup_
 log "pruning unreferenced data"
 restic prune
 
-# Rotate which slice of pack data we re-read each week. restic's m/n form reads
-# partition m of n (deterministic by pack ID); advancing m by ISO week number
-# means the WHOLE repo is bitrot-verified over {{ backup_check_read_data_partitions }} weeks,
-# instead of re-reading the same packs every week as a fixed N% would.
+# Rota qué porción de los packs se vuelve a leer cada semana. La forma m/n de
+# restic lee la partición m de n (determinística por pack ID); avanzar m según el
+# número de semana ISO hace que TODO el repo se verifique contra bitrot a lo largo
+# de {{ backup_check_read_data_partitions }} semanas, en lugar de releer los mismos packs cada semana como
+# haría un N% fijo.
 parts={{ backup_check_read_data_partitions }}
-week=$((10#$(date +%V)))          # ISO week 1..53 (10# forces base-10, no octal)
-part=$(( week % parts + 1 ))      # 1..parts, advances each week
+week=$((10#$(date +%V)))          # semana ISO 1..53 (10# fuerza base-10, sin octal)
+part=$(( week % parts + 1 ))      # 1..parts, avanza cada semana
 log "checking repository integrity (+ re-reading pack subset ${part}/${parts} for bitrot)"
 restic check --read-data-subset="${part}/${parts}"
 
-# --- Backup disk usage guard ------------------------------------------------
-# A silently filling backup disk is the classic way backups stop working, so
-# warn (and push an alert) once it crosses the threshold.
+# Un disco de backup que se llena en silencio es la forma clásica en que los
+# backups dejan de funcionar, así que se avisa (y se manda una alerta) cuando
+# cruza el umbral.
 usage=$(df --output=pcent "{{ storage_backup_disk }}" 2>/dev/null | tail -1 | tr -dc '0-9')
 if [ -n "${usage}" ] && [ "${usage}" -ge {{ backup_disk_usage_warn_percent }} ]; then
   log "WARNING: backup disk {{ storage_backup_disk }} at ${usage}% (>= {{ backup_disk_usage_warn_percent }}%)"

@@ -1,8 +1,7 @@
-# Uptime-Kuma Quadlet Unit File
 # Managed by Ansible - DO NOT EDIT MANUALLY
-# Single-container app: a plain .container unit (was a .kube pod with one
-# container). SELinux labeling of the data volume is handled by the role's
-# selinux.yml (container_file_t), so no :z/:Z relabel is requested here.
+# App de un solo container: una unit .container simple (antes era un pod .kube con
+# un container). El etiquetado SELinux del volumen de datos lo maneja el
+# selinux.yml del role (container_file_t), así que acá no se pide relabel :z/:Z.
 
 [Unit]
 Description=Uptime-Kuma Monitoring
@@ -14,11 +13,11 @@ Wants=network-online.target
 Image={{ monitoring_image }}
 ContainerName=uptime-kuma
 
-# Share the host network namespace so the monitor can reach every service
-# directly on the host loopback (127.0.0.1:<port>) — services bind to localhost
-# only, which a bridged rootless container cannot reach. Uptime-Kuma is pinned to
-# {{ monitoring_host }}:{{ monitoring_port }} via the env vars below, so it still
-# listens on loopback only and stays behind NGINX (status.<domain>).
+# Comparte el network namespace del host para que el monitor pueda alcanzar cada
+# servicio directamente en el loopback del host (127.0.0.1:<port>): los servicios
+# bindean solo a localhost, algo que un container rootless en bridge no puede
+# alcanzar. Uptime-Kuma queda fijado a {{ monitoring_host }}:{{ monitoring_port }} vía las env vars de
+# abajo, así que sigue escuchando solo en loopback y queda detrás de NGINX (status.<domain>).
 Network=host
 Environment=UPTIME_KUMA_HOST={{ monitoring_host }}
 Environment=UPTIME_KUMA_PORT={{ monitoring_port }}

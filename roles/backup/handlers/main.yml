@@ -1,10 +1,10 @@
 ---
-# Handlers for the backup role.
+# Handlers del role backup.
 
-# Explicit `systemctl --user daemon-reload`: the systemd module's user-scope
-# daemon_reload does not reliably regenerate units, whereas the command does.
-# The handler name is unique per role so it never collides with other roles'
-# reload handlers (a duplicate name silently suppresses one of them).
+# `systemctl --user daemon-reload` explícito: el daemon_reload en user-scope del
+# módulo systemd no regenera las units de forma confiable, mientras que el comando
+# sí. El nombre del handler es único por role para que nunca colisione con los
+# handlers de reload de otros roles (un nombre duplicado suprime uno en silencio).
 - name: backup daemon-reload-user  # noqa: command-instead-of-module
   ansible.builtin.command:
     cmd: systemctl --user daemon-reload

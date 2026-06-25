@@ -1,6 +1,4 @@
 ---
-# Configure Cloud Torrent systemd service
-
 - name: Deploy Cloud Torrent systemd service file
   ansible.builtin.template:
     src: cloud-torrent.service.j2

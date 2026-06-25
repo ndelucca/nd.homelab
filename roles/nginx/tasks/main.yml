@@ -1,6 +1,4 @@
 ---
-# Main entry point for NGINX reverse proxy role
-
 - name: Install NGINX
   ansible.builtin.import_tasks: install.yml
   tags: ['nginx', 'install']

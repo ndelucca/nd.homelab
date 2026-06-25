@@ -1,6 +1,6 @@
 ---
-# Handlers for this role are provided by the shared container_base role (pulled
-# in from tasks/install.yml). This role only supplies the contract vars in
-# defaults/main.yml (container_user/uid/service_name/selinux_paths) and notifies
-# the generic handlers: `container daemon-reload-user`, `container restart`,
+# Los handlers de este role los provee el role compartido container_base (traído
+# desde tasks/install.yml). Este role solo aporta las vars de contrato en
+# defaults/main.yml (container_user/uid/service_name/selinux_paths) y notifica los
+# handlers genéricos: `container daemon-reload-user`, `container restart`,
 # `container apply selinux context`.

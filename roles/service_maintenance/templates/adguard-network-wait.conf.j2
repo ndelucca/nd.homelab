@@ -1,14 +1,13 @@
-# Drop-in to ensure AdGuard waits for network and auto-restarts on failure
+# Drop-in para que AdGuard espere a la red y se reinicie ante fallos.
 [Unit]
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-# Wait until the LAN gateway actually answers (bounded), instead of a fixed
-# blind sleep. Exits as soon as the gateway pings; gives up after the bounded
-# number of tries and lets AdGuard start anyway (readiness is best-effort, must
-# never wedge DNS/DHCP startup).
+# Espera (acotada) a que el gateway de la LAN responda de verdad, en vez de un
+# sleep ciego fijo. Sale apenas el gateway contesta al ping; tras agotar la
+# cantidad de intentos deja arrancar a AdGuard igual: la readiness es best-effort
+# y nunca debe trabar el arranque de DNS/DHCP.
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 {{ service_maintenance_network_wait_tries }}); do ping -c1 -W1 {{ service_maintenance_gateway_ip }} >/dev/null 2>&1 && exit 0; sleep 1; done; exit 0'
-# Auto-restart on failure
 Restart=on-failure
 RestartSec={{ service_maintenance_adguard_restart_delay }}

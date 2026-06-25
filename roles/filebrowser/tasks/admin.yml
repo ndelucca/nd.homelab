@@ -1,12 +1,13 @@
 ---
-# Seed the INITIAL FileBrowser admin user. FileBrowser keeps users in its
-# database (bbolt), NOT in config.json, so without this step the vaulted
-# filebrowser_admin_password would never be applied — the service would just
-# auto-create a default admin/admin on first start.
+# Siembra el usuario admin INICIAL de FileBrowser. FileBrowser guarda los usuarios
+# en su base de datos (bbolt), NO en config.json, así que sin este paso el
+# filebrowser_admin_password del vault nunca se aplicaría — el servicio
+# simplemente auto-crearía un admin/admin por defecto en el primer arranque.
 #
-# This runs once, BEFORE the service first starts, so there is no exclusive
-# bbolt DB lock held by the running server to contend with. Once the DB exists
-# it is a no-op; change the password afterwards from the FileBrowser UI.
+# Esto corre una sola vez, ANTES de que el servicio arranque por primera vez, así
+# que no hay un lock exclusivo de la DB bbolt tomado por el server corriendo con el
+# que pelear. Una vez que la DB existe, no hace nada; cambiar el password después
+# desde la UI de FileBrowser.
 
 - name: Check if the FileBrowser database already exists
   ansible.builtin.stat:
@@ -45,9 +46,10 @@
   when: not filebrowser_db_stat.stat.exists
   changed_when: true
 
-# Opt-in rotation for an EXISTING DB. bbolt holds an exclusive lock while the
-# server runs, so stop it first; service.yml restarts it afterwards. Gated by
-# filebrowser_force_admin_password so normal converges never disturb the server.
+# Rotación opt-in para una DB EXISTENTE. bbolt mantiene un lock exclusivo mientras
+# el server corre, así que primero hay que frenarlo; service.yml lo reinicia
+# después. Gobernado por filebrowser_force_admin_password para que los converges
+# normales nunca molesten al server.
 - name: Stop FileBrowser to rotate the admin password
   ansible.builtin.systemd:
     name: "{{ filebrowser_service_name }}"

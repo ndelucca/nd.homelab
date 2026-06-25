@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # {{ ansible_managed }}
-# Idempotently seed Uptime-Kuma monitors directly into its SQLite DB. Only
-# monitors whose name does not already exist are inserted, so re-running is safe.
-# Must run while the uptime-kuma container is stopped (exclusive DB access).
+# Siembra de forma idempotente los monitors de Uptime-Kuma directamente en su DB
+# SQLite. Solo se insertan los monitors cuyo nombre todavía no existe, así que
+# re-correr es seguro. Debe correr con el container uptime-kuma detenido (acceso
+# exclusivo a la DB).
 import json
 import sqlite3
 

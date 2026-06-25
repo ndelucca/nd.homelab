@@ -1,19 +1,19 @@
 ---
-# Safely update the MainsailOS 3D-printer Pi.
+# Actualizar de forma segura la Pi con MainsailOS (impresora 3D).
 #
-# Updates the Klipper stack (klipper, moonraker, mainsail, crowsnest) through
-# Moonraker's update API - the same thing the Mainsail "Update" button does -
-# plus the Debian OS packages. Backs up printer_data first, never reinstalls,
-# never flashes the MCU, and aborts mid-print.
+# Actualiza el stack de Klipper (klipper, moonraker, mainsail, crowsnest) a través
+# de la API de actualización de Moonraker — lo mismo que hace el botón "Update" de
+# Mainsail — más los paquetes del SO Debian. Primero hace backup de printer_data,
+# nunca reinstala, nunca flashea el MCU y aborta si hay una impresión en curso.
 #
-# ALWAYS limit to the printer; never the Fedora server.
+# SIEMPRE limitar a la impresora; nunca al servidor Fedora.
 #
-# Usage:
+# Uso:
 #   ansible-playbook playbooks/mainsailos_update.yml -l ndelucca-raspberry-printer
 #   ansible-playbook playbooks/mainsailos_update.yml -l ndelucca-raspberry-printer --check
 #   ansible-playbook playbooks/mainsailos_update.yml -l ndelucca-raspberry-printer --tags backup
 #   ansible-playbook playbooks/mainsailos_update.yml -l ndelucca-raspberry-printer \
-#       -e mainsailos_reboot_if_required=false   # warn instead of auto-reboot
+#       -e mainsailos_reboot_if_required=false   # avisar en vez de auto-reiniciar
 
 - name: Update MainsailOS printer
   hosts: printers

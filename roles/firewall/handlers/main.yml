@@ -1,7 +1,5 @@
 ---
-# Handlers for Firewall role.
-#
-# No `reload firewalld` handler: every rule task uses `immediate: true` +
-# `permanent: true`, so changes apply to the running firewall AND persist in one
-# step. A reload would only re-read permanent config (redundant) and could drop
-# runtime-only state, so it is intentionally omitted.
+# Sin handler `reload firewalld`: cada tarea de regla usa `immediate: true` +
+# `permanent: true`, así que los cambios se aplican al firewall en ejecución Y
+# persisten en un solo paso. Un reload solo releería la config permanente
+# (redundante) y podría descartar estado runtime-only, por eso se omite a propósito.

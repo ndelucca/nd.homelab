@@ -1,6 +1,6 @@
 ---
-# Install Podman and dependencies (shared scaffolding in container_base).
-# include_role also brings in the shared container handlers used below.
+# Instala Podman y sus dependencias (scaffolding compartido en container_base).
+# include_role también trae los handlers de container compartidos usados abajo.
 
 - name: Install the rootless Podman runtime and shared container handlers
   ansible.builtin.include_role:

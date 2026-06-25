@@ -1,139 +1,142 @@
-# Forgejo Ansible Role
+# Role de Ansible: Forgejo
 
-This role deploys [Forgejo](https://forgejo.org/) — a self-hosted, lightweight
-git forge — as a rootless Podman container managed by systemd Quadlet on Fedora.
+Este role despliega [Forgejo](https://forgejo.org/) — un git forge liviano y
+self-hosted — como contenedor Podman rootless gestionado por systemd Quadlet en
+Fedora.
 
-It follows the same pattern as the other container roles in this repository
-(Immich, Kavita, Home Assistant): the container listens on `127.0.0.1` and is
-served to the LAN through the central NGINX reverse proxy, with a dedicated
-subdomain and an AdGuard DNS rewrite.
+Sigue el mismo patrón que los otros roles de contenedor de este repositorio
+(Immich, Kavita, Home Assistant): el contenedor escucha en `127.0.0.1` y se sirve
+a la LAN a través del reverse proxy central de NGINX, con un subdominio dedicado y
+un rewrite de DNS de AdGuard.
 
-## Features
+## Características
 
-- Rootless Podman container via systemd Quadlet (`.container` unit)
-- SQLite backend (single container, no external database)
-- HTTP served behind NGINX at `https://git.ndelucca.dedyn.io`
-- Git over SSH on a dedicated port (`2222`) using the container's **own** SSH
-  server — the host `sshd` (port 22) is never touched
-- Idempotent admin-user creation
-- Persistent data under `/srv/forgejo/data`
-- SELinux and firewall integration
-- Image pinned by tag (no `AutoUpdate`; bump `forgejo_version` and re-run to
-  upgrade — `playbooks/update.yml` only reports when a newer image exists)
+- Contenedor Podman rootless vía systemd Quadlet (unit `.container`)
+- Backend SQLite (un solo contenedor, sin base de datos externa)
+- HTTP servido detrás de NGINX en `https://git.ndelucca.dedyn.io`
+- Git sobre SSH en un puerto dedicado (`2222`) usando el servidor SSH **propio**
+  del contenedor — el `sshd` del host (puerto 22) nunca se toca
+- Creación idempotente del usuario admin
+- Datos persistentes bajo `/srv/forgejo/data`
+- Integración con SELinux y firewall
+- Imagen pinned por tag (sin `AutoUpdate`; subí `forgejo_version` y re-corré para
+  actualizar — `playbooks/update.yml` solo reporta cuándo hay una imagen más nueva)
 
-## Requirements
+## Requisitos
 
-- Fedora with Podman 4.4+ (Quadlet support)
+- Fedora con Podman 4.4+ (soporte de Quadlet)
 - Ansible 2.13+
-- Collections: `community.general`, `ansible.posix`
+- Colecciones: `community.general`, `ansible.posix`
 
-## Role Variables
+## Variables del role
 
-| Variable | Default | Description |
+| Variable | Default | Descripción |
 |----------|---------|-------------|
-| `forgejo_user` / `forgejo_group` | `ndelucca` | Rootless service user/group |
-| `forgejo_base_dir` | `/srv/forgejo` | Base directory |
-| `forgejo_data_dir` | `{{ forgejo_base_dir }}/data` | Persistent data (repos, SQLite, config) |
-| `forgejo_port` | `3000` | HTTP port (bound to `127.0.0.1`, behind NGINX) |
-| `forgejo_host` | `127.0.0.1` | HTTP bind address |
-| `forgejo_ssh_port` | `2222` | Git SSH port exposed on the LAN |
-| `forgejo_version` | `11.0.1` | Pinned image tag |
-| `forgejo_image` | `codeberg.org/forgejo/forgejo:{{ forgejo_version }}` | Container image |
-| `forgejo_domain` | `git.ndelucca.dedyn.io` | Public domain |
-| `forgejo_root_url` | `https://{{ forgejo_domain }}/` | External root URL |
-| `forgejo_admin_user` | `ndelucca` | Initial admin username |
-| `forgejo_admin_email` | `ndelucca@protonmail.com` | Initial admin email |
-| `forgejo_admin_password` | `""` | **Required** — set via Ansible Vault in host_vars |
-| `forgejo_disable_registration` | `true` | Disable open self-registration |
-| `forgejo_firewall_enabled` | `true` | Open the git SSH port in firewalld |
-| `forgejo_manage_selinux` | `true` | Manage SELinux file contexts |
+| `forgejo_user` / `forgejo_group` | `ndelucca` | Usuario/grupo de servicio rootless |
+| `forgejo_base_dir` | `/srv/forgejo` | Directorio base |
+| `forgejo_data_dir` | `{{ forgejo_base_dir }}/data` | Datos persistentes (repos, SQLite, config) |
+| `forgejo_port` | `3000` | Puerto HTTP (bound a `127.0.0.1`, detrás de NGINX) |
+| `forgejo_host` | `127.0.0.1` | Dirección de bind HTTP |
+| `forgejo_ssh_port` | `2222` | Puerto SSH de git expuesto en la LAN |
+| `forgejo_version` | `11.0.1` | Tag de imagen pinned |
+| `forgejo_image` | `codeberg.org/forgejo/forgejo:{{ forgejo_version }}` | Imagen del contenedor |
+| `forgejo_domain` | `git.ndelucca.dedyn.io` | Dominio público |
+| `forgejo_root_url` | `https://{{ forgejo_domain }}/` | Root URL externa |
+| `forgejo_admin_user` | `ndelucca` | Usuario admin inicial |
+| `forgejo_admin_email` | `ndelucca@protonmail.com` | Email del admin inicial |
+| `forgejo_admin_password` | `""` | **Requerido** — setear vía Ansible Vault en vault.yml |
+| `forgejo_disable_registration` | `true` | Deshabilitar el auto-registro abierto |
+| `forgejo_firewall_enabled` | `true` | Abrir el puerto SSH de git en firewalld |
+| `forgejo_manage_selinux` | `true` | Gestionar los contextos de archivo de SELinux |
 
 ## Tags
 
 `forgejo`, `preflight`, `install`, `quadlet`, `service`, `admin`, `mirror`, `selinux`
 
-## Usage
+## Uso
 
 ```bash
-# Deploy Forgejo only
+# Desplegar solo Forgejo
 ansible-playbook playbooks/site.yml -l ndelucca-server --tags forgejo
 
-# As part of the full site
+# Como parte del site completo
 ansible-playbook playbooks/site.yml -l ndelucca-server
 ```
 
-## SSH vs. the host sshd
+## SSH vs. el sshd del host
 
-The git SSH service is the SSH server **inside** the Forgejo container, published
-on the host as port `2222`. The system `sshd` on port `22` (your normal shell
-access to the server) is completely independent and is never reconfigured or
-restarted by this role. Firewalld only *adds* a rule for `2222`.
+El servicio SSH de git es el servidor SSH que corre **dentro** del contenedor de
+Forgejo, publicado en el host como puerto `2222`. El `sshd` del sistema en el
+puerto `22` (tu acceso de shell normal al servidor) es completamente independiente
+y este role nunca lo reconfigura ni lo reinicia. Firewalld solo *agrega* una regla
+para el `2222`.
 
-## Mirroring GitHub repositories (pull mirrors)
+## Espejar repositorios de GitHub (pull mirrors)
 
-The home-server is local and **not reachable from GitHub**, but GitHub is always
-reachable **from** the server. So syncing is done with **pull mirrors**: Forgejo
-reaches out to GitHub and fetches changes periodically. In this model **GitHub is
-the source of truth** and the Forgejo repos are **read-only mirrors** — they are
-overwritten on every sync, so you push to GitHub, not to Forgejo.
+El home-server es local y **no es accesible desde GitHub**, pero GitHub siempre es
+accesible **desde** el servidor. Por eso la sincronización se hace con **pull
+mirrors**: Forgejo sale hacia GitHub y trae los cambios periódicamente. En este
+modelo **GitHub es la fuente de verdad** y los repos de Forgejo son **mirrors de
+solo lectura** — se sobrescriben en cada sync, así que pusheás a GitHub, no a
+Forgejo.
 
-The role enumerates all of the user's GitHub repositories (including private,
-forks and archived) and creates each one in Forgejo as a pull mirror via the
-`POST /api/v1/repos/migrate` API (`mirror: true`). It is idempotent: repos that
-already exist are skipped (HTTP 409).
+El role enumera todos los repositorios de GitHub del usuario (incluyendo privados,
+forks y archivados) y crea cada uno en Forgejo como pull mirror vía la API
+`POST /api/v1/repos/migrate` (`mirror: true`). Es idempotente: los repos que ya
+existen se saltean (HTTP 409).
 
-> **Push mirror vs. pull mirror are mutually exclusive on a repo.** A pull-mirror
-> repo is managed by Forgejo and cannot be pushed to. That is why a repo that was
-> created normally (e.g. an early manual `git push`) must be **deleted and
-> recreated** as a mirror — list it in `forgejo_mirror_force_recreate` for a
-> single run.
+> **Push mirror y pull mirror son mutuamente excluyentes en un repo.** Un repo
+> pull-mirror lo gestiona Forgejo y no se le puede pushear. Por eso un repo creado
+> normalmente (ej. un `git push` manual temprano) debe ser **borrado y recreado**
+> como mirror — listalo en `forgejo_mirror_force_recreate` para una sola corrida.
 
 ### Setup
 
-1. **Create a GitHub PAT.** Classic token with the `repo` scope (reads and clones
-   private repos), or a fine-grained token with **Contents: Read** +
-   **Metadata: Read** over all repositories.
+1. **Creá un PAT de GitHub.** Token clásico con el scope `repo` (lee y clona repos
+   privados), o un token fine-grained con **Contents: Read** + **Metadata: Read**
+   sobre todos los repositorios.
 
-2. **Encrypt it into host_vars** with the repo's vault password file:
+2. **Encriptalo en el vault** con el archivo de vault password del repo:
 
    ```bash
    ansible-vault encrypt_string --name forgejo_github_token '<PAT>'
    ```
 
-   Paste the resulting `!vault |` block into
-   `inventory/host_vars/ndelucca-server.yml` and set:
+   Pegá el bloque `!vault |` resultante en
+   `inventory/group_vars/homeservers/vault.yml`, y en
+   `inventory/group_vars/homeservers/services.yml` seteá:
 
    ```yaml
    forgejo_pull_mirror_enabled: true
    forgejo_mirror_force_recreate:
-     - environment        # one-time, then empty it
+     - environment        # una sola vez, luego vaciarlo
    ```
 
-3. **Deploy:**
+3. **Desplegá:**
 
    ```bash
    ansible-playbook playbooks/site.yml -l ndelucca-server --tags forgejo,mirror
    ```
 
-4. **Empty `forgejo_mirror_force_recreate`** after the first successful run (it is
-   destructive — it deletes the named Forgejo repos before recreating them).
+4. **Vaciá `forgejo_mirror_force_recreate`** después de la primera corrida exitosa
+   (es destructivo — borra los repos de Forgejo nombrados antes de recrearlos).
 
-### Relevant variables
+### Variables relevantes
 
-| Variable | Default | Description |
+| Variable | Default | Descripción |
 |----------|---------|-------------|
-| `forgejo_pull_mirror_enabled` | `false` | Master switch for GitHub mirroring |
-| `forgejo_github_token` | `""` | **Required** GitHub PAT (set via Vault) |
-| `forgejo_mirror_interval` | `8h0m0s` | Periodic fetch interval (≥ `MIN_INTERVAL`) |
-| `forgejo_mirror_include_forks` | `true` | Mirror forks |
-| `forgejo_mirror_include_archived` | `true` | Mirror archived repos |
-| `forgejo_mirror_max_pages` | `5` | Pagination cap (100/page); fails if exceeded |
-| `forgejo_mirror_force_recreate` | `[]` | Repos to delete+recreate as mirrors (one-time) |
+| `forgejo_pull_mirror_enabled` | `false` | Switch maestro del mirroring de GitHub |
+| `forgejo_github_token` | `""` | PAT de GitHub **requerido** (setear vía Vault) |
+| `forgejo_mirror_interval` | `8h0m0s` | Intervalo de fetch periódico (≥ `MIN_INTERVAL`) |
+| `forgejo_mirror_include_forks` | `true` | Espejar forks |
+| `forgejo_mirror_include_archived` | `true` | Espejar repos archivados |
+| `forgejo_mirror_max_pages` | `5` | Tope de paginación (100/página); falla si se excede |
+| `forgejo_mirror_force_recreate` | `[]` | Repos a borrar+recrear como mirrors (una sola vez) |
 
-Verify in the Web UI (`https://git.ndelucca.dedyn.io/ndelucca`) that the repos
-appear with the **mirror** badge; use "Synchronize Now" on a repo to confirm a
-GitHub commit lands in Forgejo.
+Verificá en la UI web (`https://git.ndelucca.dedyn.io/ndelucca`) que los repos
+aparezcan con el badge de **mirror**; usá "Synchronize Now" en un repo para
+confirmar que un commit de GitHub llega a Forgejo.
 
-## Author
+## Autor
 
 Naza

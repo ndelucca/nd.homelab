@@ -1,6 +1,7 @@
 ---
-# Reboot only when the OS says one is needed (new kernel / rpi firmware), and
-# only when allowed by the toggle. Then wait for SSH and Moonraker to come back.
+# Reinicia solo cuando el SO indica que hace falta (nuevo kernel / firmware de la
+# rpi), y solo cuando el toggle lo permite. Después espera a que vuelvan SSH y
+# Moonraker.
 
 - name: Check whether a reboot is required
   ansible.builtin.stat:

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # {{ ansible_managed }}
-# Backup freshness dead-man's-switch. Alerts (journal + optional ntfy, via the
-# notify script) when the latest restic snapshot is older than the threshold, or
-# when there are no snapshots at all. This catches the silent failure mode where
-# the backup timer simply never runs. Always exits 0 — its job is to ALERT, not
-# to fail; a stale state is reported through the notify path, not the exit code.
+# Dead-man's-switch de frescura del backup. Alerta (journal + ntfy opcional, vía
+# el script de notify) cuando el último snapshot de restic supera el umbral de
+# antigüedad, o cuando no hay ningún snapshot. Esto detecta el modo de falla
+# silencioso en el que el timer del backup simplemente nunca corre. Siempre sale
+# con 0: su trabajo es ALERTAR, no fallar; un estado obsoleto se reporta por la
+# vía de notify, no por el exit code.
 set -uo pipefail
 
 export RESTIC_REPOSITORY="{{ backup_repo }}"
@@ -21,9 +22,10 @@ if ! mountpoint -q "{{ storage_backup_disk }}"; then
   exit 0
 fi
 
-# Epoch of the most recent snapshot (0 if none / unparseable). restic timestamps
-# are RFC3339 with sub-second precision; strip the fractional part so Python's
-# fromisoformat accepts them regardless of digit count.
+# Epoch del snapshot más reciente (0 si no hay / no se puede parsear). Los
+# timestamps de restic son RFC3339 con precisión de sub-segundo; se quita la
+# parte fraccional para que fromisoformat de Python los acepte sin importar la
+# cantidad de dígitos.
 last_epoch=$(restic snapshots --json --latest 1 --no-lock 2>/dev/null \
   | python3 -c 'import sys,json,re,datetime
 try:

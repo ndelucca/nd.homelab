@@ -1,9 +1,7 @@
 ---
-# Setup RPMFusion repository for Jellyfin
-
-# Import the RPMFusion GPG keys BEFORE installing the release RPMs so their
-# signatures are actually verified (these 2020 keys cover Fedora 33-46).
-# rpm_key is idempotent: a no-op once the fingerprint is already present.
+# Se importan las claves GPG de RPMFusion ANTES de instalar los RPMs de release
+# para que sus firmas se verifiquen de verdad (estas claves de 2020 cubren Fedora
+# 33-46). rpm_key es idempotente: no hace nada si el fingerprint ya está presente.
 - name: Import RPMFusion GPG keys
   ansible.builtin.rpm_key:
     key: "https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-{{ item }}-fedora-2020"
@@ -13,12 +11,12 @@
     - free
     - nonfree
 
-# Installing the release RPM by URL is already idempotent: dnf reports "ok"
-# (not changed) once the rpmfusion-*-release package is present, so no manual
-# `dnf repolist` string-matching is needed (that matched 'rpmfusion-free' inside
-# 'rpmfusion-free-updates' and could skip the base repo, or never refresh the
-# cache when only nonfree was added). Register the installs and refresh the
-# cache only when a repo was actually added.
+# Instalar el RPM de release por URL ya es idempotente: dnf reporta "ok" (no
+# changed) una vez que el paquete rpmfusion-*-release está presente, así que no
+# hace falta el string-matching manual con `dnf repolist` (que matcheaba
+# 'rpmfusion-free' dentro de 'rpmfusion-free-updates' y podía saltear el repo
+# base, o nunca refrescar la cache cuando solo se agregaba nonfree). Se registran
+# las instalaciones y se refresca la cache solo cuando se agregó un repo de verdad.
 - name: Install RPMFusion Free repository
   ansible.builtin.dnf:
     name: "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_distribution_version }}.noarch.rpm"

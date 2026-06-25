@@ -3,18 +3,18 @@
 Description=Renew Let's Encrypt certificates via lego (DNS-01 / {{ acme_dns_provider }})
 Wants=network-online.target
 After=network-online.target
-# Alert (journal + optional ntfy) if a renewal fails, so certs never lapse silently.
+# Alerta (journal + ntfy opcional) si falla una renovación, para que los certs nunca venzan en silencio.
 OnFailure=lego-renew-notify.service
 
 [Service]
 Type=oneshot
 EnvironmentFile={{ acme_data_dir }}/desec.env
-# lego v5: `run` obtains or renews; --renew-days makes it a no-op until
-# <{{ acme_renew_days }} days remain, and --deploy-hook reloads on actual renewal.
+# lego v5: `run` obtiene o renueva; --renew-days lo vuelve un no-op hasta que
+# queden <{{ acme_renew_days }} días, y --deploy-hook recarga solo cuando hay renovación real.
 {% for cert in acme_certificates %}
 ExecStart={{ acme_lego_bin }} run --accept-tos --email {{ acme_email }} --dns {{ acme_dns_provider }}{% if acme_dns_resolvers %} --dns.resolvers {{ acme_dns_resolvers }}{% endif %}{% if acme_dns_disable_rns %} --dns.propagation.disable-rns{% endif %}{% if acme_staging %} --server https://acme-staging-v02.api.letsencrypt.org/directory{% endif %} --path {{ acme_data_dir }}{% for d in cert.domains %} --domains "{{ d }}"{% endfor %} --renew-days {{ acme_renew_days }} --reuse-key --deploy-hook "/usr/bin/systemctl reload {{ acme_reload_service }}"
 {% endfor %}
 {% if acme_manage_selinux and (ansible_selinux.status | default('disabled')) == 'enabled' %}
-# Re-label freshly written certs so {{ acme_reload_service }} can read them.
+# Re-etiqueta los certs recién escritos para que {{ acme_reload_service }} pueda leerlos.
 ExecStartPost=/sbin/restorecon -R {{ acme_data_dir }}
 {% endif %}

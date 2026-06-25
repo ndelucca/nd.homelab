@@ -1,7 +1,8 @@
 ---
-# Entry point for the mainsailos_update role.
-# Thin orchestration over the native update mechanisms (Moonraker update API +
-# apt). Order matters: back up BEFORE any change so everything is reversible.
+# Punto de entrada del role mainsailos_update.
+# Orquestación liviana sobre los mecanismos de update nativos (API de update de
+# Moonraker + apt). El orden importa: hacer backup ANTES de cualquier cambio para
+# que todo sea reversible.
 
 - name: Run preflight checks
   ansible.builtin.import_tasks: preflight.yml

@@ -1,7 +1,8 @@
 ---
-# Firewall role — data-driven. One zone (auto-detected from the LAN interface)
-# holds every rule. Open the few LAN-facing ports/services; close everything
-# that must stay behind NGINX. See defaults/main.yml for the rule lists.
+# Rol firewall, data-driven. Una sola zona (auto-detectada de la interfaz LAN)
+# contiene todas las reglas. Abre los pocos puertos/servicios de cara a la LAN y
+# cierra todo lo que debe quedar detrás de NGINX. Ver defaults/main.yml para las
+# listas de reglas.
 
 - name: Ensure firewalld is installed
   ansible.builtin.dnf:

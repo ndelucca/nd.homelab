@@ -1,6 +1,6 @@
 ---
-# Handle systemd-resolved conflicts on port 53
-# Based on: https://github.com/AdguardTeam/AdGuardHome/wiki/FAQ
+# Resuelve los conflictos de systemd-resolved en el puerto 53.
+# Basado en: https://github.com/AdguardTeam/AdGuardHome/wiki/FAQ
 
 - name: Create systemd-resolved configuration directory
   ansible.builtin.file:
@@ -29,9 +29,9 @@
     force: false
   become: true
 
-# `state: link` + `force: true` is idempotent: it only rewrites /etc/resolv.conf
-# when it isn't already the right symlink (replacing a regular file or wrong
-# link as needed), so it no longer churns / breaks resolution on every re-run.
+# `state: link` + `force: true` es idempotente: solo reescribe /etc/resolv.conf
+# cuando todavía no es el symlink correcto (reemplazando un archivo regular o un
+# link incorrecto según haga falta), así ya no genera churn / rompe la resolución en cada re-run.
 - name: Link resolv.conf to systemd-resolved
   ansible.builtin.file:
     src: /run/systemd/resolve/resolv.conf

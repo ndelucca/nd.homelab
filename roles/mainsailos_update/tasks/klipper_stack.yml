@@ -1,12 +1,15 @@
 ---
-# Update the Klipper ecosystem through Moonraker's update API - exactly what the
-# Mainsail "Update" button does. Moonraker handles git pulls, venv rebuilds,
-# system deps and service restarts in the correct order. Runs as the printer
-# user (become: false); 127.0.0.1 keeps requests on Moonraker's loopback trust.
+# Actualiza el ecosistema Klipper a través de la API de update de Moonraker:
+# exactamente lo que hace el botón "Update" de Mainsail. Moonraker maneja los git
+# pulls, las reconstrucciones de venv, las dependencias del sistema y los
+# reinicios de servicios en el orden correcto. Corre como el usuario de la
+# impresora (become: false); 127.0.0.1 mantiene las peticiones en la confianza de
+# loopback de Moonraker.
 
-# refresh=false uses Moonraker's already-populated cache (instant); refresh=true
-# forces a synchronous GitHub query for every component and routinely exceeds the
-# HTTP timeout. The actual POST /machine/update/full refreshes on its own anyway.
+# refresh=false usa el cache ya poblado de Moonraker (instantáneo); refresh=true
+# fuerza una consulta síncrona a GitHub por cada componente y rutinariamente
+# excede el timeout HTTP. De todos modos el POST /machine/update/full real
+# refresca por su cuenta.
 - name: Fetch the pre-update status
   ansible.builtin.uri:
     url: "{{ mainsailos_moonraker_url }}/machine/update/status?refresh=false"
@@ -50,11 +53,12 @@
               | list)
          ) }}
 
-# The POST blocks until the whole update finishes - which on a Pi 3B+ can take
-# well over an hour for a big jump (venv rebuilds compile wheels in swap). A
-# client-side HTTP timeout does NOT cancel the work: Moonraker runs the update in
-# its own task and keeps going after we disconnect. So we treat a timeout here as
-# non-fatal and let the busy-poll below be the authoritative wait.
+# El POST bloquea hasta que termina todo el update, que en una Pi 3B+ puede llevar
+# bastante más de una hora en un salto grande (las reconstrucciones de venv
+# compilan wheels en swap). Un timeout HTTP del lado del cliente NO cancela el
+# trabajo: Moonraker corre el update en su propia tarea y sigue después de que nos
+# desconectamos. Por eso tratamos un timeout acá como no fatal y dejamos que el
+# busy-poll de abajo sea la espera autoritativa.
 - name: Trigger the Moonraker update(s)
   ansible.builtin.uri:
     url: "{{ item }}"
@@ -77,8 +81,9 @@
     timeout: 30
     status_code: [200]
   register: mainsailos_poll
-  # Moonraker restarts itself mid-update, so the endpoint is briefly unreachable
-  # (status -1) - keep retrying until it answers 200 AND reports not busy.
+  # Moonraker se reinicia a sí mismo a mitad del update, así que el endpoint queda
+  # brevemente inalcanzable (status -1): reintentamos hasta que responda 200 Y
+  # reporte que no está ocupado.
   until: (mainsailos_poll.status | default(-1)) == 200 and not (mainsailos_poll.json.result.busy | default(true))
   retries: "{{ mainsailos_update_poll_retries }}"
   delay: "{{ mainsailos_update_poll_delay }}"

@@ -1,15 +1,16 @@
 ---
-# Install the rootless Podman runtime and enable user lingering. Shared by every
-# container role via `include_role: { name: container_base, tasks_from: install }`.
-# Requires `container_user` (see this role's defaults contract).
+# Instala el runtime rootless de Podman y habilita el lingering del usuario. Lo
+# comparten todos los roles de container vía
+# `include_role: { name: container_base, tasks_from: install }`.
+# Requiere `container_user` (ver el contrato en los defaults de este role).
 
 - name: Install Podman packages
   ansible.builtin.dnf:
     name:
       - podman
-      - slirp4netns     # For rootless networking
-      - fuse-overlayfs  # For rootless storage
-      - crun            # Modern OCI runtime
+      - slirp4netns     # para networking rootless
+      - fuse-overlayfs  # para storage rootless
+      - crun            # runtime OCI moderno
     state: present
   become: true
 
@@ -17,7 +18,7 @@
   ansible.builtin.command: podman --version
   register: podman_version
   changed_when: false
-  check_mode: false  # read-only; must run so the version assert works in --check
+  check_mode: false  # solo lectura; debe correr para que el assert de versión funcione en --check
 
 - name: Display Podman version
   ansible.builtin.debug:

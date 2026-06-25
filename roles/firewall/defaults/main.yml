@@ -1,45 +1,41 @@
 ---
-# Default variables for the Firewall role.
-#
-# The role is data-driven: it OPENS the handful of LAN-facing ports/services and
-# CLOSES everything that must stay behind NGINX. All rules go into a single zone,
-# auto-detected from the active LAN interface (FedoraServer on Fedora Server),
-# so rules can't land in a zone the traffic never hits.
+# El rol es data-driven: ABRE el puñado de puertos/servicios de cara a la LAN y
+# CIERRA todo lo que debe quedar detrás de NGINX. Todas las reglas van a una sola
+# zona, auto-detectada de la interfaz LAN activa (FedoraServer en Fedora Server),
+# para que las reglas no caigan en una zona por la que el tráfico nunca pasa.
 
 firewall_enabled: true
 
-# Fallback zone used only if the interface's active zone can't be detected.
+# Zona de fallback, usada solo si no se puede detectar la zona activa de la interfaz.
 firewall_default_zone: FedoraServer
 
-# Interface whose zone every rule targets (same NIC AdGuard serves DHCP on).
+# Interfaz cuya zona apuntan todas las reglas (la misma NIC donde AdGuard sirve DHCP).
 firewall_interface: "{{ adguard_dhcp_interface_name | default('enp6s0') }}"
 
-# Forgejo's container git-SSH port (the only app port intentionally exposed).
+# Puerto git-SSH del contenedor de Forgejo (el único puerto de app expuesto a propósito).
 forgejo_firewall_enabled: true
 forgejo_ssh_port: 2222
 
-# --- Ports to OPEN on the LAN -----------------------------------------------
 firewall_open_ports:
   - { port: "53/tcp", comment: "AdGuard DNS", when: "{{ adguard_firewall_enabled | default(true) | bool }}" }
   - { port: "53/udp", comment: "AdGuard DNS", when: "{{ adguard_firewall_enabled | default(true) | bool }}" }
   - { port: "80/tcp", comment: "NGINX HTTP", when: "{{ nginx_firewall_enabled | default(true) | bool }}" }
   - { port: "443/tcp", comment: "NGINX HTTPS", when: "{{ nginx_firewall_enabled | default(true) | bool }}" }
   - { port: "{{ forgejo_ssh_port }}/tcp", comment: "Forgejo git SSH", when: "{{ forgejo_firewall_enabled | default(true) | bool }}" }
-  # Cloud Torrent BitTorrent peer port — OFF by default (LAN-only host, no router
-  # forward, so inbound peers can't arrive). Set cloud_torrent_open_peer_port and
-  # cloud_torrent_peer_port in services.yml to expose them to this role.
+  # Puerto de peers BitTorrent de Cloud Torrent — apagado por defecto (host solo en
+  # LAN, sin forward en el router, así que no pueden llegar peers entrantes). Setear
+  # cloud_torrent_open_peer_port y cloud_torrent_peer_port en services.yml para
+  # exponerlos a este rol.
   - { port: "{{ cloud_torrent_peer_port | default(50007) }}/tcp", comment: "Cloud Torrent BitTorrent peers", when: "{{ cloud_torrent_open_peer_port | default(false) | bool }}" }
   - { port: "{{ cloud_torrent_peer_port | default(50007) }}/udp", comment: "Cloud Torrent BitTorrent peers (uTP)", when: "{{ cloud_torrent_open_peer_port | default(false) | bool }}" }
 
-# --- Services to OPEN on the LAN --------------------------------------------
 firewall_open_services:
   - { service: dhcp, comment: "AdGuard DHCP", when: "{{ adguard_dhcp_enabled | default(false) | bool }}" }
 
-# --- Ports/services to CLOSE (apps live behind NGINX; legacy cleanup) --------
-# Cockpit ships enabled in the FedoraServer zone, so it must be explicitly
-# removed: the UI is reachable only via the NGINX 443 vhost (cockpit.socket is
-# also bound to 127.0.0.1 by the cockpit role). 853 is the dead DoT/DoQ rule
-# (AdGuard has TLS disabled).
+# Cockpit viene habilitado en la zona FedoraServer, así que hay que quitarlo
+# explícitamente: la UI solo es accesible vía el vhost 443 de NGINX (el rol cockpit
+# además bindea cockpit.socket a 127.0.0.1). 853 es la regla muerta de DoT/DoQ
+# (AdGuard tiene TLS deshabilitado).
 firewall_blocked:
   - { service: cockpit, comment: "Cockpit only via NGINX 443" }
   - { port: "853/tcp", comment: "Dead DoT rule (TLS disabled)" }

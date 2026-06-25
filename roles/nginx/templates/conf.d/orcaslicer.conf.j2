@@ -1,10 +1,6 @@
-# ========================================
-# ORCASLICER (3D SLICER) SUBDOMAIN
-# ========================================
-# KasmVNC-based container - HTTPS required for WebCodecs
-# ($connection_upgrade map is defined globally in conf.d/00-upgrade-map.conf)
+# Contenedor basado en KasmVNC; WebCodecs requiere HTTPS.
+# (la map $connection_upgrade se define globalmente en conf.d/00-upgrade-map.conf)
 
-# HTTP - Redirect to HTTPS
 server {
     listen 80;
     server_name slicer.{{ nginx_domain }};
@@ -12,27 +8,25 @@ server {
     return 301 https://$host$request_uri;
 }
 
-# HTTPS
 server {
     listen 443 ssl;
-    # Note: http2 disabled - can cause issues with WebSocket streaming
+    # http2 deshabilitado: puede causar problemas con el streaming de WebSocket
     server_name slicer.{{ nginx_domain }};
 
     ssl_certificate {{ nginx_ssl_certificate }};
     ssl_certificate_key {{ nginx_ssl_certificate_key }};
 
-    # No body size limit for uploads
+    # Sin límite de tamaño para las subidas
     client_max_body_size 0;
 
-    # Shared TLS security headers (single source: ssl_headers.inc.j2)
+    # Headers de seguridad TLS compartidos (fuente única: ssl_headers.inc.j2)
     include {{ nginx_ssl_headers_snippet }};
 
     location / {
-        # Proxy to container's HTTPS port (self-signed cert)
+        # Proxy al puerto HTTPS del contenedor (cert self-signed)
         proxy_pass https://127.0.0.1:{{ nginx_orcaslicer_port }};
         proxy_ssl_verify off;
 
-        # Required headers for KasmVNC
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -40,17 +34,17 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
 
-        # WebSocket support (critical for KasmVNC)
+        # Soporte de WebSocket (crítico para KasmVNC)
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
 
-        # Long timeouts for streaming sessions (30 minutes)
+        # Timeouts largos para las sesiones de streaming (30 minutos)
         proxy_connect_timeout 1800s;
         proxy_read_timeout 1800s;
         proxy_send_timeout 1800s;
 
-        # Disable buffering for real-time streaming
+        # Sin buffering para el streaming en tiempo real
         proxy_buffering off;
         proxy_request_buffering off;
     }

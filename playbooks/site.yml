@@ -1,6 +1,6 @@
 ---
-# Main orchestration playbook for home server setup
-# Usage: ansible-playbook playbooks/site.yml
+# Playbook principal de orquestación del home server.
+# Uso: ansible-playbook playbooks/site.yml
 
 - name: Configure home servers
   hosts: homeservers
@@ -13,8 +13,8 @@
     - role: cockpit
       tags: ['cockpit', 'monitoring']
 
-    # Issue the real wildcard cert BEFORE nginx: `nginx -t` validates the vhosts
-    # and requires the configured ssl_certificate file to already exist on disk.
+    # Emitir el cert wildcard real ANTES de nginx: `nginx -t` valida los vhosts y
+    # requiere que el archivo ssl_certificate configurado ya exista en disco.
     - role: acme
       tags: ['acme', 'tls']
       when: acme_enabled | default(false) | bool
@@ -63,10 +63,11 @@
       when: firewall_enabled | default(true)
 
   post_tasks:
-    # Start NGINX last, after AdGuard is configured and has freed/rebound its
-    # ports. The nginx role only ENABLES the unit; starting it here keeps the
-    # ordering explicit at the orchestration level instead of buried in a cross-
-    # role AdGuard handler. No ignore_errors — a broken NGINX should surface.
+    # Arrancar NGINX al final, después de que AdGuard esté configurado y haya
+    # liberado/reasignado sus puertos. El rol nginx solo HABILITA el unit;
+    # arrancarlo acá mantiene el orden explícito a nivel de orquestación en lugar
+    # de enterrarlo en un handler de AdGuard de otro rol. Sin ignore_errors — un
+    # NGINX roto debe hacerse visible.
     - name: Ensure NGINX is running
       ansible.builtin.systemd:
         name: nginx

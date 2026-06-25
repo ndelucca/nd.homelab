@@ -1,6 +1,4 @@
 ---
-# Install Jellyfin packages from RPMFusion
-
 - name: Install Jellyfin server and dependencies
   ansible.builtin.dnf:
     name:

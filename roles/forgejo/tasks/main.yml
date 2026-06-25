@@ -1,5 +1,5 @@
 ---
-# Main entry point for Forgejo role
+# Punto de entrada principal del role Forgejo
 
 - name: Include preflight checks
   ansible.builtin.import_tasks: preflight.yml
@@ -13,9 +13,9 @@
   ansible.builtin.import_tasks: quadlet.yml
   tags: ['forgejo', 'quadlet']
 
-# Apply SELinux contexts before the container starts so an enforcing host does
-# not deny volume access on the first run (admin/mirror run after, against the
-# already-running container).
+# Se aplican los contextos SELinux antes de que arranque el container para que un host
+# en modo enforcing no deniegue el acceso a los volúmenes en la primera corrida
+# (admin/mirror corren después, contra el container ya en ejecución).
 - name: Configure SELinux (shared container_base step)
   ansible.builtin.include_role:
     name: container_base

@@ -1,5 +1,5 @@
 ---
-# Safety gates that must pass before any update runs.
+# Controles de seguridad que deben pasar antes de que corra cualquier update.
 
 - name: Assert the target is a Debian host (never run on the Fedora server)
   ansible.builtin.assert:

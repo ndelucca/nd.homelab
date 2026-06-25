@@ -1,6 +1,6 @@
 ---
-# Configure the MainsailOS nginx to serve the UI over HTTPS with a real cert.
-# The acme role runs first and must have issued mainsail_tls_domain.
+# Configura el nginx de MainsailOS para servir la UI sobre HTTPS con un cert real.
+# El role acme corre primero y debe haber emitido mainsail_tls_domain.
 
 - name: Check the printer TLS certificate exists
   ansible.builtin.stat:

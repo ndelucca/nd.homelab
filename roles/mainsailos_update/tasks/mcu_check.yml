@@ -1,7 +1,8 @@
 ---
-# After a Klipper host update the MCU firmware may lag behind and need a manual
-# re-flash. We never flash from Ansible (board-specific, can brick hardware) -
-# we only detect a version mismatch and warn.
+# Después de actualizar el host de Klipper, el firmware del MCU puede quedar atrás
+# y necesitar un re-flasheo manual. Nunca flasheamos desde Ansible (es específico
+# de cada placa y puede dejar el hardware inservible): solo detectamos la
+# discrepancia de versión y advertimos.
 
 - name: Get the Klipper host software version
   ansible.builtin.uri:

@@ -1,5 +1,5 @@
 ---
-# Deploy Podman Quadlet configuration for Forgejo
+# Despliega la configuración de Podman Quadlet para Forgejo
 
 - name: Ensure systemd user directory exists
   ansible.builtin.file:

@@ -1,6 +1,4 @@
 ---
-# Preflight checks for Jellyfin installation
-
 - name: Verify we're running on Fedora
   ansible.builtin.assert:
     that:

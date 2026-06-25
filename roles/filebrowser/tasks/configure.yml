@@ -1,6 +1,4 @@
 ---
-# Configure FileBrowser application
-
 - name: Deploy FileBrowser configuration file
   ansible.builtin.template:
     src: filebrowser.json.j2

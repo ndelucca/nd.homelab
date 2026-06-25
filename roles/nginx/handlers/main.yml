@@ -1,6 +1,4 @@
 ---
-# Handlers for NGINX service
-
 - name: start nginx
   ansible.builtin.systemd:
     name: nginx

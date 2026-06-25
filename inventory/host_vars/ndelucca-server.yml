@@ -1,10 +1,10 @@
 ---
-# No host-specific overrides for ndelucca-server.
+# Sin overrides específicos de host para ndelucca-server.
 #
-# This host is the only member of the `homeservers` group, so all of its config
-# now lives in inventory/group_vars/homeservers/:
-#   - storage.yml   disk layout (single source of truth)
-#   - services.yml  network / DNS / DHCP / reverse proxy / per-app config
-#   - vault.yml     secrets (Ansible Vault)
+# Este host es el único miembro del grupo `homeservers`, así que toda su config
+# vive ahora en inventory/group_vars/homeservers/:
+#   - storage.yml   layout de discos (única fuente de verdad)
+#   - services.yml  red / DNS / DHCP / reverse proxy / config por app
+#   - vault.yml     secretos (Ansible Vault)
 #
-# Put settings here only if they must differ from the group defaults.
+# Poner ajustes acá solo si deben diferir de los defaults del grupo.

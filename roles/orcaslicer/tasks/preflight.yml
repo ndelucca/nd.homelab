@@ -1,6 +1,4 @@
 ---
-# Preflight checks and directory setup for OrcaSlicer
-
 - name: Verify Fedora operating system
   ansible.builtin.assert:
     that:
@@ -31,12 +29,13 @@
     mode: '0755'
   become: true
 
-# Ownership of the config tree is handed to the container's app user below (via
-# podman unshare), so these tasks only ensure the dirs exist with the right mode.
-# Do NOT set owner here: the LSIO image runs OrcaSlicer as an in-container uid that
-# rootless Podman maps to a host sub-uid, NOT to {{ orcaslicer_user }}. Forcing
-# {{ orcaslicer_user }} ownership is exactly what blocks the app from writing (e.g.
-# "permission denied" saving G-code to config/gcodes).
+# La propiedad del árbol de config se le entrega al usuario de la app del container
+# más abajo (vía podman unshare), así que estas tareas solo aseguran que los dirs
+# existan con el mode correcto. NO setear owner acá: la imagen LSIO corre
+# OrcaSlicer con un uid in-container que rootless Podman mapea a un sub-uid del
+# host, NO a {{ orcaslicer_user }}. Forzar la propiedad a {{ orcaslicer_user }} es
+# justo lo que bloquea a la app para escribir (ej. "permission denied" al guardar
+# G-code en config/gcodes).
 - name: Ensure config directory exists
   ansible.builtin.file:
     path: "{{ orcaslicer_config_dir }}"
@@ -54,14 +53,15 @@
     - "{{ orcaslicer_config_dir }}/downloads"
     - "{{ orcaslicer_config_dir }}/gcodes"
 
-# Give the config tree to the container's app user. OrcaSlicer runs inside the
-# container as uid {{ orcaslicer_uid }} (PUID), which rootless Podman maps to a host
-# sub-uid (e.g. 525287). `podman unshare` enters that user namespace, so a chown to
-# the in-container uid resolves to the correct host sub-uid automatically — no need
-# to hardcode it. Host access for {{ orcaslicer_user }} is preserved by the ACLs
-# below. NOTE: keep-id is deliberately NOT used here; this LSIO/s6 image starts as
-# root and drops privileges, and keep-id breaks its init (it cannot chown its own
-# rootfs), so the app never starts.
+# Se le entrega el árbol de config al usuario de la app del container. OrcaSlicer
+# corre dentro del container como uid {{ orcaslicer_uid }} (PUID), que rootless
+# Podman mapea a un sub-uid del host (ej. 525287). `podman unshare` entra a ese
+# user namespace, así que un chown al uid in-container resuelve automáticamente al
+# sub-uid correcto del host — no hace falta hardcodearlo. El acceso del host para
+# {{ orcaslicer_user }} se preserva con las ACLs de abajo. NOTA: keep-id NO se usa
+# acá a propósito; esta imagen LSIO/s6 arranca como root y dropea privilegios, y
+# keep-id rompe su init (no puede hacer chown de su propio rootfs), así que la app
+# nunca arranca.
 - name: Hand the config tree to the container's app user (rootless sub-uid)
   ansible.builtin.command:
     cmd: "podman unshare chown -R {{ orcaslicer_uid }}:{{ orcaslicer_uid }} {{ orcaslicer_config_dir }}"
@@ -97,8 +97,8 @@
   ansible.builtin.debug:
     msg: "Port {{ orcaslicer_port }} is {{ port_check.stdout }}"
 
-# A warning, not a failure: on a re-run the port is expected to be held by
-# OrcaSlicer itself (consistent with the other container roles).
+# Es un aviso, no una falla: en una re-corrida se espera que el puerto lo tenga el
+# propio OrcaSlicer (consistente con los otros roles de container).
 - name: Warn if port is occupied
   ansible.builtin.debug:
     msg: "WARNING: port {{ orcaslicer_port }} is already in use (expected if OrcaSlicer is already running)"

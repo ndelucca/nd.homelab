@@ -1,5 +1,5 @@
 ---
-# Main entry point for the backup role.
+# Punto de entrada principal del role backup.
 
 - name: Include preflight checks
   ansible.builtin.import_tasks: preflight.yml

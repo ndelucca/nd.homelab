@@ -1,43 +1,34 @@
 ---
-# Default variables for Jellyfin role
-
-# Installation configuration
 jellyfin_enable_rpmfusion: true
 jellyfin_rpmfusion_free_enabled: true
 jellyfin_rpmfusion_nonfree_enabled: false
 
-# Service user configuration
 jellyfin_user: ndelucca
 jellyfin_group: ndelucca
 
-# Directory configuration — app state lives on the appdata disk (app_data_root,
-# defined in group_vars/homeservers/storage.yml).
+# El estado de la app vive en el disco de appdata (app_data_root, definido en
+# group_vars/homeservers/storage.yml).
 jellyfin_base_dir: "{{ app_data_root }}/jellyfin"
 jellyfin_data_dir: "{{ jellyfin_base_dir }}/data"
 jellyfin_config_dir: "{{ jellyfin_base_dir }}/config"
 jellyfin_cache_dir: "{{ jellyfin_base_dir }}/cache"
 jellyfin_log_dir: "{{ jellyfin_base_dir }}/log"
 
-# Media directory (movies, TV shows, etc.). Points straight at the shared app
-# media root on the data disk — no symlink. Jellyfin's own library paths
-# (.mblink) already reference these real paths.
+# Directorio de medios (películas, series, etc.). Apunta directo al media root
+# compartido en el disco de datos, sin symlink. Las rutas de biblioteca de
+# Jellyfin (.mblink) ya referencian estas rutas reales.
 jellyfin_media_dir: "{{ app_media_root }}"
 
-# Service configuration
 jellyfin_service_name: jellyfin
 jellyfin_service_enabled: true
 jellyfin_service_state: started
 
-# Network configuration
 jellyfin_http_port: 8096
 jellyfin_https_port: 8920
 
-# Firewall settings
 jellyfin_firewall_zone: FedoraServer
 jellyfin_firewall_enabled: true
 
-# SELinux configuration
 jellyfin_manage_selinux: true
 
-# Hardware acceleration
 jellyfin_enable_hardware_acceleration: false

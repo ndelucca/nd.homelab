@@ -1,10 +1,11 @@
 # {{ ansible_managed }}
-# Shared TLS security headers, included by every HTTPS vhost via
-# `include {{ nginx_ssl_headers_snippet }};`. Single source of truth — edit here.
+# Headers de seguridad TLS compartidos, incluidos por cada vhost HTTPS vía
+# `include {{ nginx_ssl_headers_snippet }};`. Fuente única de verdad: editar acá.
 #
-# X-XSS-Protection is intentionally omitted: it is deprecated and removed from
-# modern browsers, and can introduce vulnerabilities, so the guidance is to not
-# send it (or send "0"). HSTS + nosniff + frame-options are the meaningful set.
+# X-XSS-Protection se omite a propósito: está deprecado y removido de los
+# navegadores modernos, y puede introducir vulnerabilidades, así que la
+# recomendación es no enviarlo (o enviar "0"). HSTS + nosniff + frame-options son
+# el conjunto que sí importa.
 add_header X-Frame-Options "SAMEORIGIN" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;

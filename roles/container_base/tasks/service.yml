@@ -1,14 +1,14 @@
 ---
-# Shared service step for rootless-Podman/Quadlet container roles. Included via
-# `include_role: { name: container_base, tasks_from: service }`.
+# Paso de service compartido para roles de container con Podman rootless/Quadlet.
+# Se incluye vía `include_role: { name: container_base, tasks_from: service }`.
 #
-# Flushes pending handlers FIRST (daemon-reload-user + any SELinux relabel
-# notified by the selinux step) so the regenerated unit and its volume contexts
-# are in place before the container starts, then enables/starts the user service
-# and waits for it to answer.
+# PRIMERO flushea los handlers pendientes (daemon-reload-user + cualquier relabel de
+# SELinux notificado por el paso de selinux) para que el unit regenerado y los
+# contextos de sus volumes estén en su lugar antes de que arranque el container,
+# luego habilita/arranca el servicio de usuario y espera a que responda.
 #
-# Contract vars (consumer's defaults): container_user, container_uid,
-# container_service_name, container_host, container_port, and optionally
+# Variables del contrato (defaults del consumidor): container_user, container_uid,
+# container_service_name, container_host, container_port, y opcionalmente
 # container_service_enabled (default true), container_service_state (default
 # 'started'), container_wait_delay (default 10), container_wait_timeout
 # (default 120).

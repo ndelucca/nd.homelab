@@ -1,6 +1,4 @@
 ---
-# Metadata for Firewall role
-
 galaxy_info:
   author: Naza
   description: Centralized firewall management for home server services

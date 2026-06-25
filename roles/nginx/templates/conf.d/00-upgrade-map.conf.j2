@@ -1,9 +1,11 @@
 # Managed by Ansible - DO NOT EDIT MANUALLY
-# Single global map for WebSocket upgrade, shared by every vhost. With this,
-# `proxy_set_header Connection $connection_upgrade;` sends "upgrade" only for
-# real WebSocket requests and "close"/keepalive otherwise — unlike the static
-# `Connection "upgrade"` antipattern, which forced upgrade on every request.
-# Loaded first (00-) so it is defined before any vhost references it.
+# Map global única para el upgrade de WebSocket, compartida por todos los vhost.
+# Con esto, `proxy_set_header Connection $connection_upgrade;` envía "upgrade"
+# solo en las peticiones WebSocket reales y "close"/keepalive en el resto, a
+# diferencia del antipatrón estático `Connection "upgrade"`, que forzaba el
+# upgrade en cada petición.
+# Se carga primero (00-) para que quede definida antes de que cualquier vhost la
+# referencie.
 map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;

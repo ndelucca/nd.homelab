@@ -1,5 +1,5 @@
 ---
-# Main tasks for Cockpit role
+# Tareas principales del role Cockpit
 
 - name: Install Podman packages
   ansible.builtin.dnf:
@@ -74,7 +74,7 @@
   ansible.builtin.command: podman --version
   register: podman_version_check
   changed_when: false
-  check_mode: false  # read-only; run in --check for an accurate version display
+  check_mode: false  # solo lectura; corre en --check para mostrar la versión con exactitud
 
 - name: Show installed Podman version
   ansible.builtin.debug:
