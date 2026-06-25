@@ -2,7 +2,7 @@
 # Instala el runtime rootless de Podman y habilita el lingering del usuario. Lo
 # comparten todos los roles de container vía
 # `include_role: { name: container_base, tasks_from: install }`.
-# Requiere `container_user` (ver el contrato en los defaults de este role).
+# Requiere `container_base_user` (ver el contrato en los defaults de este rol).
 
 - name: Install Podman packages
   ansible.builtin.dnf:
@@ -16,24 +16,24 @@
 
 - name: Verify Podman installation
   ansible.builtin.command: podman --version
-  register: podman_version
+  register: container_base_podman_version
   changed_when: false
   check_mode: false  # solo lectura; debe correr para que el assert de versión funcione en --check
 
 - name: Display Podman version
   ansible.builtin.debug:
-    msg: "Installed {{ podman_version.stdout }}"
+    msg: "Installed {{ container_base_podman_version.stdout }}"
 
 - name: Check Podman version is >= 4.4 (required for Quadlet)
   ansible.builtin.assert:
     that:
-      - podman_version.stdout is version('podman version 4.4', '>=', version_type='loose')
+      - container_base_podman_version.stdout is version('podman version 4.4', '>=', version_type='loose')
     fail_msg: "Podman 4.4+ is required for Quadlet support"
     success_msg: "Podman version is compatible with Quadlet"
-  when: podman_version.stdout is defined
+  when: container_base_podman_version.stdout is defined
 
 - name: Enable lingering for user (allows user services without login)
-  ansible.builtin.command: loginctl enable-linger {{ container_user }}
+  ansible.builtin.command: loginctl enable-linger {{ container_base_user }}
   args:
-    creates: /var/lib/systemd/linger/{{ container_user }}
+    creates: /var/lib/systemd/linger/{{ container_base_user }}
   become: true

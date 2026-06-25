@@ -19,6 +19,8 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: selinux
+  vars:
+    container_base_selinux_paths: "{{ [kavita_config_dir, kavita_library_dir] + (kavita_extra_libraries | map(attribute='path') | list) }}"
   tags: ['kavita', 'selinux']
   when: kavita_manage_selinux | bool
 
@@ -26,4 +28,12 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: service
+  vars:
+    container_base_user: "{{ kavita_user }}"
+    container_base_uid: "{{ kavita_uid }}"
+    container_base_service_name: "{{ kavita_service_name }}"
+    container_base_host: "{{ kavita_host }}"
+    container_base_port: "{{ kavita_port }}"
+    container_base_service_enabled: "{{ kavita_service_enabled }}"
+    container_base_service_state: "{{ kavita_service_state }}"
   tags: ['kavita', 'service']

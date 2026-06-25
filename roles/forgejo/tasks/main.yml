@@ -20,13 +20,26 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: selinux
+  vars:
+    container_base_selinux_paths: "{{ [forgejo_data_dir, forgejo_config_dir] }}"
   tags: ['forgejo', 'selinux']
   when: forgejo_manage_selinux | bool
 
+# El primer arranque de Forgejo puede ser lento, así que se permite un timeout
+# de espera más largo (container_base_wait_timeout).
 - name: Configure systemd service (shared container_base step)
   ansible.builtin.include_role:
     name: container_base
     tasks_from: service
+  vars:
+    container_base_user: "{{ forgejo_user }}"
+    container_base_uid: "{{ forgejo_uid }}"
+    container_base_service_name: "{{ forgejo_service_name }}"
+    container_base_host: "{{ forgejo_host }}"
+    container_base_port: "{{ forgejo_port }}"
+    container_base_service_enabled: "{{ forgejo_service_enabled }}"
+    container_base_service_state: "{{ forgejo_service_state }}"
+    container_base_wait_timeout: 180
   tags: ['forgejo', 'service']
 
 - name: Create admin user

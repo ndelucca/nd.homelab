@@ -24,6 +24,8 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: selinux
+  vars:
+    container_base_selinux_paths: "{{ [immich_upload_location, immich_db_data_location, immich_model_cache] }}"
   tags: ['immich', 'selinux']
   when: immich_manage_selinux | bool
 
@@ -31,4 +33,12 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: service
+  vars:
+    container_base_user: "{{ immich_user }}"
+    container_base_uid: "{{ immich_uid }}"
+    container_base_service_name: "{{ immich_service_name }}"
+    container_base_host: "{{ immich_host }}"
+    container_base_port: "{{ immich_port }}"
+    container_base_service_enabled: "{{ immich_service_enabled }}"
+    container_base_service_state: "{{ immich_service_state }}"
   tags: ['immich', 'service']

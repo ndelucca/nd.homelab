@@ -110,14 +110,3 @@ monitoring_check_retries: 2       # fallas antes de marcar DOWN
 # el INSERT falle o sea rechazado. Los monitors ya sembrados se matchean solo por
 # nombre y nunca se actualizan: editá URLs/intervalos en la UI después de la primera siembra.
 monitoring_configure_monitors: true
-
-# Contrato de container_base: alimenta el install + handlers compartidos (ver container_base).
-container_user: "{{ monitoring_user }}"
-container_uid: "{{ monitoring_uid }}"
-container_service_name: "{{ monitoring_service_name }}"
-container_selinux_paths: "{{ [monitoring_data_dir] }}"
-# Contrato del service-step de container_base (enable + wait_for).
-container_host: "{{ monitoring_host }}"
-container_port: "{{ monitoring_port }}"
-container_service_enabled: "{{ monitoring_service_enabled }}"
-container_service_state: "{{ monitoring_service_state }}"

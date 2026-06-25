@@ -6,8 +6,15 @@
 # través del handler compartido `container apply selinux context`, que el paso de
 # service flushea antes de que arranque el container (así los contextos existen en el primer run).
 #
-# Variables del contrato: container_selinux_paths (lista de dirs), y opcionalmente
-# container_selinux_booleans (lista de nombres de seboolean a habilitar, default []).
+# Variables del contrato: container_base_selinux_paths (lista de dirs), y opcionalmente
+# container_base_selinux_booleans (lista de nombres de seboolean a habilitar, default []
+# en defaults/main.yml de este rol).
+
+# Promueve el path a host fact: el handler compartido `container apply selinux context`
+# se flushea en el paso de service y los vars: del include_role no llegan a los handlers.
+- name: Register the SELinux paths as a host fact for the shared handler
+  ansible.builtin.set_fact:
+    container_base_selinux_paths: "{{ container_base_selinux_paths }}"
 
 - name: Display SELinux status
   ansible.builtin.debug:
@@ -28,7 +35,7 @@
     setype: container_file_t
     state: present
   become: true
-  loop: "{{ container_selinux_paths }}"
+  loop: "{{ container_base_selinux_paths }}"
   when: ansible_selinux.mode | default('') == 'enforcing'
   notify: Container apply selinux context
 
@@ -38,6 +45,6 @@
     state: true
     persistent: true
   become: true
-  loop: "{{ container_selinux_booleans | default([]) }}"
+  loop: "{{ container_base_selinux_booleans }}"
   when: ansible_selinux.mode | default('') == 'enforcing'
   failed_when: false

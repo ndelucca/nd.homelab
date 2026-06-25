@@ -19,11 +19,24 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: selinux
+  vars:
+    container_base_selinux_paths: "{{ [home_assistant_config_dir] }}"
   tags: ['home_assistant', 'selinux']
   when: home_assistant_manage_selinux | bool
 
+# HA tarda un poco en levantar, así que se usa un delay inicial y un timeout más largos.
 - name: Configure systemd service (shared container_base step)
   ansible.builtin.include_role:
     name: container_base
     tasks_from: service
+  vars:
+    container_base_user: "{{ home_assistant_user }}"
+    container_base_uid: "{{ home_assistant_uid }}"
+    container_base_service_name: "{{ home_assistant_service_name }}"
+    container_base_host: "{{ home_assistant_host }}"
+    container_base_port: "{{ home_assistant_port }}"
+    container_base_service_enabled: "{{ home_assistant_service_enabled }}"
+    container_base_service_state: "{{ home_assistant_service_state }}"
+    container_base_wait_delay: 15
+    container_base_wait_timeout: 180
   tags: ['home_assistant', 'service']

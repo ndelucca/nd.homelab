@@ -19,6 +19,8 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: selinux
+  vars:
+    container_base_selinux_paths: "{{ [monitoring_data_dir] }}"
   tags: ['monitoring', 'selinux']
   when: monitoring_manage_selinux | bool
 
@@ -26,6 +28,14 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: service
+  vars:
+    container_base_user: "{{ monitoring_user }}"
+    container_base_uid: "{{ monitoring_uid }}"
+    container_base_service_name: "{{ monitoring_service_name }}"
+    container_base_host: "{{ monitoring_host }}"
+    container_base_port: "{{ monitoring_port }}"
+    container_base_service_enabled: "{{ monitoring_service_enabled }}"
+    container_base_service_state: "{{ monitoring_service_state }}"
   tags: ['monitoring', 'service']
 
 - name: Seed monitors into Uptime-Kuma

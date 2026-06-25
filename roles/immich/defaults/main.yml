@@ -46,14 +46,3 @@ immich_server_image: "ghcr.io/immich-app/immich-server:{{ immich_version }}"
 immich_ml_image: "ghcr.io/immich-app/immich-machine-learning:{{ immich_version }}"
 immich_redis_image: docker.io/valkey/valkey:9-alpine
 immich_postgres_image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
-
-# Contrato de container_base — alimenta el install + handlers compartidos (ver container_base).
-container_user: "{{ immich_user }}"
-container_uid: "{{ immich_uid }}"
-container_service_name: "{{ immich_service_name }}"
-container_selinux_paths: "{{ [immich_upload_location, immich_db_data_location, immich_model_cache] }}"
-# Contrato del service-step de container_base (enable + wait_for).
-container_host: "{{ immich_host }}"
-container_port: "{{ immich_port }}"
-container_service_enabled: "{{ immich_service_enabled }}"
-container_service_state: "{{ immich_service_state }}"

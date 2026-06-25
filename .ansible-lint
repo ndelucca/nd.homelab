@@ -14,14 +14,10 @@ skip_list:
   - yaml[line-length]  # handled by .yamllint as a warning
 
 # Treat these as warnings rather than hard failures for now:
-#  - var-naming[no-role-prefix]: solo lo disparan las variables de contrato
-#    `container_*` (consumidas por el rol compartido container_base); el resto
-#    del backlog ya se prefijó. Sacar esta entrada cuando se resuelvan esas.
 #  - command-instead-of-module: legit `rpm -q` queries and `git` on the printer
 warn_list:
   - command-instead-of-shell
   - no-changed-when
-  - var-naming[no-role-prefix]
   # command-instead-of-module: native modules/facts now used everywhere the
   # conversion is clean (getenforce->ansible_selinux, id-u->getent,
   # rpm-q->package_facts). The two remaining legit queries (`which`,

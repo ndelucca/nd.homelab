@@ -6,3 +6,5 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: install
+  vars:
+    container_base_user: "{{ forgejo_user }}"

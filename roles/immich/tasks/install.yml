@@ -6,6 +6,8 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: install
+  vars:
+    container_base_user: "{{ immich_user }}"
 
 - name: Install Node.js and npm for Immich CLI
   ansible.builtin.dnf:

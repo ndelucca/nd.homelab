@@ -1,38 +1,37 @@
 ---
-# container_base — contrato de entrada (a propósito no se setea ningún valor acá).
+# container_base — defaults del rol compartido para apps con Podman rootless/Quadlet.
 #
-# Este role concentra el boilerplate compartido por todos los roles de apps con
-# Podman rootless/Quadlet: el install de Podman + los handlers compartidos, y los
-# pasos de SELinux y de servicio. NO se usa de forma standalone; un role consumidor
-# incluye cada paso por nombre:
+# Este rol concentra el boilerplate común a todos los roles de container: el install
+# de Podman + los handlers compartidos, y los pasos de SELinux y de servicio. NO se
+# usa de forma standalone; un rol consumidor incluye cada paso por nombre Y le pasa
+# el contrato vía `vars:` en el propio include_role:
 #
 #   - include_role: { name: container_base, tasks_from: install }   # + handlers
-#   - include_role: { name: container_base, tasks_from: selinux }   # etiqueta los volumes
+#     vars: { container_base_user: "{{ kavita_user }}" }
+#   - include_role: { name: container_base, tasks_from: selinux }   # etiqueta volumes
+#     vars: { container_base_selinux_paths: [ ... ] }
 #   - include_role: { name: container_base, tasks_from: service }   # habilita + espera
+#     vars: { container_base_user: ..., container_base_service_name: ..., ... }
 #
-# (preflight y quadlet quedan por-role: crean directorios específicos del role y
-# despliegan el template .container/.kube propio del role, que `template:` resuelve
-# contra el templates/ del role consumidor, no el de este.)
+# (preflight y quadlet quedan por-rol: crean directorios específicos del rol y
+# despliegan el template .container/.kube propio, que `template:` resuelve contra el
+# templates/ del rol consumidor, no el de este.)
 #
-# include_role también deja disponibles los handlers de este role en el consumidor.
-# El consumidor DEBE definir estas variables en su propio defaults/main.yml (acá se
-# dejan como checklist; deliberadamente SIN valor para que el del consumidor siempre
-# gane y no haya ambigüedad de precedencia con los defaults del role):
+# Pasar el contrato vía `vars:` del include_role —en vez de variables globales en los
+# defaults del consumidor— mantiene los valores acotados a cada include y evita
+# colisiones de namespace cuando varios roles de container corren en un mismo play.
 #
-#   container_user            # el usuario rootless del servicio (ej. "{{ kavita_user }}")
-#   container_uid             # su uid, para XDG_RUNTIME_DIR (ej. "{{ kavita_uid }}")
-#   container_service_name    # unit systemd --user (ej. "{{ kavita_service_name }}")
-#   container_selinux_paths   # lista de dirs a etiquetar/restorecon ([config, library])
-#   container_host            # host del wait_for (ej. "{{ kavita_host }}")
-#   container_port            # puerto del wait_for (ej. "{{ kavita_port }}")
+# Variables REQUERIDAS (las provee el consumidor en el vars: del include):
+#   container_base_user            # usuario rootless del servicio (ej. "{{ kavita_user }}")
+#   container_base_uid             # su uid, para XDG_RUNTIME_DIR (ej. "{{ kavita_uid }}")
+#   container_base_service_name    # unit systemd --user (ej. "{{ kavita_service_name }}")
+#   container_base_selinux_paths   # lista de dirs a etiquetar/restorecon ([config, library])
+#   container_base_host            # host del wait_for (ej. "{{ kavita_host }}")
+#   container_base_port            # puerto del wait_for (ej. "{{ kavita_port }}")
 #
-# Opcionales (con defaults sensatos en las tasks de service/selinux):
-#   container_service_enabled # default true
-#   container_service_state   # default 'started'
-#   container_wait_delay      # default 10
-#   container_wait_timeout    # default 120
-#   container_selinux_booleans# default [] (ej. ['container_use_devices'])
-#
-# Como cada role consumidor flushea sus propios handlers dentro del role, las
-# variables resuelven a los valores de ese role incluso cuando varios roles de
-# container corren en un mismo play (verificado con private_role_vars=True).
+# OPCIONALES (defaults sensatos abajo; el consumidor solo pasa lo que quiera override):
+container_base_service_enabled: true
+container_base_service_state: started
+container_base_wait_delay: 10
+container_base_wait_timeout: 120
+container_base_selinux_booleans: []   # ej. ['container_use_devices']

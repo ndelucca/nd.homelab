@@ -1,11 +1,12 @@
 ---
 # Handlers compartidos para roles de container con Podman rootless/Quadlet. Se
-# vuelven disponibles en un role consumidor vía
+# vuelven disponibles en un rol consumidor vía
 # `include_role: { name: container_base, tasks_from: install }` en su paso de
-# install. El consumidor provee las variables del contrato vía sus defaults
-# (container_user, container_uid, container_service_name, container_selinux_paths)
-# y flushea sus propios handlers dentro del role, así las variables resuelven a los
-# valores de ese role incluso cuando varios roles de container corren en un play.
+# install. El consumidor provee las variables del contrato vía el vars: de cada
+# include_role (container_base_user, container_base_uid, container_base_service_name,
+# container_base_selinux_paths) y flushea sus propios handlers dentro del rol, así las
+# variables resuelven a los valores de ese rol incluso cuando varios roles de
+# container corren en un play.
 
 # `systemctl --user daemon-reload` explícito: el daemon_reload en user-scope del
 # módulo systemd no regenera de forma confiable los units de Quadlet (el unit
@@ -14,23 +15,23 @@
   ansible.builtin.command:
     cmd: systemctl --user daemon-reload
   become: true
-  become_user: "{{ container_user }}"
+  become_user: "{{ container_base_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ container_uid }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ container_base_uid }}"
   changed_when: false
 
 - name: Container restart
   ansible.builtin.systemd:
-    name: "{{ container_service_name }}"
+    name: "{{ container_base_service_name }}"
     state: restarted
     scope: user
   become: true
-  become_user: "{{ container_user }}"
+  become_user: "{{ container_base_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ container_uid }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ container_base_uid }}"
 
 - name: Container apply selinux context
   ansible.builtin.command: "restorecon -Rv {{ item }}"
   become: true
   changed_when: false
-  loop: "{{ container_selinux_paths }}"
+  loop: "{{ container_base_selinux_paths }}"

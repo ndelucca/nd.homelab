@@ -17,6 +17,8 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: selinux
+  vars:
+    container_base_selinux_paths: "{{ [orcaslicer_config_dir] }}"
   tags: ['orcaslicer', 'selinux']
   when: orcaslicer_manage_selinux | bool
 
@@ -24,4 +26,12 @@
   ansible.builtin.include_role:
     name: container_base
     tasks_from: service
+  vars:
+    container_base_user: "{{ orcaslicer_user }}"
+    container_base_uid: "{{ orcaslicer_uid }}"
+    container_base_service_name: "{{ orcaslicer_service_name }}"
+    container_base_host: "{{ orcaslicer_host }}"
+    container_base_port: "{{ orcaslicer_port }}"
+    container_base_service_enabled: "{{ orcaslicer_service_enabled }}"
+    container_base_service_state: "{{ orcaslicer_service_state }}"
   tags: ['orcaslicer', 'service']
