@@ -50,3 +50,11 @@ filebrowser_admin_password: !vault |
   32346536303335636266663935626565303935346465303336613939303063653437356464393837
   3664666236386631610a383134363334353463393961326163306263366539356363376239313731
   37373131336135326162383931663336303566313561393564326331643533383137
+
+# Opt-in admin password rotation. The seed only runs on first install (before the
+# service starts), so changing filebrowser_admin_password later has no effect by
+# itself. Set this true for ONE run to push the new password into the existing
+# DB (the role stops the service to take the bbolt lock, updates, then restarts),
+# then set it back to false. Off by default so normal converges never touch the
+# running server.
+filebrowser_force_admin_password: false

@@ -50,21 +50,39 @@ monitoring_manage_selinux: true
 monitoring_host_ip: 192.168.10.10
 monitoring_gateway_ip: 192.168.10.1
 
+# Backend ports for the HTTP checks, defined ONCE here instead of buried as
+# literals inside each URL. Each maps to the owning role's listen port — keep it
+# in sync with that role's *_port default (noted alongside). They can't be a live
+# cross-reference because role vars are private to their role (private_role_vars);
+# filebrowser_port IS a group var (services.yml) so that one is referenced live.
+monitoring_service_ports:
+  forgejo: 3000                                          # forgejo_port
+  jellyfin: 8096                                         # Jellyfin's fixed HTTP port
+  immich: 2283                                           # immich containerPort
+  kavita: 5000                                           # kavita_port
+  filebrowser: "{{ filebrowser_port | default(8080) }}"  # group var (services.yml)
+  cloud_torrent: 9091                                    # cloud_torrent_port
+  home_assistant: 8123                                   # home_assistant_port
+  cockpit: 9090                                          # Cockpit's fixed socket port
+  adguard: 8081                                          # adguard_admin_port
+  orcaslicer: 3001                                       # orcaslicer_port
+  nginx: 443                                             # NGINX HTTPS
+
 # HTTP(S) checks, one per service, hit directly on the host loopback (the pod
 # runs with hostNetwork). This tests each backend itself, not just the proxy.
 # Redirects/auth pages are fine — accepted status codes span 200-399.
 monitoring_http_checks:
-  - {name: "Forgejo (git)", url: "http://127.0.0.1:3000"}
-  - {name: "Jellyfin", url: "http://127.0.0.1:8096"}
-  - {name: "Immich (gallery)", url: "http://127.0.0.1:2283"}
-  - {name: "Kavita (books)", url: "http://127.0.0.1:5000"}
-  - {name: "FileBrowser (files)", url: "http://127.0.0.1:8080"}
-  - {name: "Cloud Torrent", url: "http://127.0.0.1:9091"}
-  - {name: "Home Assistant", url: "http://127.0.0.1:8123"}
-  - {name: "Cockpit", url: "https://127.0.0.1:9090"}
-  - {name: "AdGuard Home", url: "http://127.0.0.1:8081"}
-  - {name: "OrcaSlicer", url: "https://127.0.0.1:3001", accepted_codes: ["200-499"]}  # 401 = up, auth required
-  - {name: "NGINX (reverse proxy)", url: "https://127.0.0.1:443"}
+  - {name: "Forgejo (git)", url: "http://127.0.0.1:{{ monitoring_service_ports.forgejo }}"}
+  - {name: "Jellyfin", url: "http://127.0.0.1:{{ monitoring_service_ports.jellyfin }}"}
+  - {name: "Immich (gallery)", url: "http://127.0.0.1:{{ monitoring_service_ports.immich }}"}
+  - {name: "Kavita (books)", url: "http://127.0.0.1:{{ monitoring_service_ports.kavita }}"}
+  - {name: "FileBrowser (files)", url: "http://127.0.0.1:{{ monitoring_service_ports.filebrowser }}"}
+  - {name: "Cloud Torrent", url: "http://127.0.0.1:{{ monitoring_service_ports.cloud_torrent }}"}
+  - {name: "Home Assistant", url: "http://127.0.0.1:{{ monitoring_service_ports.home_assistant }}"}
+  - {name: "Cockpit", url: "https://127.0.0.1:{{ monitoring_service_ports.cockpit }}"}
+  - {name: "AdGuard Home", url: "http://127.0.0.1:{{ monitoring_service_ports.adguard }}"}
+  - {name: "OrcaSlicer", url: "https://127.0.0.1:{{ monitoring_service_ports.orcaslicer }}", accepted_codes: ["200-499"]}  # 401 = up, auth required
+  - {name: "NGINX (reverse proxy)", url: "https://127.0.0.1:{{ monitoring_service_ports.nginx }}"}
 
 # Accepted HTTP status ranges (tolerate redirects to login/dashboards).
 monitoring_http_accepted_codes: ["200-399"]

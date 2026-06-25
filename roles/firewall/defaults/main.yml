@@ -25,6 +25,11 @@ firewall_open_ports:
   - { port: "80/tcp", comment: "NGINX HTTP", when: "{{ nginx_firewall_enabled | default(true) | bool }}" }
   - { port: "443/tcp", comment: "NGINX HTTPS", when: "{{ nginx_firewall_enabled | default(true) | bool }}" }
   - { port: "{{ forgejo_ssh_port }}/tcp", comment: "Forgejo git SSH", when: "{{ forgejo_firewall_enabled | default(true) | bool }}" }
+  # Cloud Torrent BitTorrent peer port — OFF by default (LAN-only host, no router
+  # forward, so inbound peers can't arrive). Set cloud_torrent_open_peer_port and
+  # cloud_torrent_peer_port in services.yml to expose them to this role.
+  - { port: "{{ cloud_torrent_peer_port | default(50007) }}/tcp", comment: "Cloud Torrent BitTorrent peers", when: "{{ cloud_torrent_open_peer_port | default(false) | bool }}" }
+  - { port: "{{ cloud_torrent_peer_port | default(50007) }}/udp", comment: "Cloud Torrent BitTorrent peers (uTP)", when: "{{ cloud_torrent_open_peer_port | default(false) | bool }}" }
 
 # --- Services to OPEN on the LAN --------------------------------------------
 firewall_open_services:

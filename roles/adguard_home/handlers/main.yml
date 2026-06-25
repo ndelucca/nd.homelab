@@ -33,10 +33,7 @@
     msg: "AdGuard DNS did not come back up"
   listen: restart adguardhome
 
-- name: start nginx after adguard
-  ansible.builtin.systemd:
-    name: nginx
-    state: started
-  become: true
-  ignore_errors: true
-  listen: restart adguardhome
+# NGINX is intentionally NOT started here. Starting it is the orchestration
+# play's job (site.yml post_tasks), which runs after every role — so the cross-
+# role coupling (and the ignore_errors that hid a broken NGINX) lives in one
+# explicit place instead of firing on every AdGuard restart.

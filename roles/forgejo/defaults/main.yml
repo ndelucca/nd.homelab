@@ -20,6 +20,10 @@ forgejo_container_name: forgejo
 forgejo_port: 3000          # HTTP, bound to localhost, served via NGINX
 forgejo_host: 127.0.0.1
 forgejo_ssh_port: 2222      # git over SSH, exposed on the LAN (container's own sshd)
+# Bind git-SSH to the LAN IP, not 0.0.0.0, so it is reachable on the LAN but not
+# on any other interface (e.g. a future VPN/WAN). Defaults to the host's primary
+# IPv4; override in host_vars if the LAN NIC isn't the default route.
+forgejo_ssh_host: "{{ ansible_default_ipv4.address }}"
 
 # Application configuration
 # The -rootless image variant runs directly as the git user (no s6/root drop),

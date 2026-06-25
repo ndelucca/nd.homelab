@@ -13,10 +13,11 @@ ContainerName={{ forgejo_container_name }}
 # directly as git (no s6/root privilege drop), so keep-id works cleanly here.
 UserNS=keep-id:uid={{ forgejo_uid }},gid={{ forgejo_uid }}
 
-# HTTP served via NGINX (localhost only); git SSH exposed on the LAN.
-# This is the container's own SSH server, independent of the host sshd (port 22).
+# HTTP served via NGINX (localhost only); git SSH exposed on the LAN IP only
+# (not 0.0.0.0, so it never lands on another interface). This is the container's
+# own SSH server, independent of the host sshd (port 22).
 PublishPort={{ forgejo_host }}:{{ forgejo_port }}:3000
-PublishPort={{ forgejo_ssh_port }}:2222
+PublishPort={{ forgejo_ssh_host }}:{{ forgejo_ssh_port }}:2222
 
 # Persistent storage (rootless image layout)
 Volume={{ forgejo_data_dir }}:/var/lib/gitea:Z

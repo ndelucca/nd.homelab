@@ -44,3 +44,29 @@
   no_log: true
   when: not filebrowser_db_stat.stat.exists
   changed_when: true
+
+# Opt-in rotation for an EXISTING DB. bbolt holds an exclusive lock while the
+# server runs, so stop it first; service.yml restarts it afterwards. Gated by
+# filebrowser_force_admin_password so normal converges never disturb the server.
+- name: Stop FileBrowser to rotate the admin password
+  ansible.builtin.systemd:
+    name: "{{ filebrowser_service_name }}"
+    state: stopped
+  become: true
+  when:
+    - filebrowser_db_stat.stat.exists
+    - filebrowser_force_admin_password | bool
+
+- name: Update the FileBrowser admin password
+  ansible.builtin.command:
+    cmd: >
+      {{ filebrowser_install_dir }}/filebrowser -d {{ filebrowser_database }}
+      users update {{ filebrowser_admin_username }} --password {{ filebrowser_admin_password }}
+    chdir: "{{ filebrowser_working_dir }}"
+  become: true
+  become_user: "{{ filebrowser_user }}"
+  no_log: true
+  when:
+    - filebrowser_db_stat.stat.exists
+    - filebrowser_force_admin_password | bool
+  changed_when: true

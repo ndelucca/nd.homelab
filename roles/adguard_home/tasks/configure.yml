@@ -46,7 +46,6 @@
     owner: "{{ adguard_user }}"
     group: "{{ adguard_group }}"
     mode: '0600'
-    backup: true
   become: true
   when: adguard_configure_app | bool
   notify: restart adguardhome
@@ -68,12 +67,24 @@
     owner: "{{ adguard_user }}"
     group: "{{ adguard_group }}"
     mode: '0600'
-    backup: true
   become: true
   when:
     - adguard_configure_app | bool
     - adguard_dhcp_enabled | bool
     - adguard_dhcp_static_leases | length > 0
+  notify: restart adguardhome
+
+# Reconcile: if static leases were configured before but the list is now empty
+# (or DHCP turned off), remove the stale leases.json instead of leaving the old
+# reservations on disk.
+- name: Remove stale DHCP leases file when no static leases are configured
+  ansible.builtin.file:
+    path: "{{ adguard_working_dir }}/data/leases.json"
+    state: absent
+  become: true
+  when:
+    - adguard_configure_app | bool
+    - not (adguard_dhcp_enabled | bool) or (adguard_dhcp_static_leases | length == 0)
   notify: restart adguardhome
 
 - name: Display configuration information

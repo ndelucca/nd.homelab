@@ -10,19 +10,31 @@
       - forgejo_admin_password | length > 0
     fail_msg: "forgejo_admin_password must be set (use Ansible Vault in host_vars)"
 
+# The password is forwarded into the container via `podman exec --env NAME`
+# (pass-through: podman reads NAME from its own environment, which Ansible sets
+# below) and referenced as $FORGEJO_ADMIN_PASSWORD inside an `sh -c`, so the
+# cleartext never appears in the host process table / argv.
 - name: Create Forgejo admin user
-  ansible.builtin.command: >
-    podman exec {{ forgejo_container_name }}
-    forgejo admin user create
-    --admin
-    --username {{ forgejo_admin_user }}
-    --password {{ forgejo_admin_password }}
-    --email {{ forgejo_admin_email }}
-    --must-change-password=false
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - --env
+      - FORGEJO_ADMIN_PASSWORD
+      - "{{ forgejo_container_name }}"
+      - sh
+      - -c
+      - >-
+        forgejo admin user create --admin
+        --username "{{ forgejo_admin_user }}"
+        --password "$FORGEJO_ADMIN_PASSWORD"
+        --email "{{ forgejo_admin_email }}"
+        --must-change-password=false
   become: true
   become_user: "{{ forgejo_user }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forgejo_uid }}"
+    FORGEJO_ADMIN_PASSWORD: "{{ forgejo_admin_password }}"
   register: forgejo_admin_create
   changed_when: "'has been successfully created' in forgejo_admin_create.stdout"
   failed_when:
@@ -33,17 +45,27 @@
 
 # `admin user create` is skipped once the user exists, so the password can drift
 # from the vault value. Enforce it on every deploy so the API (basic auth) works.
+# Same env pass-through trick to keep the secret out of the host argv.
 - name: Enforce Forgejo admin password
-  ansible.builtin.command: >
-    podman exec {{ forgejo_container_name }}
-    forgejo admin user change-password
-    --username {{ forgejo_admin_user }}
-    --password {{ forgejo_admin_password }}
-    --must-change-password=false
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - --env
+      - FORGEJO_ADMIN_PASSWORD
+      - "{{ forgejo_container_name }}"
+      - sh
+      - -c
+      - >-
+        forgejo admin user change-password
+        --username "{{ forgejo_admin_user }}"
+        --password "$FORGEJO_ADMIN_PASSWORD"
+        --must-change-password=false
   become: true
   become_user: "{{ forgejo_user }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forgejo_uid }}"
+    FORGEJO_ADMIN_PASSWORD: "{{ forgejo_admin_password }}"
   register: forgejo_admin_password_set
   # Forgejo reports success whether or not the password actually differed, so we
   # cannot detect a real change; treat this as an idempotent state-enforcing step.

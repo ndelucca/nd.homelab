@@ -6,4 +6,7 @@
     name: nginx
     enabled: true
   become: true
-  # NOTE: Do NOT notify here - NGINX will be started by AdGuard handler chain after port 80 is freed
+  # Enable only — do NOT start here. NGINX is started by site.yml post_tasks,
+  # after AdGuard has been configured (its admin moves to 127.0.0.1:8081, freeing
+  # the ports). Centralizing the start there keeps the ordering explicit instead
+  # of relying on a cross-role handler in the AdGuard role.

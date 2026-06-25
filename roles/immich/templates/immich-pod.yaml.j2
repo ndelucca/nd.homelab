@@ -68,6 +68,17 @@ spec:
       value: "--data-checksums"
     - name: TZ
       value: "{{ immich_timezone }}"
+    # Health probe (pg_isready): Podman runs livenessProbe as the container's
+    # healthcheck, so a wedged Postgres is detected and restarted on its own
+    # instead of the whole pod bounce-looping. The long initialDelay covers the
+    # first-boot initdb (--data-checksums) so the cold start isn't flagged early.
+    livenessProbe:
+      exec:
+        command: ["pg_isready", "-U", "{{ immich_db_username }}", "-d", "{{ immich_db_database }}"]
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 5
     volumeMounts:
     - name: database-storage
       mountPath: /var/lib/postgresql/data

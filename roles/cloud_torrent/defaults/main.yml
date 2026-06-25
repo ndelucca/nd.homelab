@@ -25,6 +25,18 @@ cloud_torrent_service_state: started
 cloud_torrent_port: 9091
 cloud_torrent_host: 127.0.0.1
 
+# BitTorrent peer (incoming) port. This is the torrent engine's default
+# IncomingPort, persisted in cloud_torrent_config_path (the engine has no CLI
+# flag for it; change it in the web UI to override). Named here so it is not an
+# untracked magic number. Opening it on the LAN is gated by the toggle below and
+# OFF by default: the host is LAN-only with no router port-forward, so inbound
+# peers from the internet can't arrive regardless. Outbound peering (NAT) works
+# without any open port. Flip the toggle (and add a router forward) if that
+# changes; the firewall role consumes both vars (set them in services.yml to
+# expose them to that role).
+cloud_torrent_peer_port: 50007
+cloud_torrent_open_peer_port: false
+
 # Application configuration
 cloud_torrent_title: "Cloud Torrent"
 cloud_torrent_downloads_dir: "{{ app_media_root }}"
