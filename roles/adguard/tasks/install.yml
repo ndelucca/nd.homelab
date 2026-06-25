@@ -55,7 +55,7 @@
   ansible.builtin.tempfile:
     state: directory
     suffix: _adguard_download
-  register: download_dir
+  register: adguard_download_dir
   when: adguard_needs_install
 
 - name: Fetch AdGuard Home release checksums
@@ -76,15 +76,15 @@
 - name: Download AdGuard Home archive
   ansible.builtin.get_url:
     url: "https://github.com/{{ adguard_github_repo }}/releases/download/v{{ adguard_target_version }}/AdGuardHome_linux_amd64.tar.gz"
-    dest: "{{ download_dir.path }}/AdGuardHome.tar.gz"
+    dest: "{{ adguard_download_dir.path }}/AdGuardHome.tar.gz"
     checksum: "sha256:{{ adguard_archive_sha256 }}"
     mode: '0644'
   when: adguard_needs_install
 
 - name: Extract AdGuard Home archive
   ansible.builtin.unarchive:
-    src: "{{ download_dir.path }}/AdGuardHome.tar.gz"
-    dest: "{{ download_dir.path }}"
+    src: "{{ adguard_download_dir.path }}/AdGuardHome.tar.gz"
+    dest: "{{ adguard_download_dir.path }}"
     remote_src: true
   when: adguard_needs_install
 
@@ -98,7 +98,7 @@
 
 - name: Copy AdGuard Home binary to installation directory
   ansible.builtin.copy:
-    src: "{{ download_dir.path }}/AdGuardHome/AdGuardHome"
+    src: "{{ adguard_download_dir.path }}/AdGuardHome/AdGuardHome"
     dest: "{{ adguard_install_dir }}/AdGuardHome"
     remote_src: true
     owner: root
@@ -144,7 +144,7 @@
   args:
     creates: /etc/systemd/system/{{ adguard_service_name }}.service
   notify:
-    - daemon-reload
+    - Daemon-reload
 
 - name: Override AdGuard Home service to run as ndelucca user
   ansible.builtin.lineinfile:
@@ -153,7 +153,7 @@
     line: 'User={{ adguard_user }}'
     insertafter: '^\[Service\]'
   become: true
-  notify: daemon-reload
+  notify: Daemon-reload
 
 - name: Override AdGuard Home service group
   ansible.builtin.lineinfile:
@@ -162,7 +162,7 @@
     line: 'Group={{ adguard_group }}'
     insertafter: '^User='
   become: true
-  notify: daemon-reload
+  notify: Daemon-reload
 
 - name: Set ownership of working directory
   ansible.builtin.file:
@@ -175,9 +175,9 @@
 
 - name: Clean up temporary download directory
   ansible.builtin.file:
-    path: "{{ download_dir.path }}"
+    path: "{{ adguard_download_dir.path }}"
     state: absent
-  when: download_dir is defined and download_dir.path is defined
+  when: adguard_download_dir is defined and adguard_download_dir.path is defined
 
 - name: Display installation information
   ansible.builtin.debug:

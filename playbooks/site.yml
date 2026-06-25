@@ -22,7 +22,7 @@
     - role: nginx
       tags: ['nginx', 'proxy']
 
-    - role: adguard_home
+    - role: adguard
       tags: ['adguard', 'dns']
 
     - role: filebrowser

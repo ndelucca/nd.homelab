@@ -37,7 +37,7 @@
     mode: '0644'
   become: true
   register: mainsail_tls_site
-  notify: reload nginx
+  notify: Reload nginx
 
 - name: Validate the complete nginx configuration
   ansible.builtin.command: nginx -t

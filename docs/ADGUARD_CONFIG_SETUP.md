@@ -13,18 +13,18 @@ incluyendo:
 
 ### 2. Se crearon templates Jinja2
 
-**`roles/adguard_home/templates/AdGuardHome.yaml.j2`**
+**`roles/adguard/templates/AdGuardHome.yaml.j2`**
 - Template completo de configuración de AdGuard Home
 - Todos los ajustes parametrizados vía variables de Ansible
 - Soporta DNS, DHCP, filtrado, rewrites y más
 
-**`roles/adguard_home/templates/leases.json.j2`**
+**`roles/adguard/templates/leases.json.j2`**
 - Template de los leases estáticos de DHCP
 - Gestiona las asignaciones de IP estática de tus dispositivos
 
 ### 3. Se actualizaron las variables del role
 
-**`roles/adguard_home/defaults/main.yml`**
+**`roles/adguard/defaults/main.yml`**
 Se agregaron 100+ variables de configuración, incluyendo:
 - Ajustes de autenticación de usuario
 - Servidores y modos de DNS upstream
@@ -37,7 +37,7 @@ Se agregaron 100+ variables de configuración, incluyendo:
 
 ### 4. Se creó la task de configuración
 
-**`roles/adguard_home/tasks/configure.yml`**
+**`roles/adguard/tasks/configure.yml`**
 - Despliega los templates de configuración al servidor
 - Crea backups antes de modificar archivos
 - Reinicia AdGuard Home cuando hace falta
@@ -130,7 +130,7 @@ adguard_dns_rewrites:
 ```
 
 ### Opción 2: Editar las variables por defecto
-Editá `roles/adguard_home/defaults/main.yml` para cambiar los defaults de todos
+Editá `roles/adguard/defaults/main.yml` para cambiar los defaults de todos
 los servidores.
 
 ### Opción 3: Usar extra vars
@@ -277,6 +277,6 @@ ansible ndelucca-server -m shell -a "systemctl restart AdGuardHome" --become
 
 ## Documentación
 
-- README del role: `roles/adguard_home/README.md`
-- Referencia completa de variables: `roles/adguard_home/defaults/main.yml`
-- Templates: `roles/adguard_home/templates/`
+- README del role: `roles/adguard/README.md`
+- Referencia completa de variables: `roles/adguard/defaults/main.yml`
+- Templates: `roles/adguard/templates/`

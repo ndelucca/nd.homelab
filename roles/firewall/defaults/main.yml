@@ -13,15 +13,17 @@ firewall_default_zone: FedoraServer
 firewall_interface: "{{ adguard_dhcp_interface_name | default('enp6s0') }}"
 
 # Puerto git-SSH del contenedor de Forgejo (el único puerto de app expuesto a propósito).
-forgejo_firewall_enabled: true
-forgejo_ssh_port: 2222
+# Defaultean a las vars canónicas del rol forgejo para no perder el sync si se
+# sobreescriben en inventory; el prefijo firewall_ las mantiene dentro de este rol.
+firewall_forgejo_enabled: "{{ forgejo_firewall_enabled | default(true) }}"
+firewall_forgejo_ssh_port: "{{ forgejo_ssh_port | default(2222) }}"
 
 firewall_open_ports:
   - { port: "53/tcp", comment: "AdGuard DNS", when: "{{ adguard_firewall_enabled | default(true) | bool }}" }
   - { port: "53/udp", comment: "AdGuard DNS", when: "{{ adguard_firewall_enabled | default(true) | bool }}" }
   - { port: "80/tcp", comment: "NGINX HTTP", when: "{{ nginx_firewall_enabled | default(true) | bool }}" }
   - { port: "443/tcp", comment: "NGINX HTTPS", when: "{{ nginx_firewall_enabled | default(true) | bool }}" }
-  - { port: "{{ forgejo_ssh_port }}/tcp", comment: "Forgejo git SSH", when: "{{ forgejo_firewall_enabled | default(true) | bool }}" }
+  - { port: "{{ firewall_forgejo_ssh_port }}/tcp", comment: "Forgejo git SSH", when: "{{ firewall_forgejo_enabled | bool }}" }
   # Puerto de peers BitTorrent de Cloud Torrent — apagado por defecto (host solo en
   # LAN, sin forward en el router, así que no pueden llegar peers entrantes). Setear
   # cloud_torrent_open_peer_port y cloud_torrent_peer_port en services.yml para

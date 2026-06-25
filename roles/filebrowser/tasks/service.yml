@@ -8,8 +8,8 @@
     mode: '0644'
   become: true
   notify:
-    - daemon-reload
-    - restart filebrowser
+    - Daemon-reload
+    - Restart filebrowser
 
 - name: Flush handlers to reload systemd
   ansible.builtin.meta: flush_handlers

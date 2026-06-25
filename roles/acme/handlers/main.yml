@@ -1,5 +1,5 @@
 ---
-- name: reload acme service
+- name: Reload acme service
   ansible.builtin.systemd:
     name: "{{ acme_reload_service }}"
     state: reloaded

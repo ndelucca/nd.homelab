@@ -7,7 +7,7 @@
       - jellyfin-web
     state: present
   become: true
-  notify: restart jellyfin
+  notify: Restart jellyfin
 
 - name: Gather installed package facts
   ansible.builtin.package_facts:

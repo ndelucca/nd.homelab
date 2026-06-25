@@ -17,7 +17,7 @@
     state: stopped
     timeout: 1
   ignore_errors: true
-  register: port_check
+  register: cloud_torrent_port_check
   when: not cloud_torrent_installed.stat.exists
 
 - name: Fail if port is already in use
@@ -25,7 +25,7 @@
     msg: "Port {{ cloud_torrent_port }} is already in use. Please choose a different port."
   when:
     - not cloud_torrent_installed.stat.exists
-    - port_check is failed
+    - cloud_torrent_port_check is failed
 
 - name: Ensure required packages are installed
   ansible.builtin.dnf:
@@ -46,12 +46,12 @@
 - name: Verify downloads directory exists
   ansible.builtin.stat:
     path: "{{ cloud_torrent_downloads_dir }}"
-  register: downloads_dir_stat
+  register: cloud_torrent_downloads_dir_stat
 
 - name: Warn if downloads directory does not exist
   ansible.builtin.debug:
     msg: "WARNING: Downloads directory {{ cloud_torrent_downloads_dir }} does not exist. Please ensure it is mounted before starting the service."
-  when: not downloads_dir_stat.stat.exists
+  when: not cloud_torrent_downloads_dir_stat.stat.exists
 
 - name: Create downloads directory if it doesn't exist (not a mount point)
   ansible.builtin.file:
@@ -61,4 +61,4 @@
     group: "{{ cloud_torrent_group }}"
     mode: '0755'
   become: true
-  when: not downloads_dir_stat.stat.exists
+  when: not cloud_torrent_downloads_dir_stat.stat.exists

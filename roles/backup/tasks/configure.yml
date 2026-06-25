@@ -107,7 +107,7 @@
     {{ backup_units
        + (backup_restore_drill_units if backup_restore_drill_enabled else [])
        + (backup_freshness_units if backup_freshness_enabled else []) }}
-  notify: backup daemon-reload-user
+  notify: Backup daemon-reload-user
 
 - name: Check whether the restic repository is initialised
   ansible.builtin.command: restic snapshots --no-lock

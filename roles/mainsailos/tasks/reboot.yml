@@ -11,7 +11,7 @@
 
 - name: Reboot the printer to apply kernel/firmware updates
   ansible.builtin.reboot:
-    msg: "Rebooting to apply OS updates (mainsailos_update)"
+    msg: "Rebooting to apply OS updates (mainsailos)"
     reboot_timeout: 600
     post_reboot_delay: 20
     test_command: systemctl is-system-running --wait || true

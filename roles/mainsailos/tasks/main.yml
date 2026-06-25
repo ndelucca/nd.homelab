@@ -1,5 +1,5 @@
 ---
-# Punto de entrada del role mainsailos_update.
+# Punto de entrada del role mainsailos.
 # Orquestación liviana sobre los mecanismos de update nativos (API de update de
 # Moonraker + apt). El orden importa: hacer backup ANTES de cualquier cambio para
 # que todo sea reversible.

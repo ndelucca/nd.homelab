@@ -7,4 +7,4 @@
     group: "{{ filebrowser_group }}"
     mode: '0644'
   become: true
-  notify: restart filebrowser
+  notify: Restart filebrowser

@@ -12,4 +12,4 @@
     # ser legible por todo el mundo.
     mode: '0600'
   become: true
-  notify: container restart
+  notify: Container restart

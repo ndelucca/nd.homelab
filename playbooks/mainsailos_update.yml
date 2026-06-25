@@ -20,5 +20,5 @@
   gather_facts: true
 
   roles:
-    - role: mainsailos_update
+    - role: mainsailos
       tags: ['mainsailos', 'printer', 'update']

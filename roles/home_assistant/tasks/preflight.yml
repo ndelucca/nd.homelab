@@ -43,17 +43,17 @@
 - name: Check availability of port {{ home_assistant_port }}
   ansible.builtin.shell: |
     ss -tulnp | grep -q ":{{ home_assistant_port }}\s" && echo "occupied" || echo "available"
-  register: port_check
+  register: home_assistant_port_check
   changed_when: false
   failed_when: false
 
 - name: Display port status
   ansible.builtin.debug:
-    msg: "Port {{ home_assistant_port }} is {{ port_check.stdout }}"
+    msg: "Port {{ home_assistant_port }} is {{ home_assistant_port_check.stdout }}"
 
 # Es una advertencia, no un error: en una re-ejecución se espera que el puerto lo
 # tenga ocupado el propio Home Assistant (consistente con los demás roles de container).
 - name: Warn if port is occupied
   ansible.builtin.debug:
     msg: "WARNING: port {{ home_assistant_port }} is already in use (expected if Home Assistant is already running)"
-  when: port_check.stdout == "occupied"
+  when: home_assistant_port_check.stdout == "occupied"

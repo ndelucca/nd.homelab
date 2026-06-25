@@ -12,7 +12,7 @@
   loop_control:
     label: "{{ item.target }}"
   when: ansible_selinux.mode | default('') == 'enforcing'
-  notify: cloud_torrent apply selinux context
+  notify: Cloud_torrent apply selinux context
 
 - name: Configure SELinux port for Cloud Torrent
   community.general.seport:

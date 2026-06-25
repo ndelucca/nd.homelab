@@ -28,7 +28,7 @@ internet**.
 
 | Subdominio (`*.ndelucca.dedyn.io`) | App | Role | Deploy |
 |---|---|---|---|
-| `adguard.` / apex | AdGuard Home (DNS + DHCP) | `adguard_home` | binario nativo |
+| `adguard.` / apex | AdGuard Home (DNS + DHCP) | `adguard` | binario nativo |
 | `cockpit.` | Cockpit (admin web) | `cockpit` | host (localhost + NGINX) |
 | `files.` | FileBrowser | `filebrowser` | binario nativo |
 | `jellyfin.` | Jellyfin (media) | `jellyfin` | paquete |

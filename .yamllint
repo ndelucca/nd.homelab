@@ -10,6 +10,11 @@ rules:
   # Allow inline comments closer to content than the strict default.
   comments:
     min-spaces-from-content: 1
+  # ansible-lint exige prohibir valores octales (los modes de archivo van como
+  # string "0644"); habilitarlo también re-activa el fix mode de ansible-lint.
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
   comments-indentation: disable
   # Ansible booleans are true/false; don't fight yes/no edge cases hard.
   truthy:

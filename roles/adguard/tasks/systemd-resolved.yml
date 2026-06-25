@@ -19,7 +19,7 @@
     group: root
     mode: '0644'
   become: true
-  notify: reload systemd-resolved
+  notify: Reload systemd-resolved
 
 - name: Backup original resolv.conf
   ansible.builtin.copy:
@@ -53,10 +53,10 @@
 - name: Verify DNS port is free
   ansible.builtin.shell: |
     ss -tulnp | grep -q ":53\s" && echo "occupied" || echo "free"
-  register: port_53_check
+  register: adguard_port_53_check
   changed_when: false
   become: true
 
 - name: Display DNS port status
   ansible.builtin.debug:
-    msg: "Port 53 is {{ port_53_check.stdout }}"
+    msg: "Port 53 is {{ adguard_port_53_check.stdout }}"

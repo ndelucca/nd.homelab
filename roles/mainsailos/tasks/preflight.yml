@@ -6,7 +6,7 @@
     that:
       - ansible_os_family == "Debian"
     fail_msg: >-
-      mainsailos_update only supports Debian/MainsailOS hosts, but this host is
+      mainsailos only supports Debian/MainsailOS hosts, but this host is
       {{ ansible_distribution }} ({{ ansible_os_family }}). Refusing to run.
     success_msg: "Host is {{ ansible_distribution }} {{ ansible_distribution_version }} - OK."
 

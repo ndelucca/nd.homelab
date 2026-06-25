@@ -1,29 +1,29 @@
 ---
-- name: daemon-reload
+- name: Daemon-reload
   ansible.builtin.systemd:
     daemon_reload: true
   become: true
 
-- name: restart adguardhome
+- name: Restart adguardhome
   ansible.builtin.systemd:
     name: "{{ adguard_service_name }}"
     state: restarted
   become: true
   listen: restart adguardhome
 
-- name: reload systemd-resolved
+- name: Reload systemd-resolved
   ansible.builtin.systemd:
     name: systemd-resolved
     state: reloaded
   become: true
 
-- name: reload firewalld
+- name: Reload firewalld
   ansible.builtin.systemd:
     name: firewalld
     state: reloaded
   become: true
 
-- name: wait for adguard
+- name: Wait for adguard
   ansible.builtin.wait_for:
     host: 127.0.0.1
     port: 53

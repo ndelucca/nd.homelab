@@ -1,16 +1,16 @@
 ---
-- name: daemon-reload
+- name: Daemon-reload
   ansible.builtin.systemd:
     daemon_reload: true
   become: true
 
-- name: restart cloud-torrent
+- name: Restart cloud-torrent
   ansible.builtin.systemd:
     name: "{{ cloud_torrent_service_name }}"
     state: restarted
   become: true
 
-- name: cloud_torrent apply selinux context
+- name: Cloud_torrent apply selinux context
   ansible.builtin.command: "restorecon -Rv {{ item }}"
   become: true
   loop:

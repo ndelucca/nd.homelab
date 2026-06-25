@@ -20,7 +20,7 @@
   loop_control:
     label: "{{ item.target }}"
   when: ansible_selinux.mode | default('') == 'enforcing'
-  notify: filebrowser apply selinux context
+  notify: Filebrowser apply selinux context
 
 - name: Allow FileBrowser to bind to custom port
   community.general.seport:

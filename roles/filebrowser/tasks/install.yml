@@ -59,7 +59,7 @@
   ansible.builtin.tempfile:
     state: directory
     suffix: _filebrowser_download
-  register: download_dir
+  register: filebrowser_download_dir
   when: filebrowser_needs_install
 
 - name: Fetch FileBrowser release checksums
@@ -80,35 +80,35 @@
 - name: Download FileBrowser archive
   ansible.builtin.get_url:
     url: "https://github.com/{{ filebrowser_github_repo }}/releases/download/v{{ filebrowser_target_version }}/linux-{{ filebrowser_arch }}-filebrowser.tar.gz"
-    dest: "{{ download_dir.path }}/filebrowser.tar.gz"
+    dest: "{{ filebrowser_download_dir.path }}/filebrowser.tar.gz"
     checksum: "sha256:{{ filebrowser_archive_sha256 }}"
     mode: '0644'
   when: filebrowser_needs_install
 
 - name: Extract FileBrowser archive
   ansible.builtin.unarchive:
-    src: "{{ download_dir.path }}/filebrowser.tar.gz"
-    dest: "{{ download_dir.path }}"
+    src: "{{ filebrowser_download_dir.path }}/filebrowser.tar.gz"
+    dest: "{{ filebrowser_download_dir.path }}"
     remote_src: true
   when: filebrowser_needs_install
 
 - name: Install FileBrowser binary
   ansible.builtin.copy:
-    src: "{{ download_dir.path }}/filebrowser"
+    src: "{{ filebrowser_download_dir.path }}/filebrowser"
     dest: "{{ filebrowser_install_dir }}/filebrowser"
     remote_src: true
     owner: root
     group: root
     mode: '0755'
   become: true
-  notify: restart filebrowser
+  notify: Restart filebrowser
   when: filebrowser_needs_install
 
 - name: Clean up temporary download directory
   ansible.builtin.file:
-    path: "{{ download_dir.path }}"
+    path: "{{ filebrowser_download_dir.path }}"
     state: absent
-  when: download_dir is defined and download_dir.path is defined
+  when: filebrowser_download_dir is defined and filebrowser_download_dir.path is defined
 
 - name: Verify FileBrowser binary is executable
   ansible.builtin.command: "{{ filebrowser_install_dir }}/filebrowser version"

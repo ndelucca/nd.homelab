@@ -10,7 +10,7 @@
 # `systemctl --user daemon-reload` explícito: el daemon_reload en user-scope del
 # módulo systemd no regenera de forma confiable los units de Quadlet (el unit
 # generado conserva paths viejos), mientras que el comando sí.
-- name: container daemon-reload-user  # noqa: command-instead-of-module
+- name: Container daemon-reload-user  # noqa: command-instead-of-module
   ansible.builtin.command:
     cmd: systemctl --user daemon-reload
   become: true
@@ -19,7 +19,7 @@
     XDG_RUNTIME_DIR: "/run/user/{{ container_uid }}"
   changed_when: false
 
-- name: container restart
+- name: Container restart
   ansible.builtin.systemd:
     name: "{{ container_service_name }}"
     state: restarted
@@ -29,7 +29,7 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ container_uid }}"
 
-- name: container apply selinux context
+- name: Container apply selinux context
   ansible.builtin.command: "restorecon -Rv {{ item }}"
   become: true
   changed_when: false

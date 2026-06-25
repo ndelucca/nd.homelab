@@ -89,17 +89,17 @@
 - name: Check availability of port {{ orcaslicer_port }}
   ansible.builtin.shell: |
     ss -tulnp | grep -q ":{{ orcaslicer_port }}\s" && echo "occupied" || echo "available"
-  register: port_check
+  register: orcaslicer_port_check
   changed_when: false
   failed_when: false
 
 - name: Display port status
   ansible.builtin.debug:
-    msg: "Port {{ orcaslicer_port }} is {{ port_check.stdout }}"
+    msg: "Port {{ orcaslicer_port }} is {{ orcaslicer_port_check.stdout }}"
 
 # Es un aviso, no una falla: en una re-corrida se espera que el puerto lo tenga el
 # propio OrcaSlicer (consistente con los otros roles de container).
 - name: Warn if port is occupied
   ansible.builtin.debug:
     msg: "WARNING: port {{ orcaslicer_port }} is already in use (expected if OrcaSlicer is already running)"
-  when: port_check.stdout == "occupied"
+  when: orcaslicer_port_check.stdout == "occupied"

@@ -21,13 +21,13 @@
 - name: Check availability of port {{ kavita_port }}
   ansible.builtin.shell: |
     ss -tulnp | grep -q ":{{ kavita_port }}\s" && echo "occupied" || echo "available"
-  register: port_check
+  register: kavita_port_check
   changed_when: false
   failed_when: false
 
 - name: Display port status
   ansible.builtin.debug:
-    msg: "Port {{ kavita_port }} is {{ port_check.stdout }}"
+    msg: "Port {{ kavita_port }} is {{ kavita_port_check.stdout }}"
 
 # Es una advertencia, no un error: en una re-ejecución se espera que el puerto lo tenga
 # ocupado el propio Kavita. `fail` + `ignore_errors` era un guard no-op que nunca se
@@ -35,7 +35,7 @@
 - name: Warn if port is occupied
   ansible.builtin.debug:
     msg: "WARNING: port {{ kavita_port }} is already in use (expected if Kavita is already running)"
-  when: port_check.stdout == "occupied"
+  when: kavita_port_check.stdout == "occupied"
 
 - name: Create Kavita base directory
   ansible.builtin.file:

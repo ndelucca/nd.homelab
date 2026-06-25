@@ -1,5 +1,5 @@
 ---
-# Variables por defecto del role mainsailos_update.
+# Variables por defecto del role mainsailos.
 # Sobrescribir por host en inventory/host_vars o con -e en la línea de comandos.
 
 mainsailos_backup_enabled: true          # siempre hacer backup antes de cambiar nada

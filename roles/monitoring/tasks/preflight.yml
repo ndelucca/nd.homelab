@@ -21,20 +21,20 @@
 - name: Check availability of port {{ monitoring_port }}
   ansible.builtin.shell: |
     ss -tulnp | grep -q ":{{ monitoring_port }}\s" && echo "occupied" || echo "available"
-  register: port_check
+  register: monitoring_port_check
   changed_when: false
   failed_when: false
 
 - name: Display port status
   ansible.builtin.debug:
-    msg: "Port {{ monitoring_port }} is {{ port_check.stdout }}"
+    msg: "Port {{ monitoring_port }} is {{ monitoring_port_check.stdout }}"
 
 # Un warning, no una falla: en una re-corrida se espera que el puerto lo tenga
 # tomado el propio Uptime-Kuma (consistente con los otros roles de container).
 - name: Warn if port is occupied
   ansible.builtin.debug:
     msg: "WARNING: port {{ monitoring_port }} is already in use (expected if Uptime-Kuma is already running)"
-  when: port_check.stdout == "occupied"
+  when: monitoring_port_check.stdout == "occupied"
 
 - name: Create Uptime-Kuma base directory
   ansible.builtin.file:

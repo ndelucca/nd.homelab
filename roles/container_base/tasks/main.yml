@@ -1,7 +1,7 @@
 ---
 # container_base se consume vía `tasks_from: install`, no como role completo.
 # Entrar sin un tasks_from explícito es casi seguro un error.
-- name: container_base must be included with tasks_from
+- name: Container_base must be included with tasks_from
   ansible.builtin.fail:
     msg: >-
       container_base is a helper role — include it as

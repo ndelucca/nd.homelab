@@ -3,7 +3,7 @@
 
 - name: Install Podman packages
   ansible.builtin.dnf:
-    name: "{{ podman_packages }}"
+    name: "{{ cockpit_podman_packages }}"
     state: present
   become: true
 
@@ -12,7 +12,7 @@
     name: "{{ cockpit_packages }}"
     state: present
   become: true
-  notify: restart cockpit
+  notify: Restart cockpit
 
 - name: Create Cockpit configuration directory
   ansible.builtin.file:
@@ -29,7 +29,7 @@
     group: root
     mode: '0644'
   become: true
-  notify: restart cockpit socket
+  notify: Restart cockpit socket
 
 - name: Create cockpit.socket drop-in directory
   ansible.builtin.file:
@@ -46,7 +46,7 @@
     group: root
     mode: '0644'
   become: true
-  notify: restart cockpit socket
+  notify: Restart cockpit socket
 
 - name: Enable and start Cockpit socket
   ansible.builtin.systemd:
@@ -59,8 +59,8 @@
 - name: Enable and start Podman socket (for API access)
   ansible.builtin.systemd:
     name: podman.socket
-    enabled: "{{ podman_enable_socket }}"
-    state: "{{ 'started' if podman_enable_socket else 'stopped' }}"
+    enabled: "{{ cockpit_podman_enable_socket }}"
+    state: "{{ 'started' if cockpit_podman_enable_socket else 'stopped' }}"
     daemon_reload: true
   become: true
 
@@ -72,10 +72,10 @@
 
 - name: Display Podman version
   ansible.builtin.command: podman --version
-  register: podman_version_check
+  register: cockpit_podman_version_check
   changed_when: false
   check_mode: false  # solo lectura; corre en --check para mostrar la versión con exactitud
 
 - name: Show installed Podman version
   ansible.builtin.debug:
-    msg: "Installed {{ podman_version_check.stdout }}"
+    msg: "Installed {{ cockpit_podman_version_check.stdout }}"

@@ -1,13 +1,13 @@
 ---
 # Handlers del role Cockpit
 
-- name: restart cockpit
+- name: Restart cockpit
   ansible.builtin.systemd:
     name: cockpit.service
     state: restarted
   become: true
 
-- name: restart cockpit socket
+- name: Restart cockpit socket
   ansible.builtin.systemd:
     name: cockpit.socket
     state: restarted

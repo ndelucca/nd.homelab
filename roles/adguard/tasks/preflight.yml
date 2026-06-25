@@ -27,13 +27,13 @@
 - name: Check if DNS port is available
   ansible.builtin.shell: |
     ss -tulnp | grep -q ":{{ adguard_dns_port }}\s" && echo "occupied" || echo "available"
-  register: port_check
+  register: adguard_port_check
   changed_when: false
   failed_when: false
 
 - name: Display DNS port status
   ansible.builtin.debug:
-    msg: "Port {{ adguard_dns_port }} is {{ port_check.stdout }}"
+    msg: "Port {{ adguard_dns_port }} is {{ adguard_port_check.stdout }}"
 
 - name: Create working directory for AdGuard Home
   ansible.builtin.file:

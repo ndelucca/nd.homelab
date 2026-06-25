@@ -30,7 +30,7 @@
   become: true
   loop: "{{ container_selinux_paths }}"
   when: ansible_selinux.mode | default('') == 'enforcing'
-  notify: container apply selinux context
+  notify: Container apply selinux context
 
 - name: Enable optional SELinux booleans
   ansible.posix.seboolean:

@@ -19,5 +19,5 @@
     mode: '0644'
   become: true
   notify:
-    - container daemon-reload-user
-    - container restart
+    - Container daemon-reload-user
+    - Container restart

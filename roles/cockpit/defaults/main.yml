@@ -11,7 +11,7 @@ cockpit_packages:
   - cockpit-files
   - cockpit-podman
 
-podman_packages:
+cockpit_podman_packages:
   - podman
   - podman-compose
   - slirp4netns  # Requerido para el networking de containers rootless
@@ -20,7 +20,7 @@ cockpit_service_name: cockpit.socket
 cockpit_service_enabled: true
 cockpit_service_state: started
 
-podman_enable_socket: true
+cockpit_podman_enable_socket: true
 
 # Bindeado a 127.0.0.1; expuesto solo vía el vhost 443 de NGINX.
 cockpit_port: 9090

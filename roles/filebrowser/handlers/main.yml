@@ -1,16 +1,16 @@
 ---
-- name: daemon-reload
+- name: Daemon-reload
   ansible.builtin.systemd:
     daemon_reload: true
   become: true
 
-- name: restart filebrowser
+- name: Restart filebrowser
   ansible.builtin.systemd:
     name: "{{ filebrowser_service_name }}"
     state: restarted
   become: true
 
-- name: filebrowser apply selinux context
+- name: Filebrowser apply selinux context
   ansible.builtin.command: "restorecon -Rv {{ item }}"
   become: true
   loop:

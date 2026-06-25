@@ -26,7 +26,7 @@
   loop_control:
     label: "{{ item.target }}"
   when: ansible_selinux.mode | default('') == 'enforcing'
-  notify: jellyfin apply selinux context
+  notify: Jellyfin apply selinux context
 
 - name: Allow Jellyfin to bind to custom HTTP port
   community.general.seport:

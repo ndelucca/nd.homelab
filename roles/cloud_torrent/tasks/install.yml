@@ -36,13 +36,13 @@
   ansible.builtin.tempfile:
     state: directory
     suffix: _cloud_torrent_download
-  register: download_dir
+  register: cloud_torrent_download_dir
   when: cloud_torrent_needs_install
 
 - name: Download Cloud Torrent binary
   ansible.builtin.get_url:
     url: "{{ cloud_torrent_download_url }}"
-    dest: "{{ download_dir.path }}/cloud-torrent.gz"
+    dest: "{{ cloud_torrent_download_dir.path }}/cloud-torrent.gz"
     checksum: "sha256:{{ cloud_torrent_sha256 }}"
     mode: '0644'
   when: cloud_torrent_needs_install
@@ -50,27 +50,27 @@
 - name: Extract Cloud Torrent binary
   ansible.builtin.command:
     cmd: gunzip cloud-torrent.gz
-    chdir: "{{ download_dir.path }}"
-    creates: "{{ download_dir.path }}/cloud-torrent"
+    chdir: "{{ cloud_torrent_download_dir.path }}"
+    creates: "{{ cloud_torrent_download_dir.path }}/cloud-torrent"
   when: cloud_torrent_needs_install
 
 - name: Copy binary to installation directory
   ansible.builtin.copy:
-    src: "{{ download_dir.path }}/cloud-torrent"
+    src: "{{ cloud_torrent_download_dir.path }}/cloud-torrent"
     dest: "{{ cloud_torrent_install_dir }}/cloud-torrent"
     remote_src: true
     owner: root
     group: root
     mode: '0755'
   become: true
-  notify: restart cloud-torrent
+  notify: Restart cloud-torrent
   when: cloud_torrent_needs_install
 
 - name: Clean up temporary download directory
   ansible.builtin.file:
-    path: "{{ download_dir.path }}"
+    path: "{{ cloud_torrent_download_dir.path }}"
     state: absent
-  when: download_dir is defined and download_dir.path is defined
+  when: cloud_torrent_download_dir is defined and cloud_torrent_download_dir.path is defined
 
 - name: Verify Cloud Torrent binary is executable
   ansible.builtin.command: "{{ cloud_torrent_install_dir }}/cloud-torrent --version"
