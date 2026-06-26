@@ -63,6 +63,7 @@ playbooks/
   update.yml                        # reportar actualizaciones disponibles de imágenes de contenedor
 roles/<role>/                       # un role por incumbencia: tasks/ defaults/ templates/ handlers/ meta/
 docs/                               # BOOTSTRAP, RESTORE, TLS-AND-DNS, ADGUARD_CONFIG_SETUP
+raspberry-scripts/                  # helpers sueltos para las Raspberry Pi (pendientes de refactor)
 ```
 
 Los roles siguen un esqueleto consistente: `preflight → install → [configure] →
@@ -84,6 +85,13 @@ install` / `selinux` / `service`) y expone las variables de contrato
   control se conecta como `ndelucca` con `~/.ssh/id_rsa` (ver `ansible.cfg`).
 - **Vault password:** en `.vault_pass` (gitignored). Mantené una copia en
   custodia fuera del equipo — ver [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md).
+
+Clonar:
+
+```bash
+git clone git@github.com:ndelucca/nd.homelab.git "${HOME}/nd.homelab"
+cd "${HOME}/nd.homelab"
+```
 
 ## Uso
 
