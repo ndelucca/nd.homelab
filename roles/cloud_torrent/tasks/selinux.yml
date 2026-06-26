@@ -11,7 +11,7 @@
     - { target: "{{ cloud_torrent_downloads_dir }}(/.*)?", setype: public_content_rw_t }
   loop_control:
     label: "{{ item.target }}"
-  when: ansible_selinux.mode | default('') == 'enforcing'
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
   notify: Cloud_torrent apply selinux context
 
 - name: Configure SELinux port for Cloud Torrent
@@ -21,7 +21,7 @@
     setype: http_port_t
     state: present
   become: true
-  when: ansible_selinux.mode | default('') == 'enforcing'
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
 
 - name: Enable httpd_can_network_connect SELinux boolean
   ansible.posix.seboolean:
@@ -29,4 +29,4 @@
     state: true
     persistent: true
   become: true
-  when: ansible_selinux.mode | default('') == 'enforcing'
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'

@@ -42,7 +42,7 @@
     mode: "0644"
     content: |
       MainsailOS backup manifest
-      generated: {{ ansible_date_time.iso8601 }}
+      generated: {{ ansible_facts['date_time'].iso8601 }}
       host: {{ inventory_hostname }}
       mainsail (web): {{ (mainsailos_mainsail_version_raw.content | b64decode | trim)
                           if mainsailos_mainsail_version_raw.content is defined
@@ -66,7 +66,7 @@
 - name: Create the timestamped backup archive
   community.general.archive:
     path: "{{ mainsailos_archive_paths }}"
-    dest: "{{ mainsailos_backup_dir }}/mainsailos-backup-{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+    dest: "{{ mainsailos_backup_dir }}/mainsailos-backup-{{ ansible_facts['date_time'].iso8601_basic_short }}.tar.gz"
     format: gz
     mode: "0644"
   become: false

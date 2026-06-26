@@ -20,7 +20,7 @@ forgejo_ssh_port: 2222      # git sobre SSH, expuesto en la LAN (sshd propio del
 # Se bindea git-SSH a la IP de la LAN, no a 0.0.0.0, para que sea accesible en la LAN
 # pero no en ninguna otra interfaz (ej. una futura VPN/WAN). Por defecto toma la IPv4
 # primaria del host; sobreescribir en host_vars si la NIC de la LAN no es la ruta por defecto.
-forgejo_ssh_host: "{{ ansible_default_ipv4.address }}"
+forgejo_ssh_host: "{{ ansible_facts['default_ipv4'].address }}"
 
 # La variante de imagen -rootless corre directamente como el usuario git (sin s6/drop
 # de root), que es la forma soportada de correr bajo Podman rootless con UserNS=keep-id.

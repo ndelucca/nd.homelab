@@ -26,4 +26,4 @@
       Config directory: {{ jellyfin_config_dir }}
       Service name: {{ jellyfin_service_name }}
 
-      Web UI: http://{{ ansible_default_ipv4.address }}:{{ jellyfin_http_port }}
+      Web UI: http://{{ ansible_facts['default_ipv4'].address }}:{{ jellyfin_http_port }}

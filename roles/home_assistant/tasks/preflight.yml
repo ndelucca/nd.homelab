@@ -4,9 +4,9 @@
 - name: Verify Fedora operating system
   ansible.builtin.assert:
     that:
-      - ansible_distribution == "Fedora"
+      - ansible_facts['distribution'] == "Fedora"
     fail_msg: "This role only supports Fedora"
-    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
 
 - name: Resolve home_assistant user UID for rootless Podman
   ansible.builtin.getent:
@@ -16,7 +16,7 @@
 
 - name: Set home_assistant_uid fact
   ansible.builtin.set_fact:
-    home_assistant_uid: "{{ getent_passwd[home_assistant_user][1] }}"
+    home_assistant_uid: "{{ ansible_facts['getent_passwd'][home_assistant_user][1] }}"
 
 - name: Display user UID
   ansible.builtin.debug:

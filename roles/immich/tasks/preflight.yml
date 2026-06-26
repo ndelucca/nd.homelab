@@ -4,9 +4,9 @@
 - name: Verify running on Fedora
   ansible.builtin.assert:
     that:
-      - ansible_distribution == "Fedora"
+      - ansible_facts['distribution'] == "Fedora"
     fail_msg: "This role is designed for Fedora systems"
-    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
 
 - name: Require the Immich DB password to be set (from vault)
   ansible.builtin.assert:
@@ -25,7 +25,7 @@
 
 - name: Set immich_uid fact
   ansible.builtin.set_fact:
-    immich_uid: "{{ getent_passwd[immich_user][1] }}"
+    immich_uid: "{{ ansible_facts['getent_passwd'][immich_user][1] }}"
 
 - name: Check availability of port {{ immich_port }}
   ansible.builtin.shell: |

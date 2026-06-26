@@ -188,4 +188,4 @@
       Working directory: {{ adguard_working_dir }}
       Service name: {{ adguard_service_name }}
 
-      Initial setup: http://{{ ansible_default_ipv4.address }}:{{ adguard_bind_port }}
+      Initial setup: http://{{ ansible_facts['default_ipv4'].address }}:{{ adguard_bind_port }}

@@ -5,7 +5,7 @@
       - policycoreutils-python-utils
     state: present
   become: true
-  when: ansible_selinux.mode | default('') == 'enforcing'
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
 
 - name: Set SELinux file contexts for FileBrowser
   community.general.sefcontext:
@@ -19,7 +19,7 @@
     - { target: "{{ filebrowser_root_dir }}(/.*)?", setype: public_content_rw_t }
   loop_control:
     label: "{{ item.target }}"
-  when: ansible_selinux.mode | default('') == 'enforcing'
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
   notify: Filebrowser apply selinux context
 
 - name: Allow FileBrowser to bind to custom port
@@ -30,5 +30,5 @@
     state: present
   become: true
   when:
-    - ansible_selinux.mode | default('') == 'enforcing'
+    - ansible_facts['selinux'].mode | default('') == 'enforcing'
     - filebrowser_port != 80 and filebrowser_port != 443

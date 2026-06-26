@@ -2,9 +2,9 @@
 - name: Verify we're running on Fedora
   ansible.builtin.assert:
     that:
-      - ansible_distribution == "Fedora"
+      - ansible_facts['distribution'] == "Fedora"
     fail_msg: "This role is designed for Fedora systems"
-    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
 
 - name: Ensure required packages are installed
   ansible.builtin.dnf:

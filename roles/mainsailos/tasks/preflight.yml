@@ -4,11 +4,11 @@
 - name: Assert the target is a Debian host (never run on the Fedora server)
   ansible.builtin.assert:
     that:
-      - ansible_os_family == "Debian"
+      - ansible_facts['os_family'] == "Debian"
     fail_msg: >-
       mainsailos only supports Debian/MainsailOS hosts, but this host is
-      {{ ansible_distribution }} ({{ ansible_os_family }}). Refusing to run.
-    success_msg: "Host is {{ ansible_distribution }} {{ ansible_distribution_version }} - OK."
+      {{ ansible_facts['distribution'] }} ({{ ansible_facts['os_family'] }}). Refusing to run.
+    success_msg: "Host is {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }} - OK."
 
 - name: Query Moonraker for the current print state
   ansible.builtin.uri:

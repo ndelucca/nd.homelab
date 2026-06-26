@@ -49,5 +49,5 @@
   changed_when: false
   when:
     - acme_manage_selinux | bool
-    - ansible_selinux.status | default('disabled') == 'enabled'
+    - ansible_facts['selinux'].status | default('disabled') == 'enabled'
     - acme_issue.changed | default(false)

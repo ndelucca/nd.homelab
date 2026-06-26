@@ -2,9 +2,9 @@
 - name: Verify Fedora operating system
   ansible.builtin.assert:
     that:
-      - ansible_distribution == "Fedora"
+      - ansible_facts['distribution'] == "Fedora"
     fail_msg: "This role only supports Fedora"
-    success_msg: "Running on Fedora {{ ansible_distribution_version }}"
+    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
 
 - name: Resolve orcaslicer user UID for rootless Podman
   ansible.builtin.getent:
@@ -14,7 +14,7 @@
 
 - name: Set orcaslicer_uid fact
   ansible.builtin.set_fact:
-    orcaslicer_uid: "{{ getent_passwd[orcaslicer_user][1] }}"
+    orcaslicer_uid: "{{ ansible_facts['getent_passwd'][orcaslicer_user][1] }}"
 
 - name: Display user UID
   ansible.builtin.debug:

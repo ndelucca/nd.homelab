@@ -18,7 +18,7 @@
 
 - name: Display SELinux status
   ansible.builtin.debug:
-    msg: "SELinux is {{ ansible_selinux.mode | default('disabled') }}"
+    msg: "SELinux is {{ ansible_facts['selinux'].mode | default('disabled') }}"
 
 - name: Install SELinux policy packages
   ansible.builtin.dnf:
@@ -27,7 +27,7 @@
       - container-selinux
     state: present
   become: true
-  when: ansible_selinux.mode | default('') == 'enforcing'
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
 
 - name: Set SELinux file contexts (container_file_t) for the role's volumes
   community.general.sefcontext:
@@ -36,7 +36,7 @@
     state: present
   become: true
   loop: "{{ container_base_selinux_paths }}"
-  when: ansible_selinux.mode | default('') == 'enforcing'
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
   notify: Container apply selinux context
 
 - name: Enable optional SELinux booleans
@@ -46,5 +46,5 @@
     persistent: true
   become: true
   loop: "{{ container_base_selinux_booleans }}"
-  when: ansible_selinux.mode | default('') == 'enforcing'
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
   failed_when: false
