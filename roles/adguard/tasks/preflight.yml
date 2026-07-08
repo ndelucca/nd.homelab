@@ -7,6 +7,8 @@
     success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
 
 - name: Ensure required packages are installed
+  vars:
+    mitogen_task_isolation: fork  # Mitogen: aísla el módulo dnf5 en un fork (evita el crash por el estado global de libdnf5)
   ansible.builtin.dnf:
     name:
       - curl

@@ -21,6 +21,8 @@
     msg: "SELinux is {{ ansible_facts['selinux'].mode | default('disabled') }}"
 
 - name: Install SELinux policy packages
+  vars:
+    mitogen_task_isolation: fork  # Mitogen: aísla el módulo dnf5 en un fork (evita el crash por el estado global de libdnf5)
   ansible.builtin.dnf:
     name:
       - policycoreutils-python-utils

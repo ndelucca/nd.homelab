@@ -117,6 +117,23 @@ Cada role está tagueado con su nombre más alias temáticos (`dns`, `media`, `t
 `photos`, `books`, `backup`, …) y los tags de etapa transversales (`preflight`,
 `install`, `service`, `selinux`, `firewall`).
 
+### Acelerar con Mitogen (opcional)
+
+[Mitogen](https://mitogen.networkgenomics.com/ansible_detailed.html) multiplexa
+Python sobre una sola conexión SSH por host y recorta el tiempo de ejecución
+(medido acá: converge real ~7m30s → ~4m10s; corridas livianas tipo `--check`
+hasta ~8× más rápidas). Está **vendorizado** en `vendor/mitogen-0.3.50/` (ver
+`vendor/README.md`), así que no requiere pip.
+
+- **Encender**: descomentar las dos líneas del bloque `Mitogen` en `ansible.cfg`
+  (`strategy_plugins` y `strategy`).
+- **Apagar**: volver a comentarlas → Ansible vuelve a la estrategia `linear`
+  (estado por defecto). Ningún comando de uso diario cambia.
+
+Las tareas `dnf` llevan `mitogen_task_isolation: fork` porque el módulo `dnf5` de
+Fedora guarda estado global de `libdnf5` que revienta al reusar el intérprete
+persistente de Mitogen; ese var es inerte cuando Mitogen está apagado.
+
 ## Configuración y secretos
 
 - Config no secreta: `inventory/group_vars/homeservers/services.yml`

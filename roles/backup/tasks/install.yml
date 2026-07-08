@@ -2,6 +2,8 @@
 # Instala restic y las herramientas de las que depende el script de backup.
 
 - name: Install restic and SQLite client
+  vars:
+    mitogen_task_isolation: fork  # Mitogen: aísla el módulo dnf5 en un fork (evita el crash por el estado global de libdnf5)
   ansible.builtin.dnf:
     name:
       - restic    # motor de backup (dedup + snapshots + retención)

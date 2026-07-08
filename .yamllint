@@ -30,3 +30,4 @@ rules:
 ignore: |
   .ansible/
   *.j2
+  vendor/
