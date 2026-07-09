@@ -36,6 +36,7 @@ nginx_orcaslicer_port: 3001
 nginx_home_assistant_port: 8123
 nginx_forgejo_port: 3000
 nginx_uptime_kuma_port: 3011
+nginx_nd_market_port: 28310
 
 # Vhosts de reverse proxy renderizados desde esta lista por
 # conf.d/10-services.conf.j2 (un redirect HTTP->HTTPS + un bloque server HTTPS
@@ -58,6 +59,7 @@ nginx_vhosts:
   - {subdomain: "git", port: "{{ nginx_forgejo_port }}", client_max_body_size: "0"}
   - {subdomain: "home", port: "{{ nginx_home_assistant_port }}"}
   - {subdomain: "status", port: "{{ nginx_uptime_kuma_port }}"}
+  - {subdomain: "market", port: "{{ nginx_nd_market_port }}"}
   - {subdomain: "cockpit", port: "{{ nginx_cockpit_port }}", forwarded_proto: "https", location_snippet: "gzip off;"}
   - subdomain: "files"
     port: "{{ nginx_filebrowser_port }}"

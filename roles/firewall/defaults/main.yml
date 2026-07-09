@@ -52,3 +52,4 @@ firewall_blocked:
   - { port: "{{ filebrowser_port | default(8080) }}/tcp", comment: "FileBrowser direct" }
   - { port: "9091/tcp", comment: "Cloud Torrent direct" }
   - { port: "3001/tcp", comment: "OrcaSlicer direct" }
+  - { port: "28310/tcp", comment: "nd_market direct — localhost only, behind NGINX" }

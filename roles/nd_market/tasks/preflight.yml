@@ -1,0 +1,28 @@
+---
+- name: Verify Fedora operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == "Fedora"
+    fail_msg: "This role only supports Fedora"
+
+- name: Resolve nd_market user UID for rootless Podman
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ nd_market_user }}"
+  check_mode: false
+
+- name: Set nd_market_uid fact
+  ansible.builtin.set_fact:
+    nd_market_uid: "{{ ansible_facts['getent_passwd'][nd_market_user][1] }}"
+
+- name: Ensure base and data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ nd_market_user }}"
+    group: "{{ nd_market_group }}"
+    mode: '0750'
+  become: true
+  loop:
+    - "{{ nd_market_base_dir }}"
+    - "{{ nd_market_data_dir }}"

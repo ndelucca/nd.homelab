@@ -39,6 +39,7 @@ internet**.
 | `home.` | Home Assistant | `home_assistant` | Podman `.container` |
 | `git.` | Forgejo (+ git SSH :2222) | `forgejo` | Podman `.container` |
 | `status.` | Uptime-Kuma | `monitoring` | Podman `.container` |
+| `market.` | nd.market (Markets) | `nd_market` | Podman `.container` (Forgejo Actions) |
 
 Roles transversales: `storage` (discos), `acme` (TLS), `nginx` (proxy),
 `firewall` (firewalld), `backup` (restic → D-Ursa), `service_maintenance`

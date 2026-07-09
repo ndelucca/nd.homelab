@@ -1,0 +1,25 @@
+[Unit]
+Description=nd_market Container
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ nd_market_image }}
+ContainerName={{ nd_market_container_name }}
+
+UserNS=keep-id:uid={{ nd_market_uid }},gid={{ nd_market_uid }}
+
+# HTTP en loopback; NGINX lo sirve en https://market.{{ nginx_domain }}.
+PublishPort={{ nd_market_host }}:{{ nd_market_port }}:{{ nd_market_container_port }}
+
+Volume={{ nd_market_data_dir }}:/data:Z
+
+# El deploy hace `podman pull` de :latest y reinicia; Pull=newer deja la política explícita.
+Pull=newer
+
+[Service]
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target default.target

@@ -1,0 +1,29 @@
+---
+# Variables por defecto del role nd_market (app deployada por Forgejo Actions).
+# Repo de código: git.ndelucca.dedyn.io/ndelucca/nd.market  (nombre de repo con punto).
+# Nombre ansible/service (rol/container/unit/target de deploy): nd_market.
+# Subdominio público: market.
+
+nd_market_user: ndelucca
+nd_market_group: ndelucca
+nd_market_uid: 1000  # Se obtiene dinámicamente vía getent en preflight
+
+# El estado vive en el disco de appdata (app_data_root, en homeservers/storage.yml).
+nd_market_base_dir: "{{ app_data_root }}/nd_market"
+nd_market_data_dir: "{{ nd_market_base_dir }}/data"
+
+nd_market_quadlet_dir: /etc/containers/systemd/users
+nd_market_container_name: nd_market
+
+# Imagen publicada por el workflow en el registry de Forgejo (usa el NOMBRE DE REPO, con puntos).
+nd_market_image: "git.{{ nginx_domain }}/ndelucca/nd.market:latest"
+
+nd_market_port: 28310            # HTTP en loopback, servido vía NGINX (nginx_nd_market_port)
+nd_market_host: 127.0.0.1
+nd_market_container_port: 8080   # puerto que escucha la app dentro del contenedor (EXPOSE)
+
+nd_market_service_name: nd_market
+nd_market_service_enabled: true
+nd_market_service_state: started
+
+nd_market_manage_selinux: true

@@ -1,0 +1,21 @@
+---
+- name: Ensure systemd user directory exists
+  ansible.builtin.file:
+    path: "{{ nd_market_quadlet_dir }}/{{ nd_market_uid }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Deploy nd_market Quadlet .container unit
+  ansible.builtin.template:
+    src: nd_market.container.j2
+    dest: "{{ nd_market_quadlet_dir }}/{{ nd_market_uid }}/{{ nd_market_service_name }}.container"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - Container daemon-reload-user
+    - Container restart

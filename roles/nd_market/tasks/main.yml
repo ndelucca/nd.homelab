@@ -1,0 +1,41 @@
+---
+# Punto de entrada principal del role nd_market.
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['nd_market', 'preflight']
+
+- name: Install Podman and dependencies
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: install
+  vars:
+    container_base_user: "{{ nd_market_user }}"
+  tags: ['nd_market', 'install']
+
+- name: Deploy Quadlet configuration
+  ansible.builtin.import_tasks: quadlet.yml
+  tags: ['nd_market', 'quadlet']
+
+- name: Configure SELinux (shared container_base step)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: selinux
+  vars:
+    container_base_selinux_paths: "{{ [nd_market_data_dir] }}"
+  tags: ['nd_market', 'selinux']
+  when: nd_market_manage_selinux | bool
+
+- name: Configure systemd service (shared container_base step)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: service
+  vars:
+    container_base_user: "{{ nd_market_user }}"
+    container_base_uid: "{{ nd_market_uid }}"
+    container_base_service_name: "{{ nd_market_service_name }}"
+    container_base_host: "{{ nd_market_host }}"
+    container_base_port: "{{ nd_market_port }}"
+    container_base_service_enabled: "{{ nd_market_service_enabled }}"
+    container_base_service_state: "{{ nd_market_service_state }}"
+  tags: ['nd_market', 'service']

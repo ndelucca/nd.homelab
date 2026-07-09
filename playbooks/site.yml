@@ -60,6 +60,10 @@
       tags: ['deploy_ssh', 'actions', 'ci']
       when: deploy_ssh_enabled | default(false) | bool
 
+    # App buildeada/deployada por Forgejo Actions (repo git.<dom>/ndelucca/nd.market).
+    - role: nd_market
+      tags: ['nd_market', 'market']
+
     - role: monitoring
       tags: ['monitoring', 'uptime-kuma']
 
