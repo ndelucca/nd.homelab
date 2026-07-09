@@ -49,6 +49,17 @@
     - role: forgejo
       tags: ['forgejo', 'git', 'vcs']
 
+    # Después de forgejo: el runner toma su token de registro de la CLI del contenedor
+    # de Forgejo, que debe estar arriba.
+    - role: forgejo_runner
+      tags: ['forgejo_runner', 'actions', 'ci']
+      when: forgejo_runner_enabled | default(false) | bool
+
+    # Canal de deploy (forced-command) que usan los workflows para reiniciar apps.
+    - role: deploy_ssh
+      tags: ['deploy_ssh', 'actions', 'ci']
+      when: deploy_ssh_enabled | default(false) | bool
+
     - role: monitoring
       tags: ['monitoring', 'uptime-kuma']
 

@@ -159,6 +159,24 @@ kavita_extra_libraries:
 forgejo_pull_mirror_enabled: true
 forgejo_mirror_force_recreate: []
 
+# --- Forgejo Actions (CI/CD: build + deploy en el propio server) ---
+# Todo es reproducible desde el repo: los secrets de Actions se guardan vaulteados acá y el
+# rol forgejo_runner los EMPUJA a Forgejo (nivel usuario) en cada corrida (tasks/secrets.yml).
+# Fuente de verdad = el repo; no se toca la API a mano.
+#
+# Piezas:
+#   - deploy_ssh_public_key: clave pública de deploy (texto plano, abajo) -> authorized_keys.
+#   - deploy_ssh_private_key: clave privada (VAULTEADA en homeservers/vault.yml) -> el rol la
+#     empuja como secret DEPLOY_SSH_KEY. El par ya está generado y vaulteado.
+#   - vault_forgejo_api_token: token de acceso de Forgejo (scopes write:repository +
+#     write:package + write:user) -> el rol lo empuja como secret REGISTRY_TOKEN (login/push al
+#     registry) y el skill add-home-app lo usa para crear repos (write:user es necesario para
+#     POST /user/repos). Ya creado y vaulteado en all/vault.yml.
+forgejo_runner_enabled: true
+deploy_ssh_enabled: true
+# Clave PÚBLICA de deploy (texto plano; la privada va vaulteada como deploy_ssh_private_key).
+deploy_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBx691wmrkN4IhLBzmqIrkxZS8r5/e8JVna74MyVxLT9 home-deploy"
+
 # Un único topic de ntfy maneja TODOS los avisos de falla: fallas de backup /
 # disco lleno (journalctl -t restic-backup) Y fallas de renovación de Let's
 # Encrypt (journalctl -t lego-renew; acme_notify_ntfy_url toma este valor por
