@@ -31,6 +31,11 @@ forgejo_root_url: "https://{{ forgejo_domain }}/"
 forgejo_timezone: America/Los_Angeles
 forgejo_disable_registration: true
 
+# Forgejo Actions (CI/CD compatible con la sintaxis de GitHub Actions). Habilitarlo a
+# nivel instancia hace que los repos nuevos traigan la unit Actions activa; hace falta
+# un runner registrado (rol forgejo_runner) para que los jobs se ejecuten realmente.
+forgejo_actions_enabled: true
+
 # Usuario admin (creado tras el deploy). La contraseña DEBE setearse vía vault en host_vars.
 forgejo_admin_user: ndelucca
 forgejo_admin_email: ndelucca@protonmail.com

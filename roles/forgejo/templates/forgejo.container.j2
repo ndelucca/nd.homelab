@@ -35,6 +35,7 @@ Environment=FORGEJO__server__HTTP_PORT=3000
 Environment=FORGEJO__database__DB_TYPE=sqlite3
 Environment=FORGEJO__service__DISABLE_REGISTRATION={{ forgejo_disable_registration | string | lower }}
 Environment=FORGEJO__security__INSTALL_LOCK=true
+Environment=FORGEJO__actions__ENABLED={{ forgejo_actions_enabled | string | lower }}
 
 [Service]
 Restart=on-failure
