@@ -34,4 +34,5 @@ container_base_service_enabled: true
 container_base_service_state: started
 container_base_wait_delay: 10
 container_base_wait_timeout: 120
+container_base_wait_for_port: true     # false para servicios sin puerto (ej. runner de Forgejo)
 container_base_selinux_booleans: []   # ej. ['container_use_devices']

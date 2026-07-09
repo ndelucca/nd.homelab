@@ -13,6 +13,11 @@
 # container_base_service_state (default 'started'), container_base_wait_delay
 # (default 10), container_base_wait_timeout (default 120) — estos últimos con default
 # en defaults/main.yml de este rol.
+#
+# container_base_wait_for_port (default true): los servicios que escuchan un puerto
+# esperan a que responda antes de seguir. Un servicio saliente-puro (ej. el runner de
+# Forgejo, que no escucha nada) lo pasa en false para saltear el wait_for; en ese caso
+# container_base_host/port no se usan.
 
 # Promueve el contrato a host facts ANTES del flush: los handlers compartidos
 # (`container restart`, `container daemon-reload-user`) los notifica el paso de quadlet
@@ -44,11 +49,13 @@
     port: "{{ container_base_port }}"
     delay: "{{ container_base_wait_delay }}"
     timeout: "{{ container_base_wait_timeout }}"
-  when: container_base_service_state == 'started'
+  when:
+    - container_base_service_state == 'started'
+    - container_base_wait_for_port | default(true) | bool
 
 - name: Report status of the user service {{ container_base_service_name }}
   ansible.builtin.debug:
     msg: >-
-      {{ container_base_service_name }} is up on
-      {{ container_base_host }}:{{ container_base_port }}. Manage:
+      {{ container_base_service_name }} is up{% if container_base_wait_for_port | default(true) | bool %} on
+      {{ container_base_host }}:{{ container_base_port }}{% endif %}. Manage:
       systemctl --user -M {{ container_base_user }}@ status {{ container_base_service_name }}
