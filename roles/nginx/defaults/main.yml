@@ -59,7 +59,15 @@ nginx_vhosts:
   - {subdomain: "git", port: "{{ nginx_forgejo_port }}", client_max_body_size: "0"}
   - {subdomain: "home", port: "{{ nginx_home_assistant_port }}"}
   - {subdomain: "status", port: "{{ nginx_uptime_kuma_port }}"}
-  - {subdomain: "market", port: "{{ nginx_nd_market_port }}"}
+  # nd.market usa Server-Sent Events (/stream/{symbol}, /claude/stream/{id}), no WebSockets:
+  # sin proxy_buffering off los precios en vivo se acumulan en el buffer y no llegan.
+  - subdomain: "market"
+    port: "{{ nginx_nd_market_port }}"
+    websocket: false
+    location_snippet: |-
+      proxy_buffering off;
+      proxy_cache off;
+      proxy_read_timeout 1h;
   - {subdomain: "cockpit", port: "{{ nginx_cockpit_port }}", forwarded_proto: "https", location_snippet: "gzip off;"}
   - subdomain: "files"
     port: "{{ nginx_filebrowser_port }}"

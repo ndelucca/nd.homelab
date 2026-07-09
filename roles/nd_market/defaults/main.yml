@@ -20,7 +20,7 @@ nd_market_image: "git.{{ nginx_domain }}/ndelucca/nd.market:latest"
 
 nd_market_port: 28310            # HTTP en loopback, servido vía NGINX (nginx_nd_market_port)
 nd_market_host: 127.0.0.1
-nd_market_container_port: 8080   # puerto que escucha la app dentro del contenedor (EXPOSE)
+nd_market_container_port: 28310  # puerto que escucha la app dentro del contenedor (EXPOSE)
 
 nd_market_service_name: nd_market
 nd_market_service_enabled: true
