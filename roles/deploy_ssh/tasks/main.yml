@@ -1,0 +1,32 @@
+---
+# Instala el dispatcher de deploy y la clave pública con forced-command.
+
+- name: Ensure the deploy public key is set
+  ansible.builtin.assert:
+    that:
+      - deploy_ssh_public_key | length > 0
+    fail_msg: >-
+      deploy_ssh_public_key must be set (generate a keypair out of band and put the
+      PUBLIC key here; the private key goes as the DEPLOY_SSH_KEY user-level secret in Forgejo).
+
+- name: Deploy the home-deploy dispatcher script
+  ansible.builtin.template:
+    src: home-deploy.j2
+    dest: "{{ deploy_ssh_script_path }}"
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+# Una sola entrada en authorized_keys, no exclusiva (no toca las demás claves del usuario).
+# El forced-command ignora el comando que mande el cliente salvo por $SSH_ORIGINAL_COMMAND,
+# que el dispatcher usa como nombre de app (y valida).
+- name: Install the deploy public key with a forced command
+  ansible.posix.authorized_key:
+    user: "{{ deploy_ssh_user }}"
+    key: "{{ deploy_ssh_public_key }}"
+    key_options: >-
+      command="{{ deploy_ssh_script_path }}",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty
+    exclusive: false
+    state: present
+  become: true

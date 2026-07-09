@@ -1,0 +1,39 @@
+#!/bin/sh
+# home-deploy — dispatcher de deploy (forced-command de la clave DEPLOY_SSH_KEY).
+# Gestionado por Ansible (rol deploy_ssh) — no editar a mano.
+#
+# El runner de Forgejo invoca:  ssh deploy@host <app>
+# El nombre <app> llega en $SSH_ORIGINAL_COMMAND (el forced-command ignora el resto).
+# Solo se aceptan apps con una unit de usuario gestionada, para no permitir pulls/restarts
+# arbitrarios aunque se filtre la clave.
+set -eu
+
+# systemctl --user necesita el runtime dir del usuario; bajo un forced-command puede no
+# venir seteado.
+: "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
+export XDG_RUNTIME_DIR
+
+app=$(printf '%s' "${SSH_ORIGINAL_COMMAND:-}" | tr -d '\r\n')
+
+case "$app" in
+  '' | *[!a-z0-9-]*)
+    echo "home-deploy: nombre de app inválido: '${app}'" >&2
+    exit 2
+    ;;
+esac
+
+unit="${app}.service"
+if ! systemctl --user cat "$unit" >/dev/null 2>&1; then
+  echo "home-deploy: app desconocida (sin unit gestionada): '${app}'" >&2
+  exit 3
+fi
+
+image="{{ deploy_ssh_registry }}/{{ deploy_ssh_registry_owner }}/${app}:latest"
+
+echo "home-deploy: pulling ${image}"
+podman pull "$image"
+
+echo "home-deploy: restarting ${unit}"
+systemctl --user restart "$unit"
+
+echo "home-deploy: ${app} OK"

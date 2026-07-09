@@ -1,0 +1,21 @@
+---
+# Role deploy_ssh — canal de deploy que usa el runner de Forgejo para reiniciar apps.
+#
+# El runner, tras buildear y pushear la imagen, hace `ssh deploy@host <app>`. Una ÚNICA
+# clave (secret a nivel usuario en Forgejo, compartida por todos los repos) entra con un
+# forced-command que corre el dispatcher `home-deploy`, el cual valida <app> contra las
+# units de usuario gestionadas y hace `podman pull` + `systemctl --user restart <app>`.
+
+deploy_ssh_user: ndelucca
+deploy_ssh_group: ndelucca
+
+# Clave PÚBLICA de deploy (la privada va como secret DEPLOY_SSH_KEY a nivel usuario en
+# Forgejo). Generar el par fuera de banda:  ssh-keygen -t ed25519 -f deploy_key -C home-deploy
+# REQUERIDA: setear en group_vars (texto plano, es pública).
+deploy_ssh_public_key: ""
+
+# Registry desde el que el dispatcher baja las imágenes (mismo Forgejo).
+deploy_ssh_registry: "git.{{ nginx_domain }}"
+deploy_ssh_registry_owner: "{{ forgejo_admin_user | default('ndelucca') }}"
+
+deploy_ssh_script_path: /usr/local/bin/home-deploy

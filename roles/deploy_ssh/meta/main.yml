@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  author: Naza
+  description: SSH deploy channel (forced-command dispatcher) for Forgejo Actions deploys
+  license: MIT
+  min_ansible_version: '2.13'
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+
+dependencies: []
+
+collections:
+  - ansible.posix
