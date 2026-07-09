@@ -1,0 +1,35 @@
+---
+# Despliega la config del runner (config.yml) y la unit Quadlet del daemon.
+
+- name: Deploy the runner config.yml
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ forgejo_runner_config_dir }}/config.yml"
+    owner: "{{ forgejo_runner_user }}"
+    group: "{{ forgejo_runner_group }}"
+    mode: '0640'
+  become: true
+  notify:
+    - Container daemon-reload-user
+    - Container restart
+
+- name: Ensure systemd user directory exists
+  ansible.builtin.file:
+    path: "{{ forgejo_runner_quadlet_dir }}/{{ forgejo_runner_uid }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Deploy Forgejo Runner Quadlet .container unit
+  ansible.builtin.template:
+    src: forgejo-runner.container.j2
+    dest: "{{ forgejo_runner_quadlet_dir }}/{{ forgejo_runner_uid }}/{{ forgejo_runner_service_name }}.container"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - Container daemon-reload-user
+    - Container restart

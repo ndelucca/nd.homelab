@@ -1,0 +1,50 @@
+---
+# Obtiene un token de registro para el runner.
+#
+# Si ya está registrado (existe .runner) no se hace nada. Si se pasó un token vía Vault
+# (forgejo_runner_registration_token), se usa ese. Si no, se genera uno desde la CLI del
+# contenedor de Forgejo — mismo patrón de `podman exec` que roles/forgejo/tasks/admin.yml.
+
+- name: Check whether the runner is already registered
+  ansible.builtin.stat:
+    path: "{{ forgejo_runner_data_dir }}/.runner"
+  register: forgejo_runner_state
+  become: true
+
+- name: Generate a registration token from Forgejo
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - "{{ forgejo_runner_forgejo_container }}"
+      - forgejo
+      - actions
+      - generate-runner-token
+  become: true
+  become_user: "{{ forgejo_runner_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ forgejo_runner_uid }}"
+  register: forgejo_runner_token_cmd
+  changed_when: false
+  no_log: true
+  when:
+    - not forgejo_runner_state.stat.exists
+    - forgejo_runner_registration_token | length == 0
+
+- name: Set the registration token fact
+  ansible.builtin.set_fact:
+    forgejo_runner_registration_token: "{{ forgejo_runner_token_cmd.stdout | trim }}"
+  when:
+    - not forgejo_runner_state.stat.exists
+    - forgejo_runner_registration_token | length == 0
+  no_log: true
+
+- name: Ensure a registration token is available when not yet registered
+  ansible.builtin.assert:
+    that:
+      - forgejo_runner_registration_token | length > 0
+    fail_msg: >-
+      No registration token: the Forgejo CLI did not return one. Check that the
+      '{{ forgejo_runner_forgejo_container }}' container is running, or set
+      forgejo_runner_registration_token via Vault.
+  when: not forgejo_runner_state.stat.exists

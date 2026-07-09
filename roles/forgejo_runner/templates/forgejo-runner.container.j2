@@ -1,0 +1,46 @@
+[Unit]
+Description=Forgejo Actions Runner
+Documentation=https://forgejo.org/docs/latest/admin/actions/
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ forgejo_runner_image }}
+ContainerName={{ forgejo_runner_container_name }}
+
+# Mapea el usuario de servicio del host (uid {{ forgejo_runner_uid }}) al del contenedor
+# para ser dueño de los volúmenes montados y del socket de Podman.
+UserNS=keep-id:uid={{ forgejo_runner_uid }},gid={{ forgejo_runner_uid }}
+
+# Red del host: un contenedor rootless con red default no alcanza los servicios del propio
+# host; con host-net el daemon llega a Forgejo (LAN) para buscar jobs. Los jobs también usan
+# host-net vía container.network en config.yml, para poder clonar/reportar contra la instancia.
+Network=host
+
+# Estado de registro (.runner) y config del daemon.
+Volume={{ forgejo_runner_data_dir }}:/data:Z
+Volume={{ forgejo_runner_config_dir }}/config.yml:/config.yml:Z
+
+# Socket de la API de Podman rootless del host: el runner lo usa para spawnear el
+# contenedor de cada job (docker_host en config.yml apunta acá). %t = /run/user/{{ forgejo_runner_uid }}.
+Volume=%t/podman/podman.sock:/run/podman/podman.sock
+
+Environment=DOCKER_HOST=unix:///run/podman/podman.sock
+
+# El socket de Podman del host está labeleado user_tmp_t; bajo SELinux enforcing un
+# container_t no lo puede abrir. Se deshabilita el label SELinux SOLO en este contenedor
+# (equivale a --security-opt label=disable). Es aceptable: montar el socket ya le da
+# control total de contenedores, así que el label no agrega aislamiento real acá.
+SecurityLabelDisable=true
+
+# La imagen tiene ENTRYPOINT vacío y CMD=/bin/forgejo-runner; Exec reemplaza el CMD, así
+# que hay que nombrar el binario explícitamente.
+WorkingDir=/data
+Exec=/bin/forgejo-runner daemon --config /config.yml
+
+[Service]
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target default.target

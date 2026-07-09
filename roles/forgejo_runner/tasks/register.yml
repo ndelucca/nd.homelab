@@ -1,0 +1,43 @@
+---
+# Registra el runner contra la instancia de Forgejo (one-shot). Escribe el archivo de
+# estado .runner en el data dir; `creates:` lo hace idempotente (no re-registra en cada run).
+#
+# El token se pasa vía `--env FR_TOKEN` (pass-through: podman lee FR_TOKEN de su propio
+# entorno) y se referencia como $FR_TOKEN dentro de `sh -c`, así el texto plano nunca
+# aparece en la tabla de procesos / argv del host — mismo patrón que forgejo/admin.yml.
+
+- name: Register the runner against Forgejo
+  ansible.builtin.command:
+    argv:
+      - podman
+      - run
+      - --rm
+      # Host network: un contenedor rootless con red default NO alcanza los servicios del
+      # propio host (Forgejo en la LAN); con host-net el registro llega a la instancia.
+      - --network=host
+      # keep-id: mapea al usuario del host (uid del servicio) para poder escribir .runner
+      # en el volumen de datos (owner del host).
+      - "--userns=keep-id:uid={{ forgejo_runner_uid }},gid={{ forgejo_runner_uid }}"
+      - --env
+      - FR_TOKEN
+      - --entrypoint
+      - sh
+      - -v
+      - "{{ forgejo_runner_data_dir }}:/data:Z"
+      - -w
+      - /data
+      - "{{ forgejo_runner_image }}"
+      - -c
+      - >-
+        forgejo-runner register --no-interactive
+        --instance "{{ forgejo_runner_instance_url }}"
+        --token "$FR_TOKEN"
+        --name "{{ forgejo_runner_name }}"
+        --labels "{{ forgejo_runner_labels | join(',') }}"
+    creates: "{{ forgejo_runner_data_dir }}/.runner"
+  become: true
+  become_user: "{{ forgejo_runner_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ forgejo_runner_uid }}"
+    FR_TOKEN: "{{ forgejo_runner_registration_token }}"
+  no_log: true

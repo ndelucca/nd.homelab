@@ -1,0 +1,38 @@
+# Config del Forgejo Runner (act_runner). Gestionado por Ansible — no editar a mano.
+log:
+  level: info
+
+runner:
+  # Estado de registro; relativo al WorkingDir del contenedor (/data).
+  file: .runner
+  capacity: {{ forgejo_runner_capacity }}
+  timeout: 3h
+  # Los labels se fijan al registrar; se repiten acá para dejarlos explícitos/visibles.
+  labels:
+{% for label in forgejo_runner_labels %}
+    - "{{ label }}"
+{% endfor %}
+
+cache:
+  enabled: true
+
+container:
+  # "-": el runner autodetecta el docker host (vía DOCKER_HOST env → socket de Podman) para
+  # CREAR los contenedores de job, pero NO monta el socket dentro de ellos. Los jobs no lo
+  # necesitan: construyen con buildah (sin daemon). Montarlo fallaba porque la ruta del socket
+  # dentro del runner no es válida en el host donde se crean los jobs.
+  docker_host: "-"
+  # host: los contenedores de job comparten la red del host para alcanzar Forgejo (clonar el
+  # repo, push al registry) — un contenedor con red default no llega a la LAN del host.
+  network: host
+  # No forzar pull en cada job: la imagen base (ej. node:20) se baja una vez y se cachea.
+  force_pull: false
+  privileged: false
+  # /dev/fuse: buildah dentro del job usa fuse-overlayfs para el storage overlay. Sin esto
+  # el build falla con "device /dev/fuse not found". El host lo tiene y container_use_devices
+  # está on. (Alternativa sin device: buildah --storage-driver vfs, más lento.)
+  options: "--device /dev/fuse"
+  valid_volumes: []
+
+host:
+  workdir_parent: /workspace

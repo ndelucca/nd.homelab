@@ -1,0 +1,16 @@
+---
+# Habilita el socket de la API de Podman en el scope de usuario. El runner lo monta para
+# spawnear el contenedor de cada job (docker_host en config.yml apunta a ese socket).
+# Requiere podman instalado (paso install) y lingering activo (loginctl enable-linger,
+# también del paso install) para que el servicio de usuario levante sin sesión de login.
+
+- name: Enable and start the rootless Podman API socket
+  ansible.builtin.systemd:
+    name: podman.socket
+    enabled: true
+    state: started
+    scope: user
+  become: true
+  become_user: "{{ forgejo_runner_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ forgejo_runner_uid }}"

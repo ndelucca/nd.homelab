@@ -1,0 +1,70 @@
+---
+# Variables por defecto del role Forgejo Runner (act_runner / forgejo-runner).
+#
+# Ejecuta los workflows de Forgejo Actions. Es SALIENTE PURO: marca contra la instancia
+# de Forgejo para buscar jobs, así que no expone ningún puerto (sin firewall, NGINX ni
+# DNS). Corre como contenedor rootless/Quadlet, igual que el resto de la stack.
+
+forgejo_runner_user: ndelucca
+forgejo_runner_group: ndelucca
+forgejo_runner_uid: 1000  # Se obtiene dinámicamente vía getent en preflight
+
+# Directorios — el estado (incluido el .runner con el registro) vive en el disco de appdata.
+forgejo_runner_base_dir: "{{ app_data_root }}/forgejo-runner"
+forgejo_runner_data_dir: "{{ forgejo_runner_base_dir }}/data"      # contiene .runner (estado de registro)
+forgejo_runner_config_dir: "{{ forgejo_runner_base_dir }}/config"  # config.yml
+
+forgejo_runner_quadlet_dir: /etc/containers/systemd/users  # Containers de usuario gestionados por el sistema
+forgejo_runner_container_name: forgejo-runner
+forgejo_runner_service_name: forgejo-runner  # unit forgejo-runner.container -> forgejo-runner.service
+
+# Pineado a la serie v11 para matchear la instancia de Forgejo 11.0.1 (verificado
+# existente en el registry). Última v11 al 2026-07: 11.3.1.
+forgejo_runner_version: "11.3.1"
+forgejo_runner_image: "code.forgejo.org/forgejo/runner:{{ forgejo_runner_version }}"
+
+# Instancia contra la que registra. Se usa el dominio interno (resuelto por AdGuard a la
+# IP de LAN) sobre 443 con el cert wildcard real, así que no hacen falta flags inseguros.
+# El contenedor de Forgejo bindea HTTP solo a 127.0.0.1, que dentro del runner sería su
+# propio loopback; por eso se va por el dominio + NGINX, no por 127.0.0.1:3000.
+forgejo_runner_instance_url: "https://git.{{ nginx_domain }}"
+forgejo_runner_name: "{{ inventory_hostname }}"
+
+# Labels del runner: cada label mapea a la imagen base del contenedor de job. `docker`
+# corre los jobs en contenedores efímeros (modelo GitHub-Actions-like) vía el socket de
+# Podman; `buildah` usa una imagen con buildah para construir/pushear imágenes sin daemon
+# (lo usan los workflows de deploy); `native:host` los corre dentro del propio runner.
+# NOTA: construir imágenes dentro de contenedores rootless anidados es la parte más
+# delicada; puede requerir `--isolation chroot` (o privilegios) — es el punto de iteración.
+forgejo_runner_labels:
+  - "docker:docker://node:20-bookworm"
+  - "buildah:docker://quay.io/buildah/stable"
+  - "native:host"
+
+forgejo_runner_capacity: 1  # jobs en paralelo
+
+# Nombre del contenedor de Forgejo desde el que se genera el token de registro (misma
+# stack). Defaultea a la var canónica del rol forgejo si está definida.
+forgejo_runner_forgejo_container: "{{ forgejo_container_name | default('forgejo') }}"
+
+# Token de registro. Si se deja vacío, se genera automáticamente vía la CLI del contenedor
+# de Forgejo (ver tasks/token.yml). Alternativa: setearlo vía Vault (vault_forgejo_runner_token).
+forgejo_runner_registration_token: ""
+
+forgejo_runner_service_enabled: true
+forgejo_runner_service_state: started
+
+forgejo_runner_manage_selinux: true
+
+# --- Sincronización reproducible de secrets de Actions ---
+# Este rol empuja a Forgejo (nivel usuario) los secrets que consumen los workflows,
+# leyéndolos del vault. Así la fuente de verdad es el repo (vaulteado + trackeado) y todo
+# se reconstruye con un `ansible-playbook`, sin tocar la API a mano. Un valor vacío se saltea.
+forgejo_runner_sync_secrets: true
+forgejo_runner_api_base: "https://git.{{ nginx_domain }}/api/v1"
+forgejo_runner_admin_user: "{{ forgejo_admin_user | default('ndelucca') }}"
+forgejo_runner_admin_password: "{{ forgejo_admin_password | default('') }}"
+# Clave privada de deploy (vaulteada en homeservers/vault.yml) -> secret DEPLOY_SSH_KEY.
+forgejo_runner_deploy_ssh_private_key: "{{ deploy_ssh_private_key | default('') }}"
+# Token de API de Forgejo (vaulteado) -> secret REGISTRY_TOKEN (login/push al registry).
+forgejo_runner_registry_token: "{{ vault_forgejo_api_token | default('') }}"

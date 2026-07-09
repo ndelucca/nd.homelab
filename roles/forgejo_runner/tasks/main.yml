@@ -1,0 +1,66 @@
+---
+# Punto de entrada principal del role Forgejo Runner.
+#
+# Requiere que el contenedor de Forgejo ya esté corriendo (el rol forgejo se aplica antes
+# en site.yml): el token de registro se genera desde su CLI.
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['forgejo_runner', 'preflight']
+
+- name: Install Podman and dependencies
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: install
+  vars:
+    container_base_user: "{{ forgejo_runner_user }}"
+  tags: ['forgejo_runner', 'install']
+
+# Habilita el socket rootless de Podman DESPUÉS del install (necesita el paquete podman
+# y el lingering del usuario, ambos provistos por el paso de install).
+- name: Enable the rootless Podman API socket
+  ansible.builtin.import_tasks: socket.yml
+  tags: ['forgejo_runner', 'socket']
+
+- name: Obtain a runner registration token
+  ansible.builtin.import_tasks: token.yml
+  tags: ['forgejo_runner', 'token']
+
+- name: Register the runner against Forgejo
+  ansible.builtin.import_tasks: register.yml
+  tags: ['forgejo_runner', 'register']
+
+- name: Deploy Quadlet configuration
+  ansible.builtin.import_tasks: quadlet.yml
+  tags: ['forgejo_runner', 'quadlet']
+
+- name: Configure SELinux (shared container_base step)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: selinux
+  vars:
+    container_base_selinux_paths: "{{ [forgejo_runner_data_dir, forgejo_runner_config_dir] }}"
+  tags: ['forgejo_runner', 'selinux']
+  when: forgejo_runner_manage_selinux | bool
+
+# Servicio saliente-puro: no escucha ningún puerto, así que se saltea el wait_for
+# (container_base_wait_for_port=false).
+- name: Configure systemd service (shared container_base step)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: service
+  vars:
+    container_base_user: "{{ forgejo_runner_user }}"
+    container_base_uid: "{{ forgejo_runner_uid }}"
+    container_base_service_name: "{{ forgejo_runner_service_name }}"
+    container_base_service_enabled: "{{ forgejo_runner_service_enabled }}"
+    container_base_service_state: "{{ forgejo_runner_service_state }}"
+    container_base_wait_for_port: false
+  tags: ['forgejo_runner', 'service']
+
+# Empuja los secrets de Actions (DEPLOY_SSH_KEY, REGISTRY_TOKEN) desde el vault a Forgejo,
+# de forma reproducible. Requiere el contenedor de Forgejo arriba (API), garantizado por
+# el orden en site.yml.
+- name: Sync user-level Actions secrets from the vault
+  ansible.builtin.import_tasks: secrets.yml
+  tags: ['forgejo_runner', 'secrets']
