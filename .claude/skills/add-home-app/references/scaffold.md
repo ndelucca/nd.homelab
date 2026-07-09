@@ -1,8 +1,14 @@
 # Scaffold del modo `init`
 
-Plantillas **fijas** que se escriben en el dir temporal. Sustituir solo `__APP__` (slug del
-repo) y `__OWNER__` (default `ndelucca`). No adaptar a ninguna tecnología: el stub es neutro a
-propósito para que `init` sea 100% determinista.
+Plantillas **fijas** que se escriben en el dir temporal. Sustituir tres placeholders:
+- **`__OWNER__`** — owner (default `ndelucca`).
+- **`__REPO__`** — **nombre de repo** tal cual (con puntos si los hay, ej. `nd.market`). Va en el
+  path de la **imagen** y en el título/README.
+- **`__SLUG__`** — nombre de repo con `.`→`-` (ej. `nd-market`). Va **solo** en el target de
+  `home-deploy` (`ssh … __SLUG__`), porque el dispatcher valida `^[a-z0-9-]+$` y rechaza puntos.
+
+Sin punto en el nombre, `__REPO__` y `__SLUG__` coinciden. No adaptar a ninguna tecnología: el stub
+es neutro a propósito para que `init` sea 100% determinista.
 
 ---
 
@@ -19,7 +25,7 @@ propósito para que `init` sea 100% determinista.
 FROM docker.io/library/busybox:stable
 
 WORKDIR /app
-RUN printf '%s\n' '<h1>__APP__ funcionando</h1>' > /app/index.html
+RUN printf '%s\n' '<h1>__REPO__ funcionando</h1>' > /app/index.html
 
 # Cambiá el puerto al que use tu app de verdad.
 EXPOSE 8080
@@ -47,7 +53,7 @@ jobs:
   build-and-deploy:
     runs-on: buildah              # matchea el label del runner (imagen con buildah + git)
     env:
-      IMAGE: git.ndelucca.dedyn.io/__OWNER__/__APP__
+      IMAGE: git.ndelucca.dedyn.io/__OWNER__/__REPO__
     steps:
       - name: Clonar el repo
         run: |
@@ -69,9 +75,9 @@ jobs:
           install -d -m700 ~/.ssh
           install -m600 /dev/stdin ~/.ssh/deploy_key <<< "${{ secrets.DEPLOY_SSH_KEY }}"
           # El forced-command del host (clave en el usuario ndelucca) ignora todo salvo el
-          # nombre de la app, que llega en $SSH_ORIGINAL_COMMAND.
+          # nombre de la app (= slug del service, sin puntos), que llega en $SSH_ORIGINAL_COMMAND.
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
-              ndelucca@192.168.10.10 __APP__
+              ndelucca@192.168.10.10 __SLUG__
 ```
 
 ---
@@ -110,16 +116,16 @@ target
 ## `README.md`
 
 ```markdown
-# __APP__
+# __REPO__
 
 Proyecto self-hosted en el home-server (Forgejo + Actions).
 
 ## Deploy
 
 - Push a `master` → el workflow buildea la imagen, la pushea al registry de Forgejo
-  (`git.ndelucca.dedyn.io/__OWNER__/__APP__`) y la deploya en el home-server.
+  (`git.ndelucca.dedyn.io/__OWNER__/__REPO__`) y la deploya en el home-server.
 - Para exponerlo en la red la primera vez, correr en `nd.homelab` el skill:
-  `add-home-app enable __APP__`.
+  `add-home-app enable __REPO__`.
 
 ## Desarrollo
 

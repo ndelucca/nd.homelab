@@ -1,43 +1,49 @@
 # Plantillas del modo `enable`
 
-Sustituir dos placeholders (¡son distintos!):
-- **`__APP__`** = slug tal cual (con guiones OK): nombre del **dir del rol**, del **container**,
-  del **service**, del **subdominio** y de la **imagen**. Ej: `hello-home`.
+Sustituir cuatro placeholders (¡ojo que el slug y el nombre de repo pueden diferir!):
+- **`__SLUG__`** = **slug** (repo con `.`→`-`, siempre `^[a-z0-9-]+$`): nombre del **dir del rol**,
+  del **container**, del **service** y del **subdominio por defecto**. Ej: `nd-market`.
+- **`__REPO__`** = **nombre de repo** tal cual (con puntos si los hay): va **solo** en el path de
+  la **imagen** del registry. Ej: `nd.market`. Sin punto, `__REPO__` == `__SLUG__`.
 - **`__VAR__`** = slug con **guiones → guiones bajos**: prefijo de las **variables Ansible**
-  (los nombres de variable NO admiten guiones). Ej: `hello_home`.
+  (los nombres de variable NO admiten guiones ni puntos). Ej: `nd_market`.
+- **`__SUB__`** = **subdominio** (single-label, sin punto — el cert wildcard cubre un solo nivel).
+  Por defecto = `__SLUG__`; el usuario puede pedir uno más corto (ej. `market`).
 
 Y además: `__OWNER__` (default `ndelucca`), `__PORT__` (puerto host en loopback, elegir uno
 libre), `__CPORT__` (puerto del contenedor, del `EXPOSE`). Estas plantillas siguen el patrón de
 `roles/forgejo` y `roles/kavita`; ante dudas, leé esos roles vivos.
 
-> Ejemplo para `hello-home`: `__APP__`=`hello-home`, `__VAR__`=`hello_home`.
+> Ejemplo `hello-home` (sin punto): `__SLUG__`=`__REPO__`=`__SUB__`=`hello-home`, `__VAR__`=`hello_home`.
+> Ejemplo `nd.market` (con punto): `__SLUG__`=`nd-market`, `__REPO__`=`nd.market`, `__VAR__`=`nd_market`,
+> `__SUB__`=`market` (elegido por el usuario).
 
 ---
 
-## `roles/__APP__/defaults/main.yml`
+## `roles/__SLUG__/defaults/main.yml`
 
 ```yaml
 ---
-# Variables por defecto del role __APP__ (app deployada por Forgejo Actions).
+# Variables por defecto del role __SLUG__ (app deployada por Forgejo Actions).
 
 __VAR___user: ndelucca
 __VAR___group: ndelucca
 __VAR___uid: 1000  # Se obtiene dinámicamente vía getent en preflight
 
-__VAR___base_dir: "{{ app_data_root }}/__APP__"
+__VAR___base_dir: "{{ app_data_root }}/__SLUG__"
 __VAR___data_dir: "{{ __VAR___base_dir }}/data"
 
 __VAR___quadlet_dir: /etc/containers/systemd/users
-__VAR___container_name: __APP__
+__VAR___container_name: __SLUG__
 
-# Imagen publicada por el workflow en el registry de Forgejo.
-__VAR___image: "git.{{ nginx_domain }}/__OWNER__/__APP__:latest"
+# Imagen publicada por el workflow en el registry de Forgejo (usa el NOMBRE DE REPO, con puntos).
+__VAR___image: "git.{{ nginx_domain }}/__OWNER__/__REPO__:latest"
 
 __VAR___port: __PORT__            # HTTP en loopback, servido vía NGINX
 __VAR___host: 127.0.0.1
 __VAR___container_port: __CPORT__ # puerto que escucha la app dentro del contenedor
 
-__VAR___service_name: __APP__
+__VAR___service_name: __SLUG__
 __VAR___service_enabled: true
 __VAR___service_state: started
 
@@ -46,13 +52,13 @@ __VAR___manage_selinux: true
 
 ---
 
-## `roles/__APP__/meta/main.yml`
+## `roles/__SLUG__/meta/main.yml`
 
 ```yaml
 ---
 galaxy_info:
   author: Naza
-  description: Deploy __APP__ (Forgejo-built container) on Fedora
+  description: Deploy __SLUG__ (Forgejo-built container) on Fedora
   license: MIT
   min_ansible_version: '2.13'
   platforms:
@@ -69,15 +75,15 @@ collections:
 
 ---
 
-## `roles/__APP__/tasks/main.yml`
+## `roles/__SLUG__/tasks/main.yml`
 
 ```yaml
 ---
-# Punto de entrada principal del role __APP__.
+# Punto de entrada principal del role __SLUG__.
 
 - name: Include preflight checks
   ansible.builtin.import_tasks: preflight.yml
-  tags: ['__APP__', 'preflight']
+  tags: ['__SLUG__', 'preflight']
 
 - name: Install Podman and dependencies
   ansible.builtin.include_role:
@@ -85,11 +91,11 @@ collections:
     tasks_from: install
   vars:
     container_base_user: "{{ __VAR___user }}"
-  tags: ['__APP__', 'install']
+  tags: ['__SLUG__', 'install']
 
 - name: Deploy Quadlet configuration
   ansible.builtin.import_tasks: quadlet.yml
-  tags: ['__APP__', 'quadlet']
+  tags: ['__SLUG__', 'quadlet']
 
 - name: Configure SELinux (shared container_base step)
   ansible.builtin.include_role:
@@ -97,7 +103,7 @@ collections:
     tasks_from: selinux
   vars:
     container_base_selinux_paths: "{{ [__VAR___data_dir] }}"
-  tags: ['__APP__', 'selinux']
+  tags: ['__SLUG__', 'selinux']
   when: __VAR___manage_selinux | bool
 
 - name: Configure systemd service (shared container_base step)
@@ -112,12 +118,12 @@ collections:
     container_base_port: "{{ __VAR___port }}"
     container_base_service_enabled: "{{ __VAR___service_enabled }}"
     container_base_service_state: "{{ __VAR___service_state }}"
-  tags: ['__APP__', 'service']
+  tags: ['__SLUG__', 'service']
 ```
 
 ---
 
-## `roles/__APP__/tasks/preflight.yml`
+## `roles/__SLUG__/tasks/preflight.yml`
 
 ```yaml
 ---
@@ -127,7 +133,7 @@ collections:
       - ansible_facts['distribution'] == "Fedora"
     fail_msg: "This role only supports Fedora"
 
-- name: Resolve __APP__ user UID for rootless Podman
+- name: Resolve __SLUG__ user UID for rootless Podman
   ansible.builtin.getent:
     database: passwd
     key: "{{ __VAR___user }}"
@@ -152,7 +158,7 @@ collections:
 
 ---
 
-## `roles/__APP__/tasks/quadlet.yml`
+## `roles/__SLUG__/tasks/quadlet.yml`
 
 ```yaml
 ---
@@ -165,9 +171,9 @@ collections:
     mode: '0755'
   become: true
 
-- name: Deploy __APP__ Quadlet .container unit
+- name: Deploy __SLUG__ Quadlet .container unit
   ansible.builtin.template:
-    src: __APP__.container.j2
+    src: __SLUG__.container.j2
     dest: "{{ __VAR___quadlet_dir }}/{{ __VAR___uid }}/{{ __VAR___service_name }}.container"
     owner: root
     group: root
@@ -180,11 +186,11 @@ collections:
 
 ---
 
-## `roles/__APP__/templates/__APP__.container.j2`
+## `roles/__SLUG__/templates/__SLUG__.container.j2`
 
 ```jinja
 [Unit]
-Description=__APP__ Container
+Description=__SLUG__ Container
 After=network-online.target
 Wants=network-online.target
 
@@ -194,7 +200,7 @@ ContainerName={{ __VAR___container_name }}
 
 UserNS=keep-id:uid={{ __VAR___uid }},gid={{ __VAR___uid }}
 
-# HTTP en loopback; NGINX lo sirve en https://__APP__.{{ nginx_domain }}.
+# HTTP en loopback; NGINX lo sirve en https://__SUB__.{{ nginx_domain }}.
 PublishPort={{ __VAR___host }}:{{ __VAR___port }}:{{ __VAR___container_port }}
 
 Volume={{ __VAR___data_dir }}:/data:Z
@@ -220,9 +226,9 @@ Agregar la var de puerto backend (junto a las otras `nginx_*_port`):
 ```yaml
 nginx___VAR___port: __PORT__
 ```
-Y una entrada en `nginx_vhosts`:
+Y una entrada en `nginx_vhosts` (el `subdomain` es `__SUB__`, sin punto):
 ```yaml
-  - {subdomain: "__APP__", port: "{{ nginx___VAR___port }}"}
+  - {subdomain: "__SUB__", port: "{{ nginx___VAR___port }}"}
 ```
 Si la app usa websocket/SSE o subidas grandes, agregar los params correspondientes
 (`websocket`, `client_max_body_size`, `server_snippet`, `location_snippet`) — ver los ejemplos
@@ -230,9 +236,9 @@ en el mismo archivo.
 
 ### `inventory/group_vars/homeservers/services.yml`
 
-Agregar el rewrite DNS en `adguard_dns_rewrites` (junto a las apps del server):
+Agregar el rewrite DNS en `adguard_dns_rewrites` (junto a las apps del server; usa `__SUB__`):
 ```yaml
-  - domain: "__APP__.{{ nginx_domain }}"
+  - domain: "__SUB__.{{ nginx_domain }}"
     answer: 192.168.10.10
     enabled: true
 ```
@@ -241,15 +247,15 @@ Agregar el rewrite DNS en `adguard_dns_rewrites` (junto a las apps del server):
 
 Agregar en `firewall_blocked` (queda detrás de NGINX, no se abre):
 ```yaml
-  - { port: "__PORT__/tcp", comment: "__APP__ direct — localhost only, behind NGINX" }
+  - { port: "__PORT__/tcp", comment: "__SLUG__ direct — localhost only, behind NGINX" }
 ```
 
 ### `playbooks/site.yml`
 
 Registrar el rol entre las apps:
 ```yaml
-    - role: __APP__
-      tags: ['__APP__']
+    - role: __SLUG__
+      tags: ['__SLUG__']
 ```
 
 ---
