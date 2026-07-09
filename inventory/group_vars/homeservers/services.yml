@@ -89,9 +89,6 @@ adguard_dns_rewrites:
   - domain: "home.{{ nginx_domain }}"
     answer: 192.168.10.10
     enabled: true
-  - domain: "market.{{ nginx_domain }}"
-    answer: 192.168.10.10
-    enabled: true
   - domain: "git.{{ nginx_domain }}"
     answer: 192.168.10.10
     enabled: true

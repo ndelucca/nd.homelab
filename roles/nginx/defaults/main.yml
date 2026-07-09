@@ -34,7 +34,6 @@ nginx_immich_port: 2283
 nginx_kavita_port: 5000
 nginx_orcaslicer_port: 3001
 nginx_home_assistant_port: 8123
-nginx_ndmarket_port: 28310
 nginx_forgejo_port: 3000
 nginx_uptime_kuma_port: 3011
 
@@ -42,8 +41,8 @@ nginx_uptime_kuma_port: 3011
 # conf.d/10-services.conf.j2 (un redirect HTTP->HTTPS + un bloque server HTTPS
 # cada uno, con cert compartido + headers de seguridad + X-Forwarded-*). Los
 # vhosts a medida que necesitan locations nombradas extra o un upstream atípico
-# (jellyfin /socket + CSP, cloud-torrent SSE, ndmarket SSE, orcaslicer
-# https/no-http2) conservan su propio conf.d/*.conf.j2.
+# (jellyfin /socket + CSP, cloud-torrent SSE, orcaslicer https/no-http2)
+# conservan su propio conf.d/*.conf.j2.
 # Parámetros por entrada:
 #   subdomain         '' = apex ({{ nginx_domain }}), si no <sub>.{{ nginx_domain }}
 #   port              puerto del upstream en loopback

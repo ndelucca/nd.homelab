@@ -39,7 +39,6 @@ internet**.
 | `home.` | Home Assistant | `home_assistant` | Podman `.container` |
 | `git.` | Forgejo (+ git SSH :2222) | `forgejo` | Podman `.container` |
 | `status.` | Uptime-Kuma | `monitoring` | Podman `.container` |
-| `market.` | nd.markets | (app externa) | solo reverse-proxy |
 
 Roles transversales: `storage` (discos), `acme` (TLS), `nginx` (proxy),
 `firewall` (firewalld), `backup` (restic → D-Ursa), `service_maintenance`

@@ -2,7 +2,7 @@
 # Vhosts de reverse proxy estándar, generados a partir de nginx_vhosts
 # (roles/nginx/defaults/main.yml). Los vhosts a medida que necesitan locations
 # nombradas extra o un upstream atípico conservan su propio archivo
-# conf.d/*.conf.j2 (jellyfin, cloud-torrent, ndmarket, orcaslicer). La map
+# conf.d/*.conf.j2 (jellyfin, cloud-torrent, orcaslicer). La map
 # $connection_upgrade se define globalmente en conf.d/00-upgrade-map.conf.
 {% for v in nginx_vhosts %}
 {% set fqdn = nginx_domain if v.subdomain == '' else v.subdomain ~ '.' ~ nginx_domain %}
