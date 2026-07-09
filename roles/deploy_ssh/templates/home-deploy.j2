@@ -4,6 +4,8 @@
 #
 # El runner de Forgejo invoca:  ssh deploy@host <app>
 # El nombre <app> llega en $SSH_ORIGINAL_COMMAND (el forced-command ignora el resto).
+# <app> es el nombre del service/unit (convención de la casa: guión_bajo, ej. nd_market),
+# que puede diferir del nombre del repo/imagen (ej. repo nd.market -> unit nd_market).
 # Solo se aceptan apps con una unit de usuario gestionada, para no permitir pulls/restarts
 # arbitrarios aunque se filtre la clave.
 set -eu
@@ -15,8 +17,9 @@ export XDG_RUNTIME_DIR
 
 app=$(printf '%s' "${SSH_ORIGINAL_COMMAND:-}" | tr -d '\r\n')
 
+# Nombres válidos = nombre de unit systemd: minúsculas, dígitos, guión y guión_bajo.
 case "$app" in
-  '' | *[!a-z0-9-]*)
+  '' | *[!a-z0-9_-]*)
     echo "home-deploy: nombre de app inválido: '${app}'" >&2
     exit 2
     ;;
@@ -28,12 +31,11 @@ if ! systemctl --user cat "$unit" >/dev/null 2>&1; then
   exit 3
 fi
 
-image="{{ deploy_ssh_registry }}/{{ deploy_ssh_registry_owner }}/${app}:latest"
-
-echo "home-deploy: pulling ${image}"
-podman pull "$image"
-
-echo "home-deploy: restarting ${unit}"
+# El restart re-ejecuta el `podman run` del Quadlet, que con `Pull=newer` baja la imagen
+# nueva del registry (el Image= de la unit es la fuente de verdad del nombre de la imagen,
+# que NO se deriva del nombre de la app). Si el pull/arranque falla, el restart devuelve
+# error y este script sale distinto de cero.
+echo "home-deploy: restarting ${unit} (Quadlet Pull=newer trae la imagen nueva)"
 systemctl --user restart "$unit"
 
 echo "home-deploy: ${app} OK"

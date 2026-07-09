@@ -4,7 +4,8 @@
 # El runner, tras buildear y pushear la imagen, hace `ssh deploy@host <app>`. Una ÚNICA
 # clave (secret a nivel usuario en Forgejo, compartida por todos los repos) entra con un
 # forced-command que corre el dispatcher `home-deploy`, el cual valida <app> contra las
-# units de usuario gestionadas y hace `podman pull` + `systemctl --user restart <app>`.
+# units de usuario gestionadas y hace `systemctl --user restart <app>` (el Quadlet, con
+# Pull=newer, baja la imagen nueva; el nombre de la imagen vive en la unit, no se deriva).
 
 deploy_ssh_user: ndelucca
 deploy_ssh_group: ndelucca
@@ -13,9 +14,5 @@ deploy_ssh_group: ndelucca
 # Forgejo). Generar el par fuera de banda:  ssh-keygen -t ed25519 -f deploy_key -C home-deploy
 # REQUERIDA: setear en group_vars (texto plano, es pública).
 deploy_ssh_public_key: ""
-
-# Registry desde el que el dispatcher baja las imágenes (mismo Forgejo).
-deploy_ssh_registry: "git.{{ nginx_domain }}"
-deploy_ssh_registry_owner: "{{ forgejo_admin_user | default('ndelucca') }}"
 
 deploy_ssh_script_path: /usr/local/bin/home-deploy

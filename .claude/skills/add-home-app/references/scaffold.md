@@ -2,13 +2,14 @@
 
 Plantillas **fijas** que se escriben en el dir temporal. Sustituir tres placeholders:
 - **`__OWNER__`** — owner (default `ndelucca`).
-- **`__REPO__`** — **nombre de repo** tal cual (con puntos si los hay, ej. `nd.market`). Va en el
-  path de la **imagen** y en el título/README.
-- **`__SLUG__`** — nombre de repo con `.`→`-` (ej. `nd-market`). Va **solo** en el target de
-  `home-deploy` (`ssh … __SLUG__`), porque el dispatcher valida `^[a-z0-9-]+$` y rechaza puntos.
+- **`__REPO__`** — **nombre de repo** tal cual (con puntos/guiones si los hay, ej. `nd.market`).
+  Va en el path de la **imagen** y en el título/README.
+- **`__APP__`** — nombre ansible/service = nombre de repo con `[.-]`→`_` (ej. `nd_market`). Va en
+  el target de `home-deploy` (`ssh … __APP__`): es el nombre del service/unit que se reinicia
+  (el dispatcher acepta `[a-z0-9_-]`; el nombre de la imagen NO se deriva de acá).
 
-Sin punto en el nombre, `__REPO__` y `__SLUG__` coinciden. No adaptar a ninguna tecnología: el stub
-es neutro a propósito para que `init` sea 100% determinista.
+Sin punto ni guión en el nombre, `__REPO__` y `__APP__` coinciden. No adaptar a ninguna tecnología:
+el stub es neutro a propósito para que `init` sea 100% determinista.
 
 ---
 
@@ -75,9 +76,9 @@ jobs:
           install -d -m700 ~/.ssh
           install -m600 /dev/stdin ~/.ssh/deploy_key <<< "${{ secrets.DEPLOY_SSH_KEY }}"
           # El forced-command del host (clave en el usuario ndelucca) ignora todo salvo el
-          # nombre de la app (= slug del service, sin puntos), que llega en $SSH_ORIGINAL_COMMAND.
+          # nombre de la app (= nombre del service/unit, ej. nd_market), que llega en $SSH_ORIGINAL_COMMAND.
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
-              ndelucca@192.168.10.10 __SLUG__
+              ndelucca@192.168.10.10 __APP__
 ```
 
 ---

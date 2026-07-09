@@ -55,25 +55,27 @@ Si falta algo de esto, avisá al usuario y no sigas con `enable`.
 ## Derivación de nombres (repos con punto: `nd.XXX`, `nd.xxx.xxx`)
 
 El usuario suele nombrar los repos con puntos (`nd.market`, `nd.foo.bar`). El punto es válido
-como nombre de repo y como path de imagen OCI, pero **NO** como nombre de unit systemd, de
-contenedor, de subdominio (el cert wildcard cubre un solo label) ni de variable Ansible. Por eso
-de un nombre de repo `R` se derivan **tres** nombres, de forma 100% determinista:
+como nombre de repo y como path de imagen OCI, pero **NO** como nombre de rol/variable Ansible
+(ansible-lint exige `^[a-z][a-z0-9_]*$`) ni de subdominio (el cert wildcard cubre un solo label).
+La convención de la casa para roles y services es **guión_bajo** (`home_assistant`,
+`cloud_torrent`). Por eso de un nombre de repo `R` se derivan **tres** nombres, deterministas:
 
 | Nombre | Regla | Se usa en | Ej. `nd.market` | Ej. `nd.foo.bar` |
 |--------|-------|-----------|-----------------|------------------|
-| **repo / imagen** | `R` tal cual (puntos OK) | nombre del repo Forgejo y **solo** el path de la imagen (`git.{{ nginx_domain }}/<owner>/R`) | `nd.market` | `nd.foo.bar` |
-| **slug** | `R` con cada `.` → `-` | dir del rol, container, service/unit, **target de `home-deploy`** y subdominio por defecto. Siempre cumple `^[a-z0-9-]+$` | `nd-market` | `nd-foo-bar` |
-| **var_prefix** | slug con `-` → `_` | prefijo de las variables Ansible | `nd_market` | `nd_foo_bar` |
+| **`__REPO__`** (repo/imagen) | `R` tal cual | nombre del repo Forgejo y **solo** el path de la imagen (`git.{{ nginx_domain }}/<owner>/R`) | `nd.market` | `nd.foo.bar` |
+| **`__APP__`** (nombre ansible/service) | `R` con `[.-]`→`_` | dir del rol, prefijo de vars, container, service/unit y **target de `home-deploy`**. Cumple `^[a-z][a-z0-9_]*$` | `nd_market` | `nd_foo_bar` |
+| **`__SUB__`** (subdominio) | default = `R` con `[._]`→`-` | NGINX vhost + rewrite DNS. Single-label DNS; se puede override | `market` (elegido) | `nd-foo-bar` |
 
 - **Validación del nombre de repo**: `^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$` (minúsculas; puede tener
-  puntos, guiones o guiones bajos internos). El **slug derivado siempre** cumple `^[a-z0-9-]+$`,
-  que es lo que exige el dispatcher `home-deploy` (rechaza puntos).
-- **Sin punto** (`R` = `mi-app`): los tres nombres coinciden (`mi-app` / `mi-app` / `mi_app`), así
-  que el flujo viejo no cambia.
-- **Subdominio**: por defecto = slug. Se puede override a un label más corto (ej. `nd.market` →
-  subdominio `market`), pero **siempre single-label sin punto** por el wildcard TLS. El subdominio
-  y el nombre del service NO tienen que coincidir (NGINX proxya `<sub>.` → el puerto loopback del
-  service, se llame como se llame).
+  puntos, guiones o guiones bajos internos). `__APP__` derivado siempre cumple `^[a-z][a-z0-9_]*$`.
+- **`home-deploy` acepta `[a-z0-9_-]`** como nombre de app (= nombre de unit). El nombre de la
+  **imagen no se deriva** del nombre de la app: vive en el `Image=` de la unit Quadlet, que
+  `home-deploy` reinicia con `Pull=newer`. Así el repo (`nd.market`) y la app (`nd_market`) difieren
+  sin romper el deploy.
+- **Sin punto ni guión** (`R` = `miapp`): los tres coinciden (`miapp`). Con guión (`R` = `mi-app`):
+  `__REPO__`=`mi-app`, `__APP__`=`mi_app`, `__SUB__`=`mi-app`.
+- **Subdominio**: single-label sin punto (wildcard TLS). El subdominio y el nombre del service NO
+  tienen que coincidir (NGINX proxya `<sub>.` → el puerto loopback del service).
 
 ## Token de API de Forgejo (para init y para setear secrets)
 
@@ -114,9 +116,9 @@ Crea el repo y lo llena con el scaffold fijo. Secuencia exacta (cada paso idempo
 
 3. **Escribir el scaffold** en un dir temporal del scratchpad (NO dentro de `nd.homelab`).
    Usar exactamente las plantillas de `references/scaffold.md`, sustituyendo `__OWNER__`,
-   `__REPO__` (nombre de repo, con puntos si los hay — va en la imagen y el título) y `__SLUG__`
-   (nombre de repo con `.`→`-`, va en el target de `home-deploy` porque no admite puntos). Sin
-   punto ambos coinciden:
+   `__REPO__` (nombre de repo, con puntos si los hay — va en la imagen y el título) y `__APP__`
+   (nombre de repo con `[.-]`→`_`, va en el target de `home-deploy` = nombre del service/unit).
+   Sin punto ni guión ambos coinciden:
    ```
    <tmp>/<nombre>/
    ├── Containerfile
@@ -164,12 +166,11 @@ Cloná/leé el repo Forgejo (o pedí la ruta si ya está local) e inferí:
 Datos y defaults (ver "Derivación de nombres" para repos con punto):
 | Dato | Default / inferencia |
 |------|----------------------|
-| repo / imagen | nombre del repo tal cual (puntos OK); la imagen sale del workflow |
-| slug | repo con `.`→`-` (cumple `^[a-z0-9-]+$`) — rol, container, service, target de deploy |
-| var_prefix | slug con `-`→`_` — prefijo de vars Ansible |
-| subdominio | = slug; override a label corto sin punto si el usuario lo pide (ej. `market`) |
+| `__REPO__` (repo/imagen) | nombre del repo tal cual (puntos OK); la imagen sale del workflow |
+| `__APP__` (ansible/service) | repo con `[.-]`→`_` — rol, vars, container, service/unit, target de deploy |
+| `__SUB__` (subdominio) | default = repo con `[._]`→`-`; override a label corto si el usuario lo pide (ej. `market`) |
 | puerto del contenedor | `EXPOSE` |
-| puerto host (loopback) | el siguiente libre; nueva var `nginx_<var_prefix>_port` |
+| puerto host (loopback) | el siguiente libre; nueva var `nginx___APP___port` |
 | proxy especial | inferido |
 | volúmenes/env/secrets | del repo o preguntando |
 
@@ -178,44 +179,42 @@ Solo usá `AskUserQuestion` para lo que no puedas inferir.
 ### 2. Aplicar los cambios (todo edits a este repo)
 
 Ojo con tres cosas (detalladas en `references/app-role.md`):
-- **Naming**: dir/container/service/subdominio usan el **slug** (`__SLUG__`, con `.`→`-`); la
-  **imagen** usa el **nombre de repo** (`__REPO__`, con puntos si los hay); las **variables
-  Ansible** usan el **var_prefix** (`__VAR__`, con `-`→`_`). Ej. `nd.market` → slug `nd-market`,
-  repo/imagen `nd.market`, vars `nd_market_*`. Sin punto los tres coinciden (`hello-home` → vars
-  `hello_home_*`, imagen `hello-home`).
-- **Deploy target**: la última línea del workflow (`ssh … <slug>`) y el nombre de la unit deben
-  ser el **slug** (sin punto), porque el dispatcher `home-deploy` valida `^[a-z0-9-]+$`. Si el
-  repo tiene punto y el scaffold quedó con el nombre de repo ahí, corregilo al slug.
-- **Pull privado**: si el paquete es privado, `ndelucca` necesita estar logueado al registry en
-  el host para que `podman pull` (unit + `home-deploy`) funcione. Ver la sección final de
-  `app-role.md`.
+- **Naming**: rol/vars/container/service/target-de-deploy usan `__APP__` (repo con `[.-]`→`_`,
+  guión_bajo); la **imagen** usa el **nombre de repo** (`__REPO__`, con puntos); el **subdominio**
+  usa `__SUB__`. Ej. `nd.market` → `__APP__`=`nd_market`, imagen `nd.market`, `__SUB__`=`market`.
+- **Deploy target**: la última línea del workflow (`ssh … <app>`) debe ser `__APP__` (= nombre de
+  la unit). `home-deploy` acepta `[a-z0-9_-]` y NO deriva la imagen del nombre (la lee del `Image=`
+  de la unit). Si el scaffold quedó con el nombre de repo (con punto), corregilo a `__APP__`.
+- **Pull privado**: si el paquete es privado, `ndelucca` necesita estar logueado al registry en el
+  host para que el `podman pull` de la unit (Quadlet `Pull=newer`, corre como ndelucca) funcione.
+  Con paquete público el pull es anónimo y no hace falta login. Ver la sección final de `app-role.md`.
 
 En orden (detalle y plantillas en `references/app-role.md`):
-1. **Crear el rol `roles/<slug>/`** (Quadlet: `Image=` con el **nombre de repo**, publish en
+1. **Crear el rol `roles/__APP__/`** (Quadlet: `Image=` con el **nombre de repo**, publish en
    `127.0.0.1:<hostport>`, volúmenes `:Z`, SELinux vía `container_base`).
-2. **NGINX**: agregar `nginx_<var_prefix>_port` y una entrada en `nginx_vhosts`
-   (`roles/nginx/defaults/main.yml`) con `subdomain: <subdominio>`.
+2. **NGINX**: agregar `nginx___APP___port` y una entrada en `nginx_vhosts`
+   (`roles/nginx/defaults/main.yml`) con `subdomain: <__SUB__>`.
 3. **AdGuard DNS**: agregar el rewrite en `adguard_dns_rewrites`
-   (`inventory/group_vars/homeservers/services.yml`) → `<subdominio>.{{ nginx_domain }}` → `192.168.10.10`.
+   (`inventory/group_vars/homeservers/services.yml`) → `<__SUB__>.{{ nginx_domain }}` → `192.168.10.10`.
 4. **Firewall**: agregar la entrada en `firewall_blocked` (`roles/firewall/defaults/main.yml`).
-5. **site.yml**: registrar `roles/<slug>/` (elegí una posición razonable entre las apps).
+5. **site.yml**: registrar `roles/__APP__/` (elegí una posición razonable entre las apps).
 6. **Deploy**: `deploy_ssh` ya es genérico (el dispatcher `home-deploy` valida por unit), así
    que NO hay que tocar nada por-app para el deploy — solo confirmá que `deploy_ssh_enabled`
-   está activo y que el workflow del repo hace `ssh ndelucca@192.168.10.10 <slug>` (slug = nombre
-   del service; sin punto). La clave de deploy vive en el usuario ndelucca, con forced-command.
+   está activo y que el workflow del repo hace `ssh ndelucca@192.168.10.10 __APP__` (= nombre del
+   service/unit). La clave de deploy vive en el usuario ndelucca, con forced-command.
 
 ### 3. Cerrar
 
 - Recordá el **chicken-and-egg**: la imagen debe existir en el registry antes del primer
-  `ansible-playbook` (que hace `podman pull`). Si aún no se pusheó, buildear/pushear una vez
-  a mano, o el usuario hace un primer push que dispare el workflow (build+push) — pero el
-  restart fallará hasta que la unit exista. Orden recomendado: primer push (crea la imagen) →
-  correr el playbook (crea la unit + expone) → los pushes siguientes ya reinician solos.
+  `ansible-playbook` (la unit hace `podman pull` al arrancar). Si aún no se pusheó, buildear/
+  pushear una vez a mano, o el usuario hace un primer push que dispare el workflow (build+push) —
+  pero el `home-deploy` (restart) fallará hasta que la unit exista. Orden recomendado: primer push
+  (crea la imagen) → correr el playbook (crea la unit + expone) → los pushes siguientes reinician solos.
 - Imprimí el comando exacto:
-  `ansible-playbook playbooks/site.yml -l ndelucca-server -t <slug>`
+  `ansible-playbook playbooks/site.yml -l ndelucca-server -t __APP__`
   (siempre con `-l ndelucca-server`, ver skill `ansible-host-limiter`).
-- Verificación: `https://<subdominio>.ndelucca.dedyn.io` responde con TLS válido;
-  `systemctl --user -M ndelucca@ status <slug>` activo.
+- Verificación: `https://<__SUB__>.ndelucca.dedyn.io` responde con TLS válido;
+  `systemctl --user -M ndelucca@ status __APP__` activo.
 
 ---
 
@@ -225,22 +224,22 @@ Teardown completo. Ver `references/checklists.md` (checklist de teardown). Orden
 
 1. **Parar/deshabilitar y borrar la unit** (antes de borrar el rol, para poder usar sus vars):
    ```sh
-   systemctl --user -M ndelucca@ disable --now <slug> || true
-   sudo rm -f /etc/containers/systemd/users/1000/<slug>.container
+   systemctl --user -M ndelucca@ disable --now __APP__ || true
+   sudo rm -f /etc/containers/systemd/users/1000/__APP__.container
    sudo -u ndelucca XDG_RUNTIME_DIR=/run/user/1000 systemctl --user daemon-reload
    ```
 2. **Revertir los edits de `enable`** (con Edit, quitando exactamente lo agregado):
-   - Borrar el rol `roles/<slug>/`.
-   - Quitar la entrada de `nginx_vhosts` y la var `nginx_<var_prefix>_port` (`roles/nginx/defaults`).
+   - Borrar el rol `roles/__APP__/`.
+   - Quitar la entrada de `nginx_vhosts` y la var `nginx___APP___port` (`roles/nginx/defaults`).
      El mecanismo `.managed_vhosts` de `roles/nginx` limpia el vhost huérfano al re-correr nginx.
      Si la app tenía un vhost a medida (`conf.d/<algo>.conf.j2`), borrá ese archivo también.
-   - Quitar el rewrite de `adguard_dns_rewrites` (por `<subdominio>`).
+   - Quitar el rewrite de `adguard_dns_rewrites` (por `<__SUB__>`).
    - Quitar la entrada de `firewall_blocked`.
-   - Quitar el `role: <slug>` de `playbooks/site.yml`.
+   - Quitar el `role: __APP__` de `playbooks/site.yml`.
 3. **Re-aplicar** para que la limpieza tome efecto:
    `ansible-playbook playbooks/site.yml -l ndelucca-server -t nginx,adguard,firewall`
 4. **Destructivo — confirmar con el usuario antes**:
-   - Borrar el data dir bajo `app_data_root` (`{{ app_data_root }}/<slug>`).
+   - Borrar el data dir bajo `app_data_root` (`{{ app_data_root }}/__APP__`).
    - Borrar el paquete/imagen del registry de Forgejo (API `DELETE /packages/...`; el nombre del
      paquete es el **nombre de repo**, con puntos si los hay).
    - Borrar el repo de código en Forgejo si el usuario lo pide (API `DELETE /repos/<owner>/<repo>`,
