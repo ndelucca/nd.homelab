@@ -30,8 +30,17 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ container_base_uid }}"
 
+# `-F` (force): resetea el contexto COMPLETO al default del fcontext DB, incluida la
+# parte de nivel/MCS. Sin `-F`, restorecon corrige sólo el type y PRESERVA la categoría
+# MCS por container (`s0:cX,cY`) que pudo quedar pegada de una instancia anterior (o de
+# un mount `:Z`). Si esa categoría no matchea la del container que corre hoy, SELinux le
+# niega leer su propio volume aunque los permisos Unix sean correctos: el backend queda
+# en crash-loop y NGINX devuelve 502 (le pasó a orcaslicer y su cert.pem). `-F` fuerza el
+# label category-less `container_file_t:s0`, que cualquier categoría de container domina
+# y puede leer. Para los volumes `:Z` (forgejo, nd_market, forgejo_runner) es inocuo: el
+# start del container que sigue en el paso de service re-aplica la categoría privada.
 - name: Container apply selinux context
-  ansible.builtin.command: "restorecon -Rv {{ item }}"
+  ansible.builtin.command: "restorecon -RvF {{ item }}"
   become: true
   changed_when: false
   loop: "{{ container_base_selinux_paths }}"
