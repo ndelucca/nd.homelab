@@ -125,6 +125,7 @@ Crea el repo y lo llena con el scaffold fijo. Secuencia exacta (cada paso idempo
    ├── .forgejo/workflows/deploy.yml
    ├── .gitignore
    ├── .dockerignore
+   ├── CLAUDE.md          # contrato con el home-server (invariantes de la imagen + trampas)
    └── README.md
    ```
 
@@ -161,7 +162,18 @@ Expone la app en la red. Ver `references/app-role.md` para todas las plantillas 
 Cloná/leé el repo Forgejo (o pedí la ruta si ya está local) e inferí:
 - **Puerto del contenedor**: `EXPOSE` del `Containerfile`.
 - **Imagen**: del `.forgejo/workflows/deploy.yml` (`git.ndelucca.dedyn.io/<owner>/<app>`).
-- **Volúmenes / env / proxy especial** (websocket, SSE, body size): README / compose si hay.
+- **Volúmenes / env / proxy especial** (websocket, SSE, body size): README / CLAUDE.md / compose si hay.
+
+> **PARÁ si el `Containerfile` sigue siendo el stub del scaffold** (busbox + `EXPOSE 8080` +
+> el comentario "STUB de scaffold"). El `EXPOSE` que leas acá se **congela** en
+> `__APP___container_port` y no se vuelve a mirar nunca: si la app real termina escuchando en
+> otro puerto, la unit publica hacia un puerto muerto, el action queda verde, `systemctl` dice
+> `active` y NGINX devuelve 502. Corré `enable` **después** de que el Containerfile sea el de
+> verdad. Si igual hay que seguir, avisale al usuario que va a tener que actualizar esa var y
+> re-correr el playbook cuando el puerto real se defina.
+>
+> Mismo criterio para el proxy: leé el CLAUDE.md del repo antes de asumir un vhost genérico.
+> SSE/WebSockets/uploads necesitan flags en el vhost y el pipeline no los detecta.
 
 Datos y defaults (ver "Derivación de nombres" para repos con punto):
 | Dato | Default / inferencia |
@@ -213,8 +225,18 @@ En orden (detalle y plantillas en `references/app-role.md`):
 - Imprimí el comando exacto:
   `ansible-playbook playbooks/site.yml -l ndelucca-server -t __APP__`
   (siempre con `-l ndelucca-server`, ver skill `ansible-host-limiter`).
-- Verificación: `https://<__SUB__>.ndelucca.dedyn.io` responde con TLS válido;
-  `systemctl --user -M ndelucca@ status __APP__` activo.
+- Verificación. **`systemctl … active` NO alcanza**: la unit queda activa aunque la app sea
+  inalcanzable (p.ej. si `__CPORT__` no coincide con el puerto real). Chequeá los tres niveles:
+  ```sh
+  # 1. el mapeo de puertos es el que esperás (host:__PORT__ -> contenedor:__CPORT__)
+  ssh ndelucca@192.168.10.10 'podman port __APP__'
+  # 2. la app responde por loopback en el server (descarta NGINX)
+  ssh ndelucca@192.168.10.10 'curl -fsS http://127.0.0.1:__PORT__/'
+  # 3. y por HTTPS con TLS válido (descarta vhost/DNS/cert)
+  curl -fsS https://__SUB__.ndelucca.dedyn.io/
+  ```
+  Si (1) muestra un puerto de contenedor distinto al que escucha la app, ese es el bug: corregí
+  `__APP___container_port` y re-corré el playbook.
 
 ---
 
@@ -251,7 +273,7 @@ Teardown completo. Ver `references/checklists.md` (checklist de teardown). Orden
 ## Reference files
 
 - **`references/scaffold.md`** — plantillas fijas del `init` (Containerfile, deploy.yml,
-  .gitignore, .dockerignore, README).
+  .gitignore, .dockerignore, CLAUDE.md, README).
 - **`references/app-role.md`** — plantillas del `enable`: rol de la app completo + snippets de
   NGINX/DNS/firewall/site.yml.
 - **`references/checklists.md`** — checklists de enable y de teardown.
