@@ -88,6 +88,31 @@ ansible-playbook -l ndelucca-server playbooks/site.yml
 Esto instala y arranca todo: storage, Cockpit, NGINX+TLS, AdGuard (DNS/DHCP),
 todas las apps, los timers de backup, el watchdog y el firewall.
 
+## 4b. Logins a mano que Ansible NO hace (si no, rompen en silencio)
+
+Un par de piezas dependen de credenciales interactivas que **no** están en el vault ni las
+gestiona ningún rol. Tras un rebuild hay que rehacerlas o las apps que dependen de ellas fallan
+—normalmente sin un error obvio en el playbook—. Hacelas como `ndelucca` en el host:
+
+- **Login al registry de contenedores (Forgejo).** Las apps deployadas por Forgejo Actions (hoy
+  `nd_market`) hacen `podman pull` con `Pull=newer` contra un registry privado. Sin login, el pull
+  falla y la unit no arranca.
+  ```bash
+  podman login git.ndelucca.dedyn.io -u ndelucca   # token con scope read:package
+  ```
+
+- **CLI de Claude + login OAuth (para el rol `claude_bridge`).** El bridge expone el CLI `claude`
+  del host a los contenedores por un socket unix; el binario y la sesión OAuth viven del lado del
+  host, no en las imágenes. El rol NO instala el CLI ni loguea: su `preflight` **falla con un
+  mensaje claro** si falta `~/.local/bin/claude` o `~/.claude/.credentials.json`.
+  ```bash
+  # Instalar el CLI (ver la doc oficial de Claude Code) en ~/.local/bin/claude, y luego:
+  claude   # una vez, interactivo, para completar el login OAuth de la suscripción
+  ```
+  Corré esto **antes** del `site.yml` (o re-corré `-t claude_bridge` después). Guardá un backup de
+  `~/.claude/.credentials.json`: es lo único que no se regenera solo si el refresh del token se
+  corrompe.
+
 ## 5. Si se perdieron los datos de D-Draco — restaurar
 
 Seguí [RESTORE.md](RESTORE.md): restaurá appdata/media + D-Leo desde D-Ursa,
@@ -102,6 +127,9 @@ cargá los dumps de DB, corregí la propiedad de archivos, luego re-corré
 - [ ] `systemctl --user -M ndelucca@ list-timers` muestra los timers de backup + drill armados
 - [ ] Disparar un backup una vez y confirmar un snapshot fresco:
       `systemctl --user -M ndelucca@ start backup.service && restic snapshots`
+- [ ] Bridge de Claude arriba (si hiciste el login del paso 4b):
+      `systemctl --user -M ndelucca@ is-active home-claude.socket` → `active`, y
+      `printf '{"prompt":"decí OK"}' | nc -U /run/home-claude/sock` devuelve `is_error:false`
 
 ## Referencia rápida: qué sobrevive a qué
 
