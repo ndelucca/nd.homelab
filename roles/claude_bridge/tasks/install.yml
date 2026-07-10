@@ -1,0 +1,39 @@
+---
+# Deny-list de tools a nivel settings: el prompt viaja por el socket y no puede tocar este
+# archivo, así que es el gate real. Los flags --disallowed-tools del wrapper lo duplican.
+- name: Deploy the Claude settings (tool deny-list)
+  ansible.builtin.template:
+    src: settings.json.j2
+    dest: "{{ claude_bridge_settings_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+- name: Deploy the home-claude wrapper
+  ansible.builtin.template:
+    src: home-claude.j2
+    dest: "{{ claude_bridge_script_path }}"
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  notify: Claude bridge apply selinux context
+
+# tmpfiles.d en vez de RuntimeDirectory= en la socket unit: así el dir existe desde el boot
+# (antes de que arranquen los contenedores) y su inode nunca se recrea. Con RuntimeDirectory=
+# un restart de la socket haría rmdir+mkdir y el bind-mount de un contenedor en vuelo quedaría
+# colgado de un inode huérfano.
+- name: Deploy the tmpfiles.d entry for the socket directory
+  ansible.builtin.template:
+    src: tmpfiles.conf.j2
+    dest: /etc/tmpfiles.d/home-claude.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+- name: Create the socket directory now
+  ansible.builtin.command: systemd-tmpfiles --create /etc/tmpfiles.d/home-claude.conf
+  become: true
+  changed_when: false

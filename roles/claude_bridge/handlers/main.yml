@@ -1,0 +1,38 @@
+---
+# Nombres prefijados con "Claude bridge": los handlers comparten namespace entre roles del
+# mismo play y un nombre repetido se suprime en silencio.
+#
+# Las units son de USUARIO (ver templates/home-claude.socket.j2), así que todo va con
+# become_user + XDG_RUNTIME_DIR, igual que roles/backup y roles/container_base.
+
+# `systemctl --user daemon-reload` explícito, como en container_base: el daemon_reload
+# user-scope del módulo systemd no siempre regenera los units.
+- name: Claude bridge daemon-reload-user  # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: systemctl --user daemon-reload
+  become: true
+  become_user: "{{ claude_bridge_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ claude_bridge_uid }}"
+  changed_when: false
+
+# En --check las units no se escriben, así que la unit no existe todavía y el restart fallaría
+# con "Could not find the requested service". No hay nada que reiniciar en un dry run.
+- name: Claude bridge restart socket
+  ansible.builtin.systemd:
+    name: home-claude.socket
+    state: restarted
+    scope: user
+  become: true
+  become_user: "{{ claude_bridge_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ claude_bridge_uid }}"
+  when: not ansible_check_mode
+
+- name: Claude bridge apply selinux context
+  ansible.builtin.command: "restorecon -Rv {{ item }}"
+  become: true
+  loop:
+    - "{{ claude_bridge_socket_dir }}"
+    - "{{ claude_bridge_script_path }}"
+  changed_when: false

@@ -1,0 +1,15 @@
+---
+# Se habilita la SOCKET, nunca el @.service: la instancia la spawnea systemd por conexión
+# (Accept=yes). No hay wait_for de puerto porque el bridge no escucha TCP.
+# Arranca en el boot sin sesión de login gracias al lingering de ndelucca (container_base).
+- name: Enable and start the home-claude user socket
+  ansible.builtin.systemd:
+    name: home-claude.socket
+    enabled: true
+    state: started
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ claude_bridge_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ claude_bridge_uid }}"

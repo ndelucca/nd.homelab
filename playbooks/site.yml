@@ -60,6 +60,11 @@
       tags: ['deploy_ssh', 'actions', 'ci']
       when: deploy_ssh_enabled | default(false) | bool
 
+    # Antes de las apps que lo consumen: crea el socket que sus Quadlets montan.
+    - role: claude_bridge
+      tags: ['claude_bridge', 'claude', 'ai']
+      when: claude_bridge_enabled | default(false) | bool
+
     # App buildeada/deployada por Forgejo Actions (repo git.<dom>/ndelucca/nd.market).
     - role: nd_market
       tags: ['nd_market', 'market']

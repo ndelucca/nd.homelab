@@ -43,7 +43,8 @@ internet**.
 
 Roles transversales: `storage` (discos), `acme` (TLS), `nginx` (proxy),
 `firewall` (firewalld), `backup` (restic → D-Ursa), `service_maintenance`
-(watchdog de arranque en frío de AdGuard).
+(watchdog de arranque en frío de AdGuard), `claude_bridge` (socket unix que
+expone el CLI de Claude del host a las apps containerizadas; no escucha en red).
 
 ## Estructura del repositorio
 

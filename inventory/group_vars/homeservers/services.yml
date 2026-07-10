@@ -177,6 +177,11 @@ deploy_ssh_enabled: true
 # Clave PÚBLICA de deploy (texto plano; la privada va vaulteada como deploy_ssh_private_key).
 deploy_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBx691wmrkN4IhLBzmqIrkxZS8r5/e8JVna74MyVxLT9 home-deploy"
 
+# Bridge del CLI de Claude: socket unix en /run/home-claude que cualquier app containerizada
+# puede montar para consultar al CLI sin tener el binario ni las credenciales adentro.
+# El CLI y su login los mantiene ndelucca a mano en el host (ver docs/BOOTSTRAP.md).
+claude_bridge_enabled: true
+
 # Un único topic de ntfy maneja TODOS los avisos de falla: fallas de backup /
 # disco lleno (journalctl -t restic-backup) Y fallas de renovación de Let's
 # Encrypt (journalctl -t lego-renew; acme_notify_ntfy_url toma este valor por

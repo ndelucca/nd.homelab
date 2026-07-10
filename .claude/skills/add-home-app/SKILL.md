@@ -214,6 +214,9 @@ En orden (detalle y plantillas en `references/app-role.md`):
    que NO hay que tocar nada por-app para el deploy — solo confirmá que `deploy_ssh_enabled`
    está activo y que el workflow del repo hace `ssh ndelucca@192.168.10.10 __APP__` (= nombre del
    service/unit). La clave de deploy vive en el usuario ndelucca, con forced-command.
+7. **(Opcional) Bridge de Claude**: si la app necesita invocar el CLI de Claude desde el
+   contenedor, montá el socket del rol `claude_bridge` en la Quadlet. Ver
+   `references/claude-bridge.md` (protocolo, frontera de confianza, ejemplo en `nd_market`).
 
 ### 3. Cerrar
 
@@ -277,3 +280,5 @@ Teardown completo. Ver `references/checklists.md` (checklist de teardown). Orden
 - **`references/app-role.md`** — plantillas del `enable`: rol de la app completo + snippets de
   NGINX/DNS/firewall/site.yml.
 - **`references/checklists.md`** — checklists de enable y de teardown.
+- **`references/claude-bridge.md`** — cómo una app containerizada usa el CLI de Claude del host
+  vía el rol `claude_bridge` (socket unix): contrato, frontera de confianza, snippet de Quadlet.

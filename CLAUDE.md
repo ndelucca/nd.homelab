@@ -58,6 +58,30 @@ El `podman pull` de esas units usa `Pull=newer` contra un registry **privado**, 
 `ndelucca` está logueado a mano en el host. **No hay tarea de Ansible que haga ese login**: si se
 reconstruye el server (ver `docs/BOOTSTRAP.md`), hay que rehacerlo o el pull falla en silencio.
 
+## `claude_bridge` — el CLI de Claude para apps containerizadas
+
+El rol `claude_bridge` expone el CLI `claude` del host a los contenedores por un **socket unix**
+(`/run/home-claude/sock`), porque una imagen `scratch` no puede llevar el binario (223 MB + glibc)
+ni la sesión OAuth de `~/.claude`. Es infra transversal, hermana de `deploy_ssh`. Tres cosas que no
+se deducen del rol:
+
+- **El CLI y su login NO los gestiona Ansible.** El rol asume que `ndelucca` ya instaló `claude` en
+  `~/.local/bin` y corrió el login OAuth a mano (igual que el `podman login` del registry). El
+  `preflight` falla con un mensaje claro si falta el binario o `~/.claude/.credentials.json`. Al
+  reconstruir el server (`docs/BOOTSTRAP.md`) hay que rehacer ambos.
+- **Serializa TODAS las consultas** con un `flock` (concurrencia efectiva 1). Es a propósito: el CLI
+  reescribe `~/.claude/.credentials.json` al refrescar el token y dos escrituras concurrentes lo
+  corrompen para todas las apps. No subas la concurrencia sin resolver eso primero.
+- **El gate de tools vive en `/etc/home-claude/settings.json`** (deny-list, fuente de verdad no
+  spoofeable desde el prompt) y el CLI corre sandboxeado por systemd (HOME vacío salvo `~/.claude`).
+  Montar el socket en una app le da acceso a la suscripción: es la frontera de confianza, cuidá
+  quién lo monta. Contrato del socket: `.claude/skills/add-home-app/references/claude-bridge.md`.
+
+Las units son de **usuario** (no de sistema) a propósito: el manager de usuario corre como
+`unconfined_t` y puede crear el socket con etiqueta `container_file_t`; `init_t` (pid 1) no puede.
+Y hay un módulo SELinux puntual (`home-claude.cil`) porque `container_t` no puede `connectto` a un
+peer `unconfined_t` sin él.
+
 ## Imágenes pinneadas
 
 Las imágenes de los roles de container van con tag explícito (o digest, en Kavita) para que los

@@ -1,0 +1,50 @@
+# {{ ansible_managed }}
+# Instancia por conexión, spawneada por home-claude.socket (Accept=yes). Unit de USUARIO: corre
+# como {{ claude_bridge_user }} sin necesidad de User=.
+#
+# El bridge es un confused deputy: el contenedor no tiene el binario ni las credenciales, pero
+# puede pedirle una consulta al proceso que sí los tiene, con un prompt que lleva datos no
+# confiables (inyección). El sandbox de abajo es la defensa real si el tool-gating del CLI falla.
+
+[Unit]
+Description=home-claude bridge handler (%i)
+
+[Service]
+ExecStart={{ claude_bridge_script_path }}
+
+# stdin/stdout SON el socket, explícitos: con Accept=yes systemd pasa la conexión como fd, pero
+# StandardOutput toma el default del manager (journal), no el socket. Sin estas dos líneas el
+# wrapper lee stdin vacío y escribe la respuesta al journal.
+# stderr sí va al journal: si fuera al socket, cualquier warning del CLI corrompería el JSON.
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+
+# CWD vacío y dedicado: el CLI no auto-carga ningún CLAUDE.md ni ve repos del host.
+WorkingDirectory={{ claude_bridge_workdir }}
+
+# Backstop de systemd, por encima del timeout del wrapper (que sí alcanza a responder un
+# envelope con is_error). Si salta éste, el cliente ve la conexión cerrarse de golpe.
+RuntimeMaxSec={{ claude_bridge_runtime_max_sec }}
+
+Environment=HOME={{ claude_bridge_home }}
+Environment=DISABLE_AUTOUPDATER=1
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths={{ claude_bridge_state_dir }}
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallFilter=@system-service
+
+# HOME vacío salvo lo imprescindible: el CLI no ve ~/nd.homelab, ~/.ssh, etc.
+# ProtectHome= no sirve — escondería ~/.claude, que el CLI necesita ESCRIBIR para refrescar el
+# token OAuth. Por eso .claude y .claude.json van RW.
+# Nada de MemoryDenyWriteExecute: rompe el JIT del runtime del CLI.
+TemporaryFileSystem={{ claude_bridge_home }}:ro
+BindPaths={{ claude_bridge_home }}/.claude
+BindPaths={{ claude_bridge_home }}/.claude.json
+BindReadOnlyPaths={{ claude_bridge_bin }}

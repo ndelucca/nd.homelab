@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  author: Naza
+  description: Expone el CLI de Claude del host a las apps containerizadas vía un socket unix
+  license: MIT
+  min_ansible_version: '2.13'
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+
+dependencies: []
+
+collections:
+  - community.general

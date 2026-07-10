@@ -1,0 +1,53 @@
+---
+- name: Install SELinux policy packages
+  vars:
+    mitogen_task_isolation: fork  # Mitogen: aísla el módulo dnf5 en un fork (evita el crash por el estado global de libdnf5)
+  ansible.builtin.dnf:
+    name:
+      - policycoreutils-python-utils
+      - container-selinux
+    state: present
+  become: true
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
+
+# container_file_t sobre el dir del socket: sin esto el contenedor (container_t) no puede
+# conectarse al sock_file, que nacería con la etiqueta de /run. El socket que systemd crea
+# adentro hereda la etiqueta del dir padre.
+#
+# Se etiqueta acá en vez de con `:z` en el Volume= de la Quadlet porque `:z` reetiqueta en cada
+# arranque de contenedor, y `:Z` (MCS privado) rompería a las demás apps que comparten el socket.
+- name: Set SELinux file contexts for the bridge
+  community.general.sefcontext:
+    target: "{{ item.target }}"
+    setype: "{{ item.setype }}"
+    state: present
+  become: true
+  loop:
+    - { target: "{{ claude_bridge_socket_dir }}(/.*)?", setype: container_file_t }
+    - { target: "{{ claude_bridge_script_path }}", setype: bin_t }
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
+  notify: Claude bridge apply selinux context
+
+- name: Flush handlers so the contexts are applied before the socket is created
+  ansible.builtin.meta: flush_handlers
+
+# El socket lo escucha el manager de usuario (unconfined_t) y container_t no puede connectto a un
+# peer unconfined_t. Este módulo CIL agrega esa única regla. Ver home-claude.cil.j2.
+- name: Deploy the SELinux policy module for container connectto
+  ansible.builtin.template:
+    src: home-claude.cil.j2
+    dest: "{{ claude_bridge_settings_dir }}/home-claude.cil"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  register: claude_bridge_cil
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
+
+- name: Install the SELinux policy module
+  ansible.builtin.command: "semodule -i {{ claude_bridge_settings_dir }}/home-claude.cil"
+  become: true
+  when:
+    - ansible_facts['selinux'].mode | default('') == 'enforcing'
+    - claude_bridge_cil.changed
+  changed_when: true

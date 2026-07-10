@@ -1,0 +1,22 @@
+---
+# Units de USUARIO en /etc/systemd/user (root las escribe, el manager de ndelucca las lee).
+# Tienen que ser de usuario: el manager de usuario corre como unconfined_t y puede crear el
+# socket con etiqueta container_file_t; pid 1 (init_t) no puede. Ver home-claude.socket.j2.
+- name: Deploy the home-claude systemd user units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/user/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  loop:
+    - home-claude.socket
+    - home-claude@.service
+  notify:
+    - Claude bridge daemon-reload-user
+    - Claude bridge restart socket
+
+# Si una unit cambió, systemd tiene que releerla antes de que service.yml la habilite.
+- name: Flush handlers so the units are reloaded before being enabled
+  ansible.builtin.meta: flush_handlers

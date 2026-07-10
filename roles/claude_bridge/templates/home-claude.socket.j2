@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+# Socket del bridge de Claude. Se habilita ESTA unit, nunca home-claude@.service:
+# con Accept=yes systemd spawnea una instancia del service por conexión entrante.
+#
+# Es una unit de USUARIO a propósito. El manager de usuario corre como unconfined_t y puede
+# crear el socket con la etiqueta container_file_t que necesita el contenedor; pid 1 (init_t)
+# NO puede, y la unit falla con "Failed to create listening socket: Permission denied".
+
+[Unit]
+Description=home-claude bridge socket
+
+[Socket]
+ListenStream={{ claude_bridge_socket_path }}
+SocketMode=0660
+Accept=yes
+# Backstop del kernel: las conexiones de más esperan en el backlog. La serialización real la
+# impone el flock del wrapper (una consulta a la vez).
+MaxConnections={{ claude_bridge_max_connections }}
+
+# Sin RuntimeDirectory=: el dir lo crea /etc/tmpfiles.d/home-claude.conf en el boot. Si systemd
+# lo borrara en cada stop, el bind-mount de un contenedor en vuelo quedaría colgado de un inode
+# huérfano.
+
+[Install]
+WantedBy=sockets.target

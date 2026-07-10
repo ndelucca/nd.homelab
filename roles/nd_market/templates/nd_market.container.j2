@@ -13,6 +13,14 @@ UserNS=keep-id:uid={{ nd_market_uid }},gid={{ nd_market_uid }}
 PublishPort={{ nd_market_host }}:{{ nd_market_port }}:{{ nd_market_container_port }}
 
 Volume={{ nd_market_data_dir }}:/data:Z
+{% if nd_market_claude_bridge_enabled %}
+
+# Bridge del CLI de Claude (rol claude_bridge). Sin `:z` ni `:Z`: el dir ya viene etiquetado
+# container_file_t, y `:Z` (MCS privado) se lo robaría a las demás apps que comparten el socket.
+Volume={{ nd_market_claude_socket_dir }}:{{ nd_market_claude_mount }}
+Environment=NDM_CLAUDE_PROVIDER=bridge
+Environment=NDM_CLAUDE_SOCKET={{ nd_market_claude_mount }}/sock
+{% endif %}
 
 # El deploy hace `podman pull` de :latest y reinicia; Pull=newer deja la política explícita.
 Pull=newer

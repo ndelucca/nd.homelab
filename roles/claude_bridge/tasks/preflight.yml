@@ -1,0 +1,77 @@
+---
+- name: Verify Fedora operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == "Fedora"
+    fail_msg: "This role only supports Fedora"
+
+- name: Resolve claude_bridge user UID
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ claude_bridge_user }}"
+  check_mode: false
+
+- name: Set claude_bridge_uid fact
+  ansible.builtin.set_fact:
+    claude_bridge_uid: "{{ ansible_facts['getent_passwd'][claude_bridge_user][1] }}"
+
+# El CLI lo instala el usuario a mano (`claude` se auto-actualiza y no queremos que Ansible
+# pelee con eso). Si no está, el bridge arrancaría igual y fallaría en la primera consulta:
+# mejor romper acá con un mensaje claro.
+- name: Verify the Claude CLI is installed on the host
+  ansible.builtin.stat:
+    path: "{{ claude_bridge_bin }}"
+  register: claude_bridge_bin_stat
+
+- name: Fail when the Claude CLI is missing
+  ansible.builtin.assert:
+    that:
+      - claude_bridge_bin_stat.stat.exists
+      - claude_bridge_bin_stat.stat.executable
+    fail_msg: >-
+      No se encontró el CLI de Claude en {{ claude_bridge_bin }}. Instalalo como
+      {{ claude_bridge_user }} antes de correr este rol (o ajustá claude_bridge_bin).
+
+# Idem las credenciales: sin ellas el CLI pide login interactivo y el wrapper cuelga.
+- name: Verify the Claude credentials exist
+  ansible.builtin.stat:
+    path: "{{ claude_bridge_home }}/.claude/.credentials.json"
+  register: claude_bridge_creds_stat
+  become: true
+
+- name: Warn when the Claude credentials are missing
+  ansible.builtin.assert:
+    that:
+      - claude_bridge_creds_stat.stat.exists
+    fail_msg: >-
+      No hay credenciales en {{ claude_bridge_home }}/.claude/.credentials.json. Corré
+      `claude` una vez como {{ claude_bridge_user }} para autenticarte antes de usar el bridge.
+
+- name: Ensure the state and working directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ claude_bridge_user }}"
+    group: "{{ claude_bridge_group }}"
+    mode: '0750'
+  become: true
+  loop:
+    - "{{ claude_bridge_state_dir }}"
+    - "{{ claude_bridge_workdir }}"
+
+# Las units son de usuario: sin lingering no arrancan hasta que ndelucca abra una sesión.
+# Los roles de container ya lo habilitan vía container_base, pero este rol debe poder correr solo.
+- name: Enable lingering for the bridge user
+  ansible.builtin.command: "loginctl enable-linger {{ claude_bridge_user }}"
+  become: true
+  args:
+    creates: "/var/lib/systemd/linger/{{ claude_bridge_user }}"
+
+- name: Ensure the settings directory exists
+  ansible.builtin.file:
+    path: "{{ claude_bridge_settings_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true

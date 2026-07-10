@@ -1,0 +1,69 @@
+---
+# Rol claude_bridge — expone el CLI de Claude del host a las apps containerizadas.
+#
+# Las apps corren en contenedores rootless (imágenes chicas, a veces `scratch`) y no pueden
+# ejecutar el CLI: son 223 MB de ELF linkeado a glibc, más las credenciales OAuth del host.
+# En vez de meter todo eso adentro, el bridge deja el CLI del lado del host detrás de un
+# socket unix con un contrato JSON estrecho (prompt/system/model), y cada app monta el socket.
+#
+# Frontera de confianza: NO hay auth en el protocolo. Toda app cuya Quadlet monte
+# claude_bridge_socket_dir puede consultar (y gastar la suscripción). El control de acceso es
+# quién monta el socket, igual que el forced-command de home-deploy.
+
+claude_bridge_user: ndelucca
+claude_bridge_group: ndelucca
+claude_bridge_uid: 1000  # Se obtiene dinámicamente vía getent en preflight
+
+# Binario del CLI, instalado a mano por el usuario (no lo gestiona Ansible).
+claude_bridge_bin: "/home/{{ claude_bridge_user }}/.local/bin/claude"
+claude_bridge_home: "/home/{{ claude_bridge_user }}"
+
+claude_bridge_script_path: /usr/local/bin/home-claude
+claude_bridge_settings_dir: /etc/home-claude
+claude_bridge_settings_path: "{{ claude_bridge_settings_dir }}/settings.json"
+
+claude_bridge_state_dir: /var/lib/home-claude
+# CWD del CLI: un dir vacío, para que no auto-cargue ningún CLAUDE.md ni vea repos del host.
+claude_bridge_workdir: "{{ claude_bridge_state_dir }}/empty"
+claude_bridge_lock_path: "{{ claude_bridge_state_dir }}/claude.lock"
+
+# El dir lo crea tmpfiles.d en el boot (antes que cualquier contenedor), así el source del
+# bind-mount siempre existe y podman nunca lo auto-crea vacío.
+claude_bridge_socket_dir: /run/home-claude
+claude_bridge_socket_path: "{{ claude_bridge_socket_dir }}/sock"
+# Ruta donde las apps montan el dir adentro del contenedor (contrato público).
+claude_bridge_container_mount: /run/home-claude
+
+# Backstop del kernel: las conexiones de más esperan en el backlog. La serialización real la
+# impone el flock del wrapper (una consulta a la vez), no este número.
+claude_bridge_max_connections: 8
+
+claude_bridge_call_timeout: 600     # tope del wrapper; al vencer devuelve un envelope is_error
+claude_bridge_lock_timeout: 300     # espera máxima por el flock antes de rendirse
+claude_bridge_runtime_max_sec: 900  # backstop de systemd; debe ser > call_timeout
+
+claude_bridge_max_prompt_bytes: 262144
+claude_bridge_max_system_bytes: 262144
+
+claude_bridge_default_model: sonnet
+claude_bridge_allowed_models:
+  - opus
+  - sonnet
+  - haiku
+
+# El caso de uso es texto -> JSON: el CLI no necesita NINGUNA tool. La deny-list vive en
+# settings.json (fuente de verdad, no spoofeable desde el prompt) y se repite como flag.
+claude_bridge_denied_tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - NotebookEdit
+  - Glob
+  - Grep
+  - WebFetch
+  - WebSearch
+  - Task
+  - TodoWrite
+
+claude_bridge_manage_selinux: true

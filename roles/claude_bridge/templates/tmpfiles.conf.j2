@@ -1,0 +1,5 @@
+# {{ ansible_managed }}
+# Crea el dir del socket en cada boot, antes de basic.target: así el source del bind-mount de
+# las Quadlets siempre existe y podman nunca lo auto-crea vacío (lo que enmascararía un bridge
+# ausente). La etiqueta SELinux (container_file_t) la fija el rol vía sefcontext + restorecon.
+d {{ claude_bridge_socket_dir }} 0750 {{ claude_bridge_user }} {{ claude_bridge_group }} -

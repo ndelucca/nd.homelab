@@ -1,0 +1,14 @@
+; {{ ansible_managed }}
+; Política SELinux puntual del bridge de Claude.
+;
+; El socket lo escucha el manager de systemd del usuario, que corre como unconfined_t. Un
+; contenedor (container_t) puede escribir el sock_file (ya lo permite svirt_sandbox_domain sobre
+; container_file_t) pero NO puede `connectto` a un peer unconfined_t: no existe esa allow en la
+; policy base, y está dontaudit'd (por eso no aparece AVC). Sin esto el connect() del contenedor
+; devuelve EACCES.
+;
+; Alcance: habilita a CUALQUIER contenedor (container_t) a conectarse a sockets unix de procesos
+; unconfined del host. En este server de un solo usuario, donde los contenedores corren código
+; propio, es un ensanche aceptable y es exactamente lo que generaría `audit2allow`. La frontera
+; de acceso sigue siendo DAC (el sock_file 0660 de ndelucca) + quién monta el dir del socket.
+(allow container_t unconfined_t (unix_stream_socket (connectto)))

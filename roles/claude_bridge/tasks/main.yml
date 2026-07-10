@@ -1,0 +1,24 @@
+---
+- name: Preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['claude_bridge', 'preflight']
+
+- name: Install the bridge wrapper and its config
+  ansible.builtin.import_tasks: install.yml
+  tags: ['claude_bridge', 'install']
+
+# Antes de units/service: el dir del socket tiene que quedar container_file_t ANTES de que
+# systemd cree el socket adentro, para que el socket herede la etiqueta y el contenedor pueda
+# conectarse.
+- name: Configure SELinux
+  ansible.builtin.import_tasks: selinux.yml
+  when: claude_bridge_manage_selinux | bool
+  tags: ['claude_bridge', 'selinux']
+
+- name: Deploy the systemd units
+  ansible.builtin.import_tasks: units.yml
+  tags: ['claude_bridge', 'units']
+
+- name: Enable the socket
+  ansible.builtin.import_tasks: service.yml
+  tags: ['claude_bridge', 'service']

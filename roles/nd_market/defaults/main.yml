@@ -27,3 +27,12 @@ nd_market_service_enabled: true
 nd_market_service_state: started
 
 nd_market_manage_selinux: true
+
+# La app consulta al CLI de Claude a través del bridge del host (rol claude_bridge): monta su
+# socket unix y le habla por el protocolo JSON. Sin esto el consultor no funciona: la imagen es
+# `scratch` y no tiene el binario ni las credenciales.
+nd_market_claude_bridge_enabled: true
+# Defaultean a las vars canónicas del rol claude_bridge para no perder el sync; el prefijo
+# nd_market_ las mantiene dentro de este rol (mismo patrón que firewall_forgejo_ssh_port).
+nd_market_claude_socket_dir: "{{ claude_bridge_socket_dir | default('/run/home-claude') }}"
+nd_market_claude_mount: "{{ claude_bridge_container_mount | default('/run/home-claude') }}"
