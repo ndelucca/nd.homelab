@@ -11,7 +11,7 @@ orcaslicer_config_dir: "{{ orcaslicer_base_dir }}/config"
 orcaslicer_quadlet_dir: /etc/containers/systemd/users
 # Tag pineado para deploys reproducibles (antes era ':latest').
 # Releases más nuevos: https://hub.docker.com/r/linuxserver/orcaslicer/tags
-orcaslicer_image: lscr.io/linuxserver/orcaslicer:2.4.0
+orcaslicer_image: lscr.io/linuxserver/orcaslicer:2.4.2
 
 orcaslicer_port: 3001
 orcaslicer_host: 127.0.0.1
