@@ -43,12 +43,26 @@
 - name: Flush handlers to reload systemd-resolved
   ansible.builtin.meta: flush_handlers
 
+# Detecta quién ocupa el :53 ANTES de esperar a que se libere. La espera de abajo
+# sólo tiene sentido en bootstrap (systemd-resolved tiene el puerto y AdGuard todavía
+# no bindeó). En estado estable AdGuard ES quien escucha en `*:53`, así que el puerto
+# nunca pasa a "stopped": sin este gate, wait_for agota los 30s de timeout y tira un
+# `fatal ...ignoring` en cada re-run (falso positivo: "occupied" es el estado deseado).
+- name: Check whether AdGuard Home already owns the DNS port
+  ansible.builtin.shell: |
+    set -o pipefail
+    ss -tulnpH 'sport = :53' 2>/dev/null | grep -q AdGuardHome && echo owned || echo not-owned
+  register: adguard_owns_port_53
+  changed_when: false
+  become: true
+
 - name: Wait for systemd-resolved to release DNS port
   ansible.builtin.wait_for:
     port: 53
     state: stopped
     timeout: 30
   ignore_errors: true
+  when: adguard_owns_port_53.stdout != 'owned'
 
 - name: Verify DNS port is free
   ansible.builtin.shell: |
