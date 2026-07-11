@@ -21,8 +21,8 @@ immich_host: 127.0.0.1
 
 # Se pinea a un release exacto por reproducibilidad; bumpear esto (y immich_cli_version
 # para que coincida) para actualizar. Ver los releases de upstream.
-immich_version: v2.7.5
-immich_cli_version: "2.7.5"  # mantener en sync con immich_version
+immich_version: v3.0.2
+immich_cli_version: "3.0.2"  # mantener en sync con immich_version
 immich_timezone: America/Los_Angeles
 
 # immich_db_password DEBE proveerse vía vault (ver group_vars/homeservers/vault.yml);
