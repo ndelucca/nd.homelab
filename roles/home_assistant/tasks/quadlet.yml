@@ -20,4 +20,7 @@
   become: true
   notify:
     - Container daemon-reload-user
+    # Volumen category-less (sin :Z): relabelear a container_file_t:s0 ANTES de reiniciar,
+    # o el container nuevo arranca contra una categoría MCS vieja y crashea (cd /config: Permission denied).
+    - Container apply selinux context
     - Container restart

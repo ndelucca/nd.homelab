@@ -34,7 +34,12 @@
   become: true
   notify:
     - Container daemon-reload-user
+    # Volumen category-less (sin :Z): relabelear a container_file_t:s0 ANTES del restart,
+    # o el container nuevo crashea contra la categoría MCS vieja.
+    - Container apply selinux context
     - Container restart
 
-- name: Flush handlers to reload systemd
-  ansible.builtin.meta: flush_handlers
+# NO se flushean los handlers acá. El paso de service compartido (container_base) los flushea
+# DESPUÉS de promover container_base_uid/user/service_name y los paths de SELinux a host facts;
+# hacerlo antes (como estaba) disparaba daemon-reload/restart con container_base_uid undefined
+# —el flush corría antes de los include_role de selinux y service— rompiendo `-t monitoring`.

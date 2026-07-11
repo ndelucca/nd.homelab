@@ -23,4 +23,7 @@
   become: true
   notify:
     - Container daemon-reload-user
+    # Volumen category-less (sin :Z): relabelear a container_file_t:s0 ANTES del restart,
+    # o el container nuevo crashea contra la categoría MCS vieja (le pasó a cert.pem).
+    - Container apply selinux context
     - Container restart
