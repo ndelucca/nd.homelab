@@ -15,4 +15,4 @@
     state: true
     persistent: true
   become: true
-  when: ansible_facts['selinux'].status == "enabled"
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
