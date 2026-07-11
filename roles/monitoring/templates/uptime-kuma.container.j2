@@ -24,6 +24,13 @@ Environment=UPTIME_KUMA_PORT={{ monitoring_port }}
 
 Volume={{ monitoring_data_dir }}:/app/data
 
+# Los monitors de tipo "ping" (2.x) invocan /usr/bin/ping, un binario con
+# cap_net_raw=ep. Podman no incluye CAP_NET_RAW en el bounding set por default, así que
+# el exec del binario falla con EPERM ("spawn EPERM" en el log) aun corriendo como root.
+# Se agrega la capability para que los monitors ICMP funcionen. (En 1.x andaba porque
+# usaba ICMP no privilegiado; 2.x cambió a spawnear el binario ping.)
+AddCapability=CAP_NET_RAW
+
 [Service]
 Restart=on-failure
 RestartSec=30
