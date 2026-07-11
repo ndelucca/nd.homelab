@@ -13,7 +13,7 @@ home_assistant_config_dir: "{{ home_assistant_base_dir }}/config"
 # Se pinea a un release exacto por reproducibilidad; bumpear home_assistant_version
 # para actualizar (HA suele traer cambios incompatibles seguido).
 home_assistant_quadlet_dir: /etc/containers/systemd/users
-home_assistant_version: "2026.6.4"
+home_assistant_version: "2026.7.2"
 home_assistant_image: "ghcr.io/home-assistant/home-assistant:{{ home_assistant_version }}"
 
 home_assistant_port: 8123
