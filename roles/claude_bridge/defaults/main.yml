@@ -51,8 +51,15 @@ claude_bridge_allowed_models:
   - sonnet
   - haiku
 
-# El caso de uso es texto -> JSON: el CLI no necesita NINGUNA tool. La deny-list vive en
-# settings.json (fuente de verdad, no spoofeable desde el prompt) y se repite como flag.
+# El caso de uso es texto -> JSON: el CLI no necesita NINGUNA tool.
+#
+# Gate real = settings.json (root, no spoofeable desde el prompt): deniega TODAS las tools con el
+# glob "*". Es future-proof: una tool nueva del CLI queda denegada por default en vez de colarse por
+# no estar enumerada (lo que pasaría con una deny-list fija). Ver claude_bridge_settings_deny abajo.
+claude_bridge_settings_deny: ["*"]
+
+# Lista explícita que además se pasa como --disallowed-tools (cinturón sobre los tiradores, forma
+# conocida-segura del flag). Redundante con el "*" de settings.json pero documenta qué se bloquea.
 claude_bridge_denied_tools:
   - Bash
   - Read

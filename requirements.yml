@@ -1,9 +1,10 @@
 ---
 # Dependencias de colecciones de Ansible. Instalar con:
 #   ansible-galaxy collection install -r requirements.yml
-# Versiones fijadas a un rango mayor para builds reproducibles.
+# Versiones fijadas EXACTAS para builds reproducibles (las que están instaladas hoy).
+# Para actualizar: subir el número acá y re-instalar con `ansible-galaxy collection install -r`.
 collections:
   - name: ansible.posix
-    version: ">=2.2.0,<3.0.0"
+    version: "2.2.0"
   - name: community.general
-    version: ">=12.6.1,<13.0.0"
+    version: "12.6.1"
