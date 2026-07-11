@@ -24,9 +24,10 @@ monitoring_port: 3011        # puerto del host (3011 está libre; 3001 es OrcaSl
 monitoring_container_port: 3001
 monitoring_host: 127.0.0.1
 
-# Fijado a un patch release exacto (el tag :1 flota a lo largo de la línea 1.x);
-# subí monitoring_version para actualizar.
-monitoring_version: "1.23.17"
+# Fijado a un patch release exacto de la línea 2.x (el tag :2 flota); subí
+# monitoring_version para actualizar. OJO: 2.x cambió el schema privado de kuma.db
+# respecto de 1.x — re-verificá la siembra de monitors tras un bump (ver monitors.yml).
+monitoring_version: "2.4.0"
 monitoring_image: "docker.io/louislam/uptime-kuma:{{ monitoring_version }}"
 
 # Desplegado como un único Quadlet .container, así que la unit es
