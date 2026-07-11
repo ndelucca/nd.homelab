@@ -18,9 +18,9 @@ forgejo_runner_quadlet_dir: /etc/containers/systemd/users  # Containers de usuar
 forgejo_runner_container_name: forgejo-runner
 forgejo_runner_service_name: forgejo-runner  # unit forgejo-runner.container -> forgejo-runner.service
 
-# Pineado a la serie v11 para matchear la instancia de Forgejo 11.0.1 (verificado
-# existente en el registry). Última v11 al 2026-07: 11.3.1.
-forgejo_runner_version: "11.3.1"
+# Pineado a la serie v12 para acompañar la instancia de Forgejo 15.x LTS.
+# Última v12 al 2026-07: 12.13.0.
+forgejo_runner_version: "12.13.0"
 forgejo_runner_image: "code.forgejo.org/forgejo/runner:{{ forgejo_runner_version }}"
 
 # Instancia contra la que registra. Se usa el dominio interno (resuelto por AdGuard a la
