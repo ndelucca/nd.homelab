@@ -29,8 +29,10 @@
   gather_facts: true
 
   vars:
-    # uid del usuario dueño de los contenedores rootless (ndelucca = 1000)
-    podman_user_uid: "{{ ansible_user_uid | default(1000) }}"
+    # uid del usuario dueño de los contenedores rootless (ndelucca = 1000). Se usa el valor
+    # canónico pinneado (storage.yml), NO ansible_user_uid: el setup corre bajo become=root
+    # (become=True global), así que ansible_user_uid resolvería a 0 y apuntaría a /run/user/0.
+    podman_user_uid: "{{ app_storage_uid }}"
 
   tasks:
     - name: Check upstream for newer images (dry-run; no changes made)

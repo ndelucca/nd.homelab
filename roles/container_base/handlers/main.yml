@@ -32,7 +32,7 @@
 #
 # DEBE estar definido ANTES de `Container restart`: los handlers se ejecutan en orden de
 # DEFINICIÓN, no de notificación. Los roles de volumen category-less (home_assistant,
-# orcaslicer, kavita, monitoring) notifican este handler desde su deploy de Quadlet junto
+# orcaslicer, kavita, monitoring, immich) notifican este handler desde su deploy de Quadlet junto
 # con el restart; si el relabel corriera después del restart, el container nuevo arrancaría
 # contra el label MCS viejo y crashearía igual (se arreglaría recién en la corrida siguiente).
 - name: Container apply selinux context

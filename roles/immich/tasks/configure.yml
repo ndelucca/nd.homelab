@@ -12,4 +12,8 @@
     # ser legible por todo el mundo.
     mode: '0600'
   become: true
-  notify: Container restart
+  # Volumen category-less (hostPath sin :Z): relabelear a container_file_t:s0 ANTES del restart,
+  # o en un bump de imagen el container nuevo rearranca contra la categoría MCS vieja y crashea.
+  notify:
+    - Container apply selinux context
+    - Container restart

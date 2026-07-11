@@ -10,6 +10,11 @@ export RESTIC_PASSWORD_FILE="{{ backup_password_file }}"
 log() { echo "[backup] $*"; }
 die() { echo "[backup][ERROR] $*" >&2; exit 1; }
 
+# Falla diferida: un dump que falla NO debe abortar el resto del backup (el objetivo primario es
+# tener una copia del resto de las apps + D-Leo). Se marca acá, se sigue, se corre restic igual, y
+# al final se sale distinto de cero para que OnFailure=/notify avise que el snapshot salió degradado.
+backup_degraded=0
+
 # RequiresMountsFor no es confiable para user units (los mounts del sistema no
 # son visibles para el user manager), así que se verifican los mounts de forma
 # explícita antes de tocarlos.
@@ -23,15 +28,17 @@ if podman ps --format '{% raw %}{{.Names}}{% endraw %}' | grep -qx "{{ backup_im
   log "dumping Immich Postgres -> ${IMMICH_DUMP}"
   if podman exec "{{ backup_immich_container }}" \
         pg_dump -U "{{ backup_immich_db_user }}" -d "{{ backup_immich_db_name }}" --clean --if-exists \
-        | gzip -c > "${IMMICH_DUMP}.tmp"; then
-    [ -s "${IMMICH_DUMP}.tmp" ] || die "Immich dump is empty"
+        | gzip -c > "${IMMICH_DUMP}.tmp" && [ -s "${IMMICH_DUMP}.tmp" ]; then
     mv -f "${IMMICH_DUMP}.tmp" "${IMMICH_DUMP}"
   else
+    # No se aborta el backup entero: se conserva el dump anterior (si existe) y se marca degradado.
     rm -f "${IMMICH_DUMP}.tmp"
-    die "pg_dump failed for Immich"
+    log "WARNING: el dump de Immich falló o vino vacío — se respalda el dump previo si existe (backup DEGRADADO)"
+    backup_degraded=1
   fi
 else
-  die "Immich container {{ backup_immich_container }} not running — cannot dump Postgres"
+  log "WARNING: el container {{ backup_immich_container }} no está corriendo — se saltea el dump de Immich (backup DEGRADADO)"
+  backup_degraded=1
 fi
 {% endif %}
 
@@ -97,5 +104,9 @@ restic forget \
   --keep-daily {{ backup_keep_daily }} \
   --keep-weekly {{ backup_keep_weekly }} \
   --keep-monthly {{ backup_keep_monthly }}
+
+# Si algún dump se saltó/falló, el backup del resto igual corrió; se marca la unit como fallada
+# (OnFailure=backup-notify@) para que la falla no pase inadvertida.
+[ "${backup_degraded}" -eq 0 ] || die "backup completó pero un dump de DB se saltó/falló (ver WARNING arriba)"
 
 log "done"
