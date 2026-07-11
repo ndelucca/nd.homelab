@@ -65,12 +65,17 @@
     mode: '0755'
   become: true
 
-- name: Create Immich database directory
+# NO se fuerza owner/group acá a propósito. El pod corre con UserNS=keep-id, así que el
+# usuario del host immich_user (uid 1000) mapea a ROOT dentro del container. Postgres
+# corre como el usuario `postgres` (uid 999 del container) y es dueño de su propio PGDATA;
+# forzar owner=immich_user en cada corrida lo dejaba root:root adentro y Postgres no podía
+# abrir sus archivos ("could not open file global/pg_filenode.map: Permission denied"),
+# rompiendo toda conexión nueva y el pg_dump del backup. Se crea el dir si falta y se deja
+# que Postgres administre el ownership de su contenido.
+- name: Ensure Immich database directory exists
   ansible.builtin.file:
     path: "{{ immich_db_data_location }}"
     state: directory
-    owner: "{{ immich_user }}"
-    group: "{{ immich_group }}"
     mode: '0700'
   become: true
 

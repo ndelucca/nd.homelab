@@ -13,5 +13,7 @@
     - Container daemon-reload-user
     - Container restart
 
-- name: Flush handlers to reload systemd
-  ansible.builtin.meta: flush_handlers
+# NO se flushean los handlers acá: el paso de service compartido (container_base) los flushea
+# DESPUÉS de promover container_base_uid/user/service_name a host facts. Flushear antes (como
+# estaba) dispara daemon-reload/restart con container_base_uid undefined —corre antes de los
+# include_role de selinux y service— y rompe la corrida cuando la unit cambia (ej. bump de imagen).
