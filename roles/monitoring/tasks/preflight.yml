@@ -1,40 +1,18 @@
 ---
 # Chequeos de preflight del role monitoring.
 
-- name: Verify running on Fedora
-  ansible.builtin.assert:
-    that:
-      - ansible_facts['distribution'] == "Fedora"
-    fail_msg: "This role is designed for Fedora systems"
-    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
+- name: Common container preflight (Fedora, uid, port, quadlet dir)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: preflight
+  vars:
+    container_base_user: "{{ monitoring_user }}"
+    container_base_port: "{{ monitoring_port }}"
+    container_base_quadlet_dir: "{{ monitoring_quadlet_dir }}"
 
-- name: Resolve monitoring user UID for rootless Podman
-  ansible.builtin.getent:
-    database: passwd
-    key: "{{ monitoring_user }}"
-  check_mode: false
-
-- name: Set monitoring_uid fact
+- name: Map the resolved UID to monitoring_uid
   ansible.builtin.set_fact:
-    monitoring_uid: "{{ ansible_facts['getent_passwd'][monitoring_user][1] }}"
-
-- name: Check availability of port {{ monitoring_port }}
-  ansible.builtin.shell: |
-    ss -tulnp | grep -q ":{{ monitoring_port }}\s" && echo "occupied" || echo "available"
-  register: monitoring_port_check
-  changed_when: false
-  failed_when: false
-
-- name: Display port status
-  ansible.builtin.debug:
-    msg: "Port {{ monitoring_port }} is {{ monitoring_port_check.stdout }}"
-
-# Un warning, no una falla: en una re-corrida se espera que el puerto lo tenga
-# tomado el propio Uptime-Kuma (consistente con los otros roles de container).
-- name: Warn if port is occupied
-  ansible.builtin.debug:
-    msg: "WARNING: port {{ monitoring_port }} is already in use (expected if Uptime-Kuma is already running)"
-  when: monitoring_port_check.stdout == "occupied"
+    monitoring_uid: "{{ container_base_uid }}"
 
 - name: Create Uptime-Kuma base directory
   ansible.builtin.file:
@@ -51,14 +29,5 @@
     state: directory
     owner: "{{ monitoring_user }}"
     group: "{{ monitoring_group }}"
-    mode: '0755'
-  become: true
-
-- name: Create Quadlet directory for user
-  ansible.builtin.file:
-    path: "{{ monitoring_quadlet_dir }}/{{ monitoring_uid }}"
-    state: directory
-    owner: root
-    group: root
     mode: '0755'
   become: true

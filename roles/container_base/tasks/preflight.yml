@@ -1,0 +1,59 @@
+---
+# Preflight compartido para roles de container rootless/Quadlet. Se incluye vía
+# `include_role: { name: container_base, tasks_from: preflight }`.
+#
+# Concentra lo común a todos los preflights de container: verifica Fedora, resuelve el uid del
+# usuario de servicio (getent) y lo publica como fact `container_base_uid`, chequea el puerto (aviso
+# no-fatal) y crea el dir de Quadlet del usuario. El consumidor mapea `container_base_uid` a su
+# propio `<app>_uid` justo después del include y agrega sus tareas específicas (dirs de datos,
+# ACLs, asserts de secretos, etc.).
+#
+# Variables del contrato (vía el `vars:` del include_role):
+#   container_base_user          # REQUERIDA: usuario rootless del servicio (ej. "{{ kavita_user }}")
+#   container_base_port          # opcional: puerto a chequear; si no se pasa, se saltea el check
+#   container_base_quadlet_dir   # opcional: dir base de units Quadlet de usuario; si no se pasa, el
+#                                #   dir <quadlet_dir>/<uid> lo crea el rol en su quadlet.yml
+
+- name: Verify running on Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == "Fedora"
+    fail_msg: "This role is designed for Fedora systems"
+    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
+
+# check_mode: false para que el uid resuelva también bajo --check (los pasos posteriores lo usan).
+- name: Resolve service user UID for rootless Podman
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ container_base_user }}"
+  check_mode: false
+
+- name: Publish the resolved UID as a host fact
+  ansible.builtin.set_fact:
+    container_base_uid: "{{ ansible_facts['getent_passwd'][container_base_user][1] }}"
+
+- name: Check availability of the service port {{ container_base_port | default('(n/a)') }}
+  ansible.builtin.shell: |
+    ss -tulnp | grep -q ":{{ container_base_port }}\s" && echo "occupied" || echo "available"
+  register: container_base_port_check
+  changed_when: false
+  failed_when: false
+  when: container_base_port is defined
+
+# Aviso, no error: en una re-corrida se espera que el puerto lo tenga ocupado el propio servicio.
+- name: Warn if the service port is already in use
+  ansible.builtin.debug:
+    msg: "WARNING: port {{ container_base_port }} is already in use (expected if the service is already running)"
+  when:
+    - container_base_port is defined
+    - container_base_port_check.stdout | default('') == "occupied"
+
+- name: Create the user's Quadlet directory
+  ansible.builtin.file:
+    path: "{{ container_base_quadlet_dir }}/{{ container_base_uid }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  when: container_base_quadlet_dir is defined

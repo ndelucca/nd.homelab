@@ -1,24 +1,17 @@
 ---
-- name: Verify Fedora operating system
-  ansible.builtin.assert:
-    that:
-      - ansible_facts['distribution'] == "Fedora"
-    fail_msg: "This role only supports Fedora"
-    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
+# Chequeos de preflight y armado de directorios para OrcaSlicer
 
-- name: Resolve orcaslicer user UID for rootless Podman
-  ansible.builtin.getent:
-    database: passwd
-    key: "{{ orcaslicer_user }}"
-  check_mode: false
+- name: Common container preflight (Fedora, uid, port)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: preflight
+  vars:
+    container_base_user: "{{ orcaslicer_user }}"
+    container_base_port: "{{ orcaslicer_port }}"
 
-- name: Set orcaslicer_uid fact
+- name: Map the resolved UID to orcaslicer_uid
   ansible.builtin.set_fact:
-    orcaslicer_uid: "{{ ansible_facts['getent_passwd'][orcaslicer_user][1] }}"
-
-- name: Display user UID
-  ansible.builtin.debug:
-    msg: "Using UID {{ orcaslicer_uid }} for user {{ orcaslicer_user }}"
+    orcaslicer_uid: "{{ container_base_uid }}"
 
 - name: Ensure base directory exists
   ansible.builtin.file:
@@ -85,21 +78,3 @@
     - { path: "{{ orcaslicer_config_dir }}/downloads", default: true }
     - { path: "{{ orcaslicer_config_dir }}/gcodes", default: false }
     - { path: "{{ orcaslicer_config_dir }}/gcodes", default: true }
-
-- name: Check availability of port {{ orcaslicer_port }}
-  ansible.builtin.shell: |
-    ss -tulnp | grep -q ":{{ orcaslicer_port }}\s" && echo "occupied" || echo "available"
-  register: orcaslicer_port_check
-  changed_when: false
-  failed_when: false
-
-- name: Display port status
-  ansible.builtin.debug:
-    msg: "Port {{ orcaslicer_port }} is {{ orcaslicer_port_check.stdout }}"
-
-# Es un aviso, no una falla: en una re-corrida se espera que el puerto lo tenga el
-# propio OrcaSlicer (consistente con los otros roles de container).
-- name: Warn if port is occupied
-  ansible.builtin.debug:
-    msg: "WARNING: port {{ orcaslicer_port }} is already in use (expected if OrcaSlicer is already running)"
-  when: orcaslicer_port_check.stdout == "occupied"

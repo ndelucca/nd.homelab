@@ -1,41 +1,18 @@
 ---
 # Chequeos de preflight para la instalación de Kavita
 
-- name: Verify running on Fedora
-  ansible.builtin.assert:
-    that:
-      - ansible_facts['distribution'] == "Fedora"
-    fail_msg: "This role is designed for Fedora systems"
-    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
+- name: Common container preflight (Fedora, uid, port, quadlet dir)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: preflight
+  vars:
+    container_base_user: "{{ kavita_user }}"
+    container_base_port: "{{ kavita_port }}"
+    container_base_quadlet_dir: "{{ kavita_quadlet_dir }}"
 
-- name: Resolve Kavita user UID for rootless Podman
-  ansible.builtin.getent:
-    database: passwd
-    key: "{{ kavita_user }}"
-  check_mode: false
-
-- name: Set kavita_uid fact
+- name: Map the resolved UID to kavita_uid
   ansible.builtin.set_fact:
-    kavita_uid: "{{ ansible_facts['getent_passwd'][kavita_user][1] }}"
-
-- name: Check availability of port {{ kavita_port }}
-  ansible.builtin.shell: |
-    ss -tulnp | grep -q ":{{ kavita_port }}\s" && echo "occupied" || echo "available"
-  register: kavita_port_check
-  changed_when: false
-  failed_when: false
-
-- name: Display port status
-  ansible.builtin.debug:
-    msg: "Port {{ kavita_port }} is {{ kavita_port_check.stdout }}"
-
-# Es una advertencia, no un error: en una re-ejecución se espera que el puerto lo tenga
-# ocupado el propio Kavita. `fail` + `ignore_errors` era un guard no-op que nunca se
-# disparaba; una advertencia explícita expresa la intención honestamente sin abortar el play.
-- name: Warn if port is occupied
-  ansible.builtin.debug:
-    msg: "WARNING: port {{ kavita_port }} is already in use (expected if Kavita is already running)"
-  when: kavita_port_check.stdout == "occupied"
+    kavita_uid: "{{ container_base_uid }}"
 
 - name: Create Kavita base directory
   ansible.builtin.file:
@@ -61,14 +38,5 @@
     state: directory
     owner: "{{ kavita_user }}"
     group: "{{ kavita_group }}"
-    mode: '0755'
-  become: true
-
-- name: Create Quadlet directory for user
-  ansible.builtin.file:
-    path: "{{ kavita_quadlet_dir }}/{{ kavita_uid }}"
-    state: directory
-    owner: root
-    group: root
     mode: '0755'
   become: true

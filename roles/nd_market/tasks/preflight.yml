@@ -1,19 +1,40 @@
 ---
-- name: Verify Fedora operating system
-  ansible.builtin.assert:
-    that:
-      - ansible_facts['distribution'] == "Fedora"
-    fail_msg: "This role only supports Fedora"
+- name: Common container preflight (Fedora, uid)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: preflight
+  vars:
+    container_base_user: "{{ nd_market_user }}"
 
-- name: Resolve nd_market user UID for rootless Podman
-  ansible.builtin.getent:
-    database: passwd
-    key: "{{ nd_market_user }}"
+- name: Map the resolved UID to nd_market_uid
+  ansible.builtin.set_fact:
+    nd_market_uid: "{{ container_base_uid }}"
+
+# El Quadlet usa Pull=newer contra el registry PRIVADO de Forgejo, cuyo login lo hace ndelucca a
+# mano (no lo gestiona Ansible; ver docs/BOOTSTRAP.md §4b). Sin login el pull falla en SILENCIO y
+# la unit no arranca. Verificar acá y fallar con un mensaje claro en vez de un 502 misterioso.
+- name: Check whether podman is logged in to the container registry
+  ansible.builtin.command: "podman login --get-login {{ nd_market_image.split('/')[0] }}"
+  become: true
+  become_user: "{{ nd_market_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ nd_market_uid }}"
+  register: nd_market_registry_login
+  changed_when: false
+  failed_when: false
   check_mode: false
 
-- name: Set nd_market_uid fact
-  ansible.builtin.set_fact:
-    nd_market_uid: "{{ ansible_facts['getent_passwd'][nd_market_user][1] }}"
+# Warning (no un assert que aborte): un login faltante NO debe bloquear el converge del resto de los
+# roles. Surfacea el mensaje claro —convirtiendo el 502 silencioso en algo visible— y sigue; el
+# propio nd_market igual fallará más adelante al pullear si el login falta, ya con contexto.
+- name: Warn clearly if podman is NOT logged in to the registry (Pull=newer needs it)
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: podman NO está logueado al registry {{ nd_market_image.split('/')[0] }} — el
+      Pull=newer de nd_market fallará (la imagen no se actualiza y la unit no arranca tras un deploy).
+      Logueate a mano como {{ nd_market_user }} en el host (ver docs/BOOTSTRAP.md §4b):
+      podman login {{ nd_market_image.split('/')[0] }} -u ndelucca
+  when: nd_market_registry_login.rc != 0
 
 - name: Ensure base and data directories exist
   ansible.builtin.file:

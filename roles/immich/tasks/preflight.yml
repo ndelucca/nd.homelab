@@ -1,12 +1,18 @@
 ---
 # Chequeos de preflight para la instalación de Immich
 
-- name: Verify running on Fedora
-  ansible.builtin.assert:
-    that:
-      - ansible_facts['distribution'] == "Fedora"
-    fail_msg: "This role is designed for Fedora systems"
-    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
+- name: Common container preflight (Fedora, uid, port, quadlet dir)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: preflight
+  vars:
+    container_base_user: "{{ immich_user }}"
+    container_base_port: "{{ immich_port }}"
+    container_base_quadlet_dir: "{{ immich_quadlet_dir }}"
+
+- name: Map the resolved UID to immich_uid
+  ansible.builtin.set_fact:
+    immich_uid: "{{ container_base_uid }}"
 
 - name: Require the Immich DB password to be set (from vault)
   ansible.builtin.assert:
@@ -16,36 +22,6 @@
       immich_db_password is empty. Define it in group_vars/homeservers/vault.yml
       (it must match the password the running Postgres already uses).
     success_msg: "Immich DB password is set"
-
-- name: Resolve Immich user UID for rootless Podman
-  ansible.builtin.getent:
-    database: passwd
-    key: "{{ immich_user }}"
-  check_mode: false
-
-- name: Set immich_uid fact
-  ansible.builtin.set_fact:
-    immich_uid: "{{ ansible_facts['getent_passwd'][immich_user][1] }}"
-
-- name: Check availability of port {{ immich_port }}
-  ansible.builtin.shell: |
-    ss -tulnp | grep -q ":{{ immich_port }}\s" && echo "occupied" || echo "available"
-  register: immich_port_check
-  changed_when: false
-  failed_when: false
-
-- name: Display port status
-  ansible.builtin.debug:
-    msg: "Port {{ immich_port }} is {{ immich_port_check.stdout }}"
-
-# Es una advertencia, no un error: en una re-ejecución se espera que el puerto lo tenga
-# ocupado el propio Immich. `fail` + `ignore_errors` era un guard no-op que nunca
-# abortaba; una advertencia explícita expresa la intención honestamente (consistente
-# con los demás roles de container).
-- name: Warn if port is occupied
-  ansible.builtin.debug:
-    msg: "WARNING: port {{ immich_port }} is already in use (expected if Immich is already running)"
-  when: immich_port_check.stdout == "occupied"
 
 - name: Create Immich base directory
   ansible.builtin.file:
@@ -94,14 +70,5 @@
     state: directory
     owner: "{{ immich_user }}"
     group: "{{ immich_group }}"
-    mode: '0755'
-  become: true
-
-- name: Create Quadlet directory for user
-  ansible.builtin.file:
-    path: "{{ immich_quadlet_dir }}/{{ immich_uid }}"
-    state: directory
-    owner: root
-    group: root
     mode: '0755'
   become: true

@@ -1,26 +1,17 @@
 ---
 # Chequeos de preflight y armado de directorios para Forgejo
 
-- name: Verify Fedora operating system
-  ansible.builtin.assert:
-    that:
-      - ansible_facts['distribution'] == "Fedora"
-    fail_msg: "This role only supports Fedora"
-    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
+- name: Common container preflight (Fedora, uid, port)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: preflight
+  vars:
+    container_base_user: "{{ forgejo_user }}"
+    container_base_port: "{{ forgejo_port }}"
 
-- name: Resolve forgejo user UID for rootless Podman
-  ansible.builtin.getent:
-    database: passwd
-    key: "{{ forgejo_user }}"
-  check_mode: false
-
-- name: Set forgejo_uid fact
+- name: Map the resolved UID to forgejo_uid
   ansible.builtin.set_fact:
-    forgejo_uid: "{{ ansible_facts['getent_passwd'][forgejo_user][1] }}"
-
-- name: Display user UID
-  ansible.builtin.debug:
-    msg: "Using UID {{ forgejo_uid }} for user {{ forgejo_user }}"
+    forgejo_uid: "{{ container_base_uid }}"
 
 - name: Ensure base directory exists
   ansible.builtin.file:
@@ -42,21 +33,3 @@
   loop:
     - "{{ forgejo_data_dir }}"
     - "{{ forgejo_config_dir }}"
-
-- name: Check availability of port {{ forgejo_port }}
-  ansible.builtin.shell: |
-    ss -tulnp | grep -q ":{{ forgejo_port }}\s" && echo "occupied" || echo "available"
-  register: forgejo_port_check
-  changed_when: false
-  failed_when: false
-
-- name: Display port status
-  ansible.builtin.debug:
-    msg: "Port {{ forgejo_port }} is {{ forgejo_port_check.stdout }}"
-
-# Es una advertencia, no un error: en una re-ejecución se espera que el puerto lo
-# tenga ocupado el propio Forgejo (consistente con los demás roles de container).
-- name: Warn if port is occupied
-  ansible.builtin.debug:
-    msg: "WARNING: port {{ forgejo_port }} is already in use (expected if Forgejo is already running)"
-  when: forgejo_port_check.stdout == "occupied"

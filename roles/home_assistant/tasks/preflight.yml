@@ -1,26 +1,17 @@
 ---
 # Chequeos de preflight y armado de directorios para Home Assistant
 
-- name: Verify Fedora operating system
-  ansible.builtin.assert:
-    that:
-      - ansible_facts['distribution'] == "Fedora"
-    fail_msg: "This role only supports Fedora"
-    success_msg: "Running on Fedora {{ ansible_facts['distribution_version'] }}"
+- name: Common container preflight (Fedora, uid, port)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: preflight
+  vars:
+    container_base_user: "{{ home_assistant_user }}"
+    container_base_port: "{{ home_assistant_port }}"
 
-- name: Resolve home_assistant user UID for rootless Podman
-  ansible.builtin.getent:
-    database: passwd
-    key: "{{ home_assistant_user }}"
-  check_mode: false
-
-- name: Set home_assistant_uid fact
+- name: Map the resolved UID to home_assistant_uid
   ansible.builtin.set_fact:
-    home_assistant_uid: "{{ ansible_facts['getent_passwd'][home_assistant_user][1] }}"
-
-- name: Display user UID
-  ansible.builtin.debug:
-    msg: "Using UID {{ home_assistant_uid }} for user {{ home_assistant_user }}"
+    home_assistant_uid: "{{ container_base_uid }}"
 
 - name: Ensure base directory exists
   ansible.builtin.file:
@@ -39,21 +30,3 @@
     group: "{{ home_assistant_group }}"
     mode: '0755'
   become: true
-
-- name: Check availability of port {{ home_assistant_port }}
-  ansible.builtin.shell: |
-    ss -tulnp | grep -q ":{{ home_assistant_port }}\s" && echo "occupied" || echo "available"
-  register: home_assistant_port_check
-  changed_when: false
-  failed_when: false
-
-- name: Display port status
-  ansible.builtin.debug:
-    msg: "Port {{ home_assistant_port }} is {{ home_assistant_port_check.stdout }}"
-
-# Es una advertencia, no un error: en una re-ejecución se espera que el puerto lo
-# tenga ocupado el propio Home Assistant (consistente con los demás roles de container).
-- name: Warn if port is occupied
-  ansible.builtin.debug:
-    msg: "WARNING: port {{ home_assistant_port }} is already in use (expected if Home Assistant is already running)"
-  when: home_assistant_port_check.stdout == "occupied"
