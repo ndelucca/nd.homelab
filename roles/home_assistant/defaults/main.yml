@@ -25,7 +25,6 @@ home_assistant_service_name: home_assistant
 home_assistant_service_enabled: true
 home_assistant_service_state: started
 
-home_assistant_firewall_zone: FedoraServer
 home_assistant_firewall_enabled: false
 
 home_assistant_manage_selinux: true

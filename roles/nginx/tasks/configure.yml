@@ -138,10 +138,5 @@
     - nginx_config.changed | bool
     - nginx_runtime.status.ActiveState == "active"
 
-- name: Ensure NGINX can connect to network
-  ansible.posix.seboolean:
-    name: httpd_can_network_connect
-    state: true
-    persistent: true
-  become: true
-  when: ansible_facts['selinux'].status == "enabled"
+# El seboolean httpd_can_network_connect lo maneja tasks/selinux.yml (gateado por
+# nginx_manage_selinux); no se duplica acá.

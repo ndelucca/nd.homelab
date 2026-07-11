@@ -29,7 +29,6 @@ orcaslicer_service_name: orcaslicer
 orcaslicer_service_enabled: true
 orcaslicer_service_state: started
 
-orcaslicer_firewall_zone: FedoraServer
 orcaslicer_firewall_enabled: false
 
 orcaslicer_manage_selinux: true

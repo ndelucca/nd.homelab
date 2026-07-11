@@ -41,7 +41,6 @@ cloud_torrent_enable_auth: false
 cloud_torrent_auth_user: ""
 cloud_torrent_auth_password: ""
 
-cloud_torrent_firewall_zone: FedoraServer
 cloud_torrent_firewall_enabled: true
 
 cloud_torrent_manage_selinux: true

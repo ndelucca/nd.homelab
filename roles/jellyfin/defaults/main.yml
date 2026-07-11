@@ -26,7 +26,6 @@ jellyfin_service_state: started
 jellyfin_http_port: 8096
 jellyfin_https_port: 8920
 
-jellyfin_firewall_zone: FedoraServer
 jellyfin_firewall_enabled: true
 
 jellyfin_manage_selinux: true

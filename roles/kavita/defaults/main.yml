@@ -27,7 +27,6 @@ kavita_service_name: kavita
 kavita_service_enabled: true
 kavita_service_state: started
 
-kavita_firewall_zone: FedoraServer
 kavita_firewall_enabled: false  # false porque NGINX maneja el acceso externo
 
 kavita_manage_selinux: true

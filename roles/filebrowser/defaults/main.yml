@@ -18,8 +18,6 @@ filebrowser_service_state: started
 filebrowser_bind_address: 127.0.0.1
 filebrowser_port: 8080
 
-filebrowser_firewall_zone: public
-
 # Directorio raíz a servir — los discos montan en root, así que todos los discos
 # son navegables directamente (sin symlinks por disco). Se puede sobrescribir en
 # el inventory.

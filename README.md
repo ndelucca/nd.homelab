@@ -73,9 +73,9 @@ quadlet → selinux → service`. Los roles de contenedores rootless-Podman/Quad
 **install + handlers, el paso de SELinux y el paso de service** vía el role
 **`container_base`**: cada uno los incluye por nombre (`include_role … tasks_from:
 install` / `selinux` / `service`) y expone las variables de contrato
-(`container_user`, `container_uid`, `container_service_name`,
-`container_selinux_paths`, `container_host`, `container_port`) en su
-`defaults/main.yml`. Solo `preflight` (directorios específicos del role) y
+(`container_base_user`, `container_base_uid`, `container_base_service_name`,
+`container_base_selinux_paths`, `container_base_host`, `container_base_port`) vía
+el `vars:` de cada `include_role`. Solo `preflight` (directorios específicos del role) y
 `quadlet` (el template `.container`/`.kube` propio del role) quedan por role.
 
 ## Prerequisitos
@@ -83,7 +83,7 @@ install` / `selinux` / `service`) y expone las variables de contrato
 - **Nodo de control:** Ansible 2.14+, Python 3.8+, y las colecciones:
   `ansible-galaxy collection install -r requirements.yml`
 - **Target:** Fedora Server, autenticación SSH por clave, sudo. El nodo de
-  control se conecta como `ndelucca` con `~/.ssh/id_rsa` (ver `ansible.cfg`).
+  control se conecta como `ndelucca` con `~/.ssh/id_ed25519` (ver `ansible.cfg`).
 - **Vault password:** en `.vault_pass` (gitignored). Mantené una copia en
   custodia fuera del equipo — ver [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md).
 

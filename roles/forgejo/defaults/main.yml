@@ -45,7 +45,6 @@ forgejo_service_name: forgejo  # unit forgejo.container -> forgejo.service
 forgejo_service_enabled: true
 forgejo_service_state: started
 
-forgejo_firewall_zone: FedoraServer
 forgejo_firewall_enabled: true  # true: hay que abrir el puerto de git SSH
 
 forgejo_manage_selinux: true

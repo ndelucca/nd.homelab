@@ -38,7 +38,6 @@ monitoring_service_enabled: true
 monitoring_service_state: started
 
 # Firewall cerrado; alcanzable solo vía NGINX.
-monitoring_firewall_zone: FedoraServer
 monitoring_firewall_enabled: false
 
 monitoring_manage_selinux: true

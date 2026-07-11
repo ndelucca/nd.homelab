@@ -87,7 +87,6 @@ nginx_vhosts:
 
 # Configuración del firewall
 nginx_firewall_enabled: true
-nginx_firewall_zone: FedoraServer
 
 # Configuración de SELinux
 nginx_manage_selinux: true

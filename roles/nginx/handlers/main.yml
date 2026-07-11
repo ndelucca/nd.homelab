@@ -1,18 +1,4 @@
 ---
-- name: Start nginx
-  ansible.builtin.systemd:
-    name: nginx
-    state: started
-  become: true
-
-- name: Reload nginx
-  ansible.builtin.systemd:
-    name: nginx
-    state: reloaded
-  become: true
-
-- name: Restart nginx
-  ansible.builtin.systemd:
-    name: nginx
-    state: restarted
-  become: true
+# Sin handlers: el reload de NGINX es inline en configure.yml (solo si el unit ya está activo)
+# y el arranque final vive en el post_tasks de playbooks/site.yml (después de que AdGuard libera
+# el puerto 53). El rol mainsail_tls (play de printers) trae su propio handler `Reload nginx`.
