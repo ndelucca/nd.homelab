@@ -24,7 +24,7 @@ forgejo_ssh_host: "{{ ansible_facts['default_ipv4'].address }}"
 
 # La variante de imagen -rootless corre directamente como el usuario git (sin s6/drop
 # de root), que es la forma soportada de correr bajo Podman rootless con UserNS=keep-id.
-forgejo_version: "11.0.1-rootless"   # Tag de imagen pineado
+forgejo_version: "15.0.4-rootless"   # Tag de imagen pineado
 forgejo_image: "codeberg.org/forgejo/forgejo:{{ forgejo_version }}"
 forgejo_domain: "git.{{ nginx_domain }}"
 forgejo_root_url: "https://{{ forgejo_domain }}/"
