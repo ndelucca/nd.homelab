@@ -30,5 +30,12 @@ jobs:
       - name: yamllint
         run: yamllint .
 
+      # ansible-lint corre `ansible-playbook --syntax-check`, que carga los group_vars
+      # con valores !vault. ansible.cfg apunta vault_password_file a .vault_pass (gitignoreado,
+      # ausente en CI) y sin ese archivo el syntax-check aborta. El syntax-check NO descifra los
+      # valores —solo se necesita que el archivo exista—, así que un password dummy alcanza.
+      - name: Provide a dummy vault password (syntax-check no descifra valores)
+        run: echo dummy > .vault_pass
+
       - name: ansible-lint
         run: ansible-lint
