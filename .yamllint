@@ -31,3 +31,4 @@ ignore: |
   .ansible/
   *.j2
   vendor/
+  collections/  # colecciones instaladas por ansible-galaxy (código de terceros)

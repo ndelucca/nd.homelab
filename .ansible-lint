@@ -8,6 +8,7 @@ exclude_paths:
   - .ansible/
   - .github/
   - vendor/  # Mitogen vendorizado (código de terceros)
+  - collections/  # colecciones instaladas por ansible-galaxy (código de terceros)
 
 # Rules intentionally relaxed for a single-maintainer home-lab. Remove
 # entries as the corresponding cleanups land.

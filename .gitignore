@@ -12,6 +12,9 @@
 # Fact cache
 /tmp/ansible_facts
 
+# Colecciones instaladas por ansible-galaxy (collections_path en ansible.cfg)
+/collections/
+
 # Python
 __pycache__/
 *.py[cod]
