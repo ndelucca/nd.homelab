@@ -14,6 +14,10 @@
   register: cloud_torrent_installed_raw
   changed_when: false
   failed_when: false
+  # Sonda read-only: DEBE correr también en --check. Si se saltea, la versión instalada queda
+  # vacía y `cloud_torrent_needs_install` da true por falso positivo, metiendo al dry-run en el
+  # camino de descarga (donde el tempfile sí se saltea y el get_url revienta).
+  check_mode: false
   when: cloud_torrent_binary.stat.exists
 
 - name: Normalize installed vs target Cloud Torrent versions
@@ -45,14 +49,16 @@
     dest: "{{ cloud_torrent_download_dir.path }}/cloud-torrent.gz"
     checksum: "sha256:{{ cloud_torrent_sha256 }}"
     mode: '0644'
-  when: cloud_torrent_needs_install
+  # `tempfile` no corre en --check: sin el guard del path, un dry-run con update pendiente
+  # revienta acá. Mismo patrón que el cleanup de más abajo.
+  when: cloud_torrent_needs_install and cloud_torrent_download_dir.path is defined
 
 - name: Extract Cloud Torrent binary
   ansible.builtin.command:
     cmd: gunzip cloud-torrent.gz
     chdir: "{{ cloud_torrent_download_dir.path }}"
     creates: "{{ cloud_torrent_download_dir.path }}/cloud-torrent"
-  when: cloud_torrent_needs_install
+  when: cloud_torrent_needs_install and cloud_torrent_download_dir.path is defined
 
 - name: Copy binary to installation directory
   ansible.builtin.copy:
@@ -64,7 +70,7 @@
     mode: '0755'
   become: true
   notify: Restart cloud-torrent
-  when: cloud_torrent_needs_install
+  when: cloud_torrent_needs_install and cloud_torrent_download_dir.path is defined
 
 - name: Clean up temporary download directory
   ansible.builtin.file:

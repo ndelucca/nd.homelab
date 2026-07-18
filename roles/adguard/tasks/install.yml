@@ -11,6 +11,11 @@
   register: adguard_installed_raw
   changed_when: false
   failed_when: false
+  # Sonda read-only: DEBE correr también en --check. Si se saltea, la versión instalada queda
+  # vacía, `adguard_needs_install` da true por falso positivo y el dry-run entra al camino de
+  # instalación con los `uri` de abajo salteados (que sí son check-mode-aware), reventando en
+  # `adguard_checksums.content`. Ese era el motivo de que `site.yml --check` fallara entero.
+  check_mode: false
   when: adguard_binary.stat.exists
 
 - name: Resolve latest AdGuard Home release from GitHub
@@ -20,6 +25,7 @@
       Accept: application/vnd.github+json
   register: adguard_release_api
   failed_when: false
+  check_mode: false  # GET read-only: sin esto el dry-run no puede resolver la versión target
   when: adguard_version == 'latest'
 
 - name: Determine requested AdGuard Home version string
@@ -63,6 +69,7 @@
     url: "https://github.com/{{ adguard_github_repo }}/releases/download/v{{ adguard_target_version }}/checksums.txt"
     return_content: true
   register: adguard_checksums
+  check_mode: false  # GET read-only: deja que el dry-run llegue hasta el download con el sha real
   when: adguard_needs_install
 
 - name: Extract expected SHA256 for the AdGuard Home archive
@@ -79,14 +86,14 @@
     dest: "{{ adguard_download_dir.path }}/AdGuardHome.tar.gz"
     checksum: "sha256:{{ adguard_archive_sha256 }}"
     mode: '0644'
-  when: adguard_needs_install
+  when: adguard_needs_install and adguard_download_dir.path is defined
 
 - name: Extract AdGuard Home archive
   ansible.builtin.unarchive:
     src: "{{ adguard_download_dir.path }}/AdGuardHome.tar.gz"
     dest: "{{ adguard_download_dir.path }}"
     remote_src: true
-  when: adguard_needs_install
+  when: adguard_needs_install and adguard_download_dir.path is defined
 
 - name: Stop AdGuard Home service before replacing binary
   ansible.builtin.systemd:
@@ -106,7 +113,7 @@
     mode: '0755'
   become: true
   notify: restart adguardhome
-  when: adguard_needs_install
+  when: adguard_needs_install and adguard_download_dir.path is defined
 
 - name: Read current capabilities on AdGuard Home binary
   ansible.builtin.command: getcap {{ adguard_install_dir }}/AdGuardHome
