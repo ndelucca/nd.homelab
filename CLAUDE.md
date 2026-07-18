@@ -82,6 +82,38 @@ Las units son de **usuario** (no de sistema) a propósito: el manager de usuario
 Y hay un módulo SELinux puntual (`home-claude.cil`) porque `container_t` no puede `connectto` a un
 peer `unconfined_t` sin él.
 
+## fcontext de SELinux: gana la ÚLTIMA regla, no la más específica
+
+En `file_contexts.local` (lo que escribe `sefcontext` / `semanage fcontext -a`), cuando varias
+reglas matchean un path **gana la última en el archivo**, que es la que se registró más tarde. NO
+gana la más específica. Es contraintuitivo y no se ve leyendo los roles.
+
+Importa porque hay reglas amplias que tapan a las de abajo:
+
+- `filebrowser` registra `/srv/disks(/.*)?` → `public_content_rw_t` (a propósito: es un file
+  manager nativo cuya raíz es el disco entero).
+- Todos los volumes de container abajo de ahí (`appdata/*`, `media/Gallery`, `media/Books`)
+  necesitan `container_file_t`, y sólo sobreviven porque se registraron **después**.
+
+Si una regla amplia queda registrada después de una específica, la tapa; el `restorecon -R` del
+handler de ese rol repinta el volume con la etiqueta amplia y, como `container_read_public_content`
+y `container_manage_public_content` están **off**, `container_t` deja de poder leer su propio
+volume: el backend entra en crash-loop y NGINX devuelve **502**. Los permisos Unix se ven perfectos
+y `ausearch` no muestra nada (son denials `dontaudit`), así que el síntoma despista.
+
+Le pasó a Immich en jul-2026: `media/Gallery` había quedado registrado antes que la regla de
+filebrowser. Diagnóstico rápido —
+
+```sh
+selabel_lookup -b file -k <path>   # qué etiqueta resuelve HOY (matchpathcon usa caché, no confíes)
+grep -n "srv/disks" /etc/selinux/targeted/contexts/files/file_contexts.local   # el orden real
+```
+
+Si una regla quedó tapada, re-registrala (`semanage fcontext -d` + `-a`) para moverla al final, y
+después `restorecon -RF` sobre el path. Regla al agregar un rol: **nunca etiquetes un directorio
+padre compartido**; etiquetá sólo los subdirectorios propios (por eso `jellyfin` lista
+`Movies`/`Series` en vez del media root).
+
 ## Imágenes pinneadas
 
 Las imágenes de los roles de container van con tag explícito (o digest, en Kavita) para que los

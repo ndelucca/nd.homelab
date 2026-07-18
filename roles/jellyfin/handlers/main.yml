@@ -14,9 +14,8 @@
   ansible.builtin.command: "restorecon -Rv {{ item }}"
   become: true
   changed_when: false
-  loop:
-    - "{{ jellyfin_data_dir }}"
-    - "{{ jellyfin_config_dir }}"
-    - "{{ jellyfin_cache_dir }}"
-    - "{{ jellyfin_log_dir }}"
-    - "{{ jellyfin_media_dir }}"
+  # El media root NO se relabelea entero: `Gallery` (immich) y `Books` (kavita) son volumes
+  # de container y un `restorecon -R` acá los repinta a public_content_rw_t, dejándolos
+  # ilegibles para container_t (crash-loop → 502). Sólo las bibliotecas propias.
+  loop: "{{ [jellyfin_data_dir, jellyfin_config_dir, jellyfin_cache_dir, jellyfin_log_dir]
+            + jellyfin_media_selinux_dirs }}"

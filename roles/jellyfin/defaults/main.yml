@@ -19,6 +19,22 @@ jellyfin_log_dir: "{{ jellyfin_base_dir }}/log"
 # Jellyfin (.mblink) ya referencian estas rutas reales.
 jellyfin_media_dir: "{{ app_media_root }}"
 
+# Subdirectorios del media root que Jellyfin realmente sirve, y los ÚNICOS que
+# etiqueta/relabelea (ver tasks/selinux.yml y el handler `Jellyfin apply selinux context`).
+#
+# NO usar jellyfin_media_dir acá. El media root es compartido: `Gallery` es de immich y
+# `Books` de kavita, y esos son volumes de container que necesitan `container_file_t`.
+# En file_contexts.local NO gana la regla más específica sino la ÚLTIMA que matchea (ver la
+# nota de ordenamiento en CLAUDE.md), así que una regla sobre el root entero puede tapar las
+# de esas subcarpetas según el orden en que se registraron. Si las tapa, el `restorecon -R`
+# del handler repinta los volumes a public_content_rw_t y, como container_read/manage_
+# public_content están off, `container_t` no puede leer su propio volume: crash-loop y 502.
+# Etiquetar sólo las bibliotecas propias saca a Jellyfin de esa carrera por completo.
+# Si Jellyfin sirve una biblioteca nueva, agregala explícitamente acá.
+jellyfin_media_selinux_dirs:
+  - "{{ app_media_root }}/Movies"
+  - "{{ app_media_root }}/Series"
+
 jellyfin_service_name: jellyfin
 jellyfin_service_enabled: true
 jellyfin_service_state: started

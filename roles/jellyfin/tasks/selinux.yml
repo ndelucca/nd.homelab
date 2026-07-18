@@ -24,9 +24,34 @@
     - { target: "{{ jellyfin_config_dir }}", setype: var_lib_t }
     - { target: "{{ jellyfin_cache_dir }}", setype: var_lib_t }
     - { target: "{{ jellyfin_log_dir }}", setype: var_log_t }
-    - { target: "{{ jellyfin_media_dir }}", setype: public_content_rw_t }
   loop_control:
     label: "{{ item.target }}"
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
+  notify: Jellyfin apply selinux context
+
+# Migración: hasta jul-2026 este rol registraba el media root ENTERO como
+# public_content_rw_t, tapando potencialmente las reglas de los volumes de container que
+# viven abajo (Gallery/immich, Books/kavita). Hay que borrarla explícitamente: `state:
+# present` en las reglas nuevas no remueve la vieja. Inocuo en un host limpio.
+- name: Remove the obsolete media-root-wide SELinux fcontext rule
+  community.general.sefcontext:
+    target: "{{ jellyfin_media_dir }}(/.*)?"
+    setype: public_content_rw_t
+    state: absent
+  become: true
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
+  notify: Jellyfin apply selinux context
+
+# Separado del loop de arriba porque acá se etiquetan SÓLO las bibliotecas propias de
+# Jellyfin, nunca el media root entero (que comparte con volumes de container). Ver el
+# comentario de jellyfin_media_selinux_dirs en defaults/main.yml.
+- name: Set SELinux file contexts for the Jellyfin media libraries
+  community.general.sefcontext:
+    target: "{{ item }}(/.*)?"
+    setype: public_content_rw_t
+    state: present
+  become: true
+  loop: "{{ jellyfin_media_selinux_dirs }}"
   when: ansible_facts['selinux'].mode | default('') == 'enforcing'
   notify: Jellyfin apply selinux context
 
