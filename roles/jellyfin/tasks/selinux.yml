@@ -29,19 +29,11 @@
   when: ansible_facts['selinux'].mode | default('') == 'enforcing'
   notify: Jellyfin apply selinux context
 
-# Migración: hasta jul-2026 este rol registraba el media root ENTERO como
-# public_content_rw_t, tapando potencialmente las reglas de los volumes de container que
-# viven abajo (Gallery/immich, Books/kavita). Hay que borrarla explícitamente: `state:
-# present` en las reglas nuevas no remueve la vieja. Inocuo en un host limpio.
-- name: Remove the obsolete media-root-wide SELinux fcontext rule
-  community.general.sefcontext:
-    target: "{{ jellyfin_media_dir }}(/.*)?"
-    setype: public_content_rw_t
-    state: absent
-  become: true
-  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
-  notify: Jellyfin apply selinux context
-
+# NO borrar acá la vieja regla del media root entero (`{{ app_media_root }}(/.*)?` →
+# public_content_rw_t) que este rol registraba hasta jul-2026: `cloud_torrent` la registra
+# también y de forma legítima (su downloads dir ES el media root), así que un `state: absent`
+# acá se pelearía con él y la corrida nunca sería idempotente.
+#
 # Separado del loop de arriba porque acá se etiquetan SÓLO las bibliotecas propias de
 # Jellyfin, nunca el media root entero (que comparte con volumes de container). Ver el
 # comentario de jellyfin_media_selinux_dirs en defaults/main.yml.

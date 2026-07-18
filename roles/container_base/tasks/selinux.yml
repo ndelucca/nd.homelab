@@ -27,6 +27,7 @@
     name:
       - policycoreutils-python-utils
       - container-selinux
+      - libselinux-utils  # selabel_lookup, para el chequeo de shadowing de abajo
     state: present
   become: true
   when: ansible_facts['selinux'].mode | default('') == 'enforcing'
@@ -39,6 +40,44 @@
   become: true
   loop: "{{ container_base_selinux_paths }}"
   when: ansible_facts['selinux'].mode | default('') == 'enforcing'
+  notify: Container apply selinux context
+
+# --- Guarda contra el shadowing de fcontext -------------------------------------------
+# En file_contexts.local gana la ÚLTIMA regla que matchea, NO la más específica (ver la nota
+# en CLAUDE.md). Una regla amplia de otro rol sobre un directorio padre compartido —hoy
+# `/srv/disks(/.*)?` de filebrowser— tapa la regla container_file_t de arriba si quedó
+# registrada después. Con la regla tapada, el `restorecon` del handler repinta el volume a
+# public_content_rw_t y container_t deja de poder leer su propio volume: crash-loop y 502.
+# Le pasó a Immich en jul-2026 (media/Gallery).
+#
+# `state: present` no alcanza para arreglarlo: la regla EXISTE, sólo que pierde. Hay que
+# borrarla y re-agregarla para moverla al final del archivo. Estas dos tareas detectan la
+# condición y convergen solas, así el orden de registro deja de importar.
+- name: Check whether the role's fcontext rules are shadowed by a broader rule
+  ansible.builtin.command: "selabel_lookup -b file -k {{ item }}"
+  register: container_base_fcontext_lookup
+  changed_when: false
+  failed_when: false
+  become: true
+  loop: "{{ container_base_selinux_paths }}"
+  when: ansible_facts['selinux'].mode | default('') == 'enforcing'
+
+# Re-registrar mueve la regla al final de file_contexts.local, que es donde gana. El `-d` va
+# con `|| true` porque el rol puede correr antes de que la regla exista (primer deploy).
+- name: Re-register the shadowed fcontext rules so they win the lookup
+  ansible.builtin.shell: |
+    set -o pipefail
+    semanage fcontext -d '{{ item.item }}(/.*)?' 2>/dev/null || true
+    semanage fcontext -a -t container_file_t '{{ item.item }}(/.*)?'
+  become: true
+  changed_when: true
+  loop: "{{ container_base_fcontext_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item | default('') }}"
+  when:
+    - ansible_facts['selinux'].mode | default('') == 'enforcing'
+    - item.stdout is defined
+    - "'container_file_t' not in item.stdout"
   notify: Container apply selinux context
 
 - name: Enable optional SELinux booleans

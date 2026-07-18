@@ -26,11 +26,10 @@ jellyfin_media_dir: "{{ app_media_root }}"
 # `Books` de kavita, y esos son volumes de container que necesitan `container_file_t`.
 # En file_contexts.local NO gana la regla más específica sino la ÚLTIMA que matchea (ver la
 # nota de ordenamiento en CLAUDE.md), así que una regla sobre el root entero puede tapar las
-# de esas subcarpetas según el orden en que se registraron. Si las tapa, el `restorecon -R`
-# del handler repinta los volumes a public_content_rw_t y, como container_read/manage_
-# public_content están off, `container_t` no puede leer su propio volume: crash-loop y 502.
-# Etiquetar sólo las bibliotecas propias saca a Jellyfin de esa carrera por completo.
-# Si Jellyfin sirve una biblioteca nueva, agregala explícitamente acá.
+# de esas subcarpetas. Peor todavía: el `restorecon -R` del handler repintaría esos volumes
+# con lo que diga la DB, y si quedó tapada es public_content_rw_t → container_t no puede leer
+# su propio volume → crash-loop y 502. Etiquetar sólo las bibliotecas propias saca a Jellyfin
+# de esa carrera. Si Jellyfin sirve una biblioteca nueva, agregala explícitamente acá.
 jellyfin_media_selinux_dirs:
   - "{{ app_media_root }}/Movies"
   - "{{ app_media_root }}/Series"

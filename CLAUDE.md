@@ -109,10 +109,19 @@ selabel_lookup -b file -k <path>   # qué etiqueta resuelve HOY (matchpathcon us
 grep -n "srv/disks" /etc/selinux/targeted/contexts/files/file_contexts.local   # el orden real
 ```
 
-Si una regla quedó tapada, re-registrala (`semanage fcontext -d` + `-a`) para moverla al final, y
-después `restorecon -RF` sobre el path. Regla al agregar un rol: **nunca etiquetes un directorio
-padre compartido**; etiquetá sólo los subdirectorios propios (por eso `jellyfin` lista
-`Movies`/`Series` en vez del media root).
+**Los roles de container se auto-reparan.** `container_base/tasks/selinux.yml` chequea con
+`selabel_lookup` si cada path de `container_base_selinux_paths` sigue resolviendo a
+`container_file_t` y, si quedó tapado, borra y re-agrega la regla para moverla al final. El orden
+de registro dejó de importar para ellos: alcanza con correr el rol. `state: present` solo NO
+arregla esto, porque la regla existe — lo que está mal es su posición.
+
+Los roles de reglas amplias (`filebrowser`, `cloud_torrent`) corren antes que los de container en
+`site.yml`, así que en un host limpio el orden ya sale bien; el guard cubre los hosts con historia.
+
+Al agregar un rol: **nunca etiquetes un directorio padre compartido**, etiquetá sólo los
+subdirectorios propios (por eso `jellyfin` lista `Movies`/`Series` en vez del media root). Y no
+pongas un `state: absent` sobre una regla amplia: `cloud_torrent` posee legítimamente la del media
+root y las corridas se pelearían entre sí.
 
 ## Imágenes pinneadas
 
