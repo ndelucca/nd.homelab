@@ -32,7 +32,7 @@ internet**.
 | `cockpit.` | Cockpit (admin web) | `cockpit` | host (localhost + NGINX) |
 | `files.` | FileBrowser | `filebrowser` | binario nativo |
 | `jellyfin.` | Jellyfin (media) | `jellyfin` | paquete |
-| `torrent.` | Cloud Torrent | `cloud_torrent` | binario nativo |
+| `torrent.` | Cloud Torrent ([fork propio](https://github.com/ndelucca/nd.cloud.torrent)) | `cloud_torrent` | binario nativo |
 | `gallery.` | Immich (fotos) | `immich` | pod Podman `.kube` |
 | `books.` | Kavita (lectura) | `kavita` | Podman `.container` |
 | `slicer.` | OrcaSlicer (web) | `orcaslicer` | Podman `.container` |

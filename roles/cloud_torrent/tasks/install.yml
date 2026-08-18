@@ -36,6 +36,20 @@
       target={{ cloud_torrent_target_version }}
       -> {{ 'installing/updating' if cloud_torrent_needs_install else 'up to date' }}
 
+# Gateado en needs_install: un host que ya está en la versión pineada no tiene por
+# qué exigir el checksum, y así el assert sólo salta cuando de verdad hay que bajar.
+- name: Assert a checksum is pinned before downloading
+  ansible.builtin.assert:
+    that:
+      - cloud_torrent_sha256 | length == 64
+    fail_msg: >-
+      cloud_torrent_sha256 está vacío o no es un SHA256: no hay nada con qué
+      verificar {{ cloud_torrent_download_url }}. Tomalo del
+      nd.cloud.torrent_{{ cloud_torrent_version }}_checksums.txt del release y
+      pinealo en roles/cloud_torrent/defaults/main.yml.
+    success_msg: "Checksum pineado para Cloud Torrent {{ cloud_torrent_version }}"
+  when: cloud_torrent_needs_install
+
 - name: Create temporary download directory
   ansible.builtin.tempfile:
     state: directory
@@ -83,7 +97,17 @@
   register: cloud_torrent_version_check
   changed_when: false
   failed_when: false
+  # Sonda read-only, igual que la de más arriba: sin esto en --check se saltea, el
+  # registro queda vacío y el debug de abajo cae al fallback, reportando la versión
+  # *objetivo* como si estuviera instalada.
+  check_mode: false
 
 - name: Display Cloud Torrent version
   ansible.builtin.debug:
-    msg: "Installed Cloud Torrent version: {{ cloud_torrent_version_check.stderr | default(cloud_torrent_version) }}"
+    # El fork imprime --version por stdout (el upstream lo hacía por stderr), así
+    # que se leen los dos: con `stderr | default(...)` a secas el mensaje salía
+    # vacío, porque un stderr vacío está definido y el default no dispara.
+    msg: >-
+      Installed Cloud Torrent version:
+      {{ ((cloud_torrent_version_check.stdout | default('')) ~ (cloud_torrent_version_check.stderr | default('')))
+         | trim | default(cloud_torrent_version, true) }}

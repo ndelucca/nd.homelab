@@ -7,6 +7,12 @@
   ansible.builtin.import_tasks: install.yml
   tags: ['cloud_torrent', 'install']
 
+# Antes del service: el unit no puede arrancar bien sin la config del motor, que
+# es la única fuente del directorio de descargas.
+- name: Configure engine settings
+  ansible.builtin.import_tasks: config.yml
+  tags: ['cloud_torrent', 'config']
+
 - name: Configure systemd service
   ansible.builtin.import_tasks: service.yml
   tags: ['cloud_torrent', 'service']

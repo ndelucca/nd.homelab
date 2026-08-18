@@ -1,0 +1,8 @@
+{
+  "AutoStart": {{ cloud_torrent_auto_start | bool | to_json }},
+  "DisableEncryption": {{ cloud_torrent_disable_encryption | bool | to_json }},
+  "DownloadDirectory": {{ cloud_torrent_downloads_dir | to_json }},
+  "EnableUpload": {{ cloud_torrent_enable_upload | bool | to_json }},
+  "EnableSeeding": {{ cloud_torrent_enable_seeding | bool | to_json }},
+  "IncomingPort": {{ cloud_torrent_peer_port | int }}
+}

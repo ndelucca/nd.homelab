@@ -1,5 +1,10 @@
-# Usa Server-Sent Events (SSE) en /sync, no WebSockets, así que no lleva headers
+# Usa Server-Sent Events (SSE) en /events, no WebSockets, así que no lleva headers
 # de upgrade.
+#
+# El endpoint es /events y no /sync: el fork ndelucca/nd.cloud.torrent reemplazó el
+# stream de velox del upstream original. Si esta location no matchea, el stream cae
+# en `location /`, que bufferea, y el síntoma es una página que carga bien pero no
+# se actualiza nunca.
 
 server {
     listen 80;
@@ -18,6 +23,11 @@ server {
     # Headers de seguridad TLS compartidos (fuente única: ssl_headers.inc.j2)
     include {{ nginx_ssl_headers_snippet }};
 
+    # Subida de archivos .torrent (POST /api/torrentfile, multipart). El default de
+    # 1m alcanza para uno, pero no para una tanda; un 413 acá se lee como si la app
+    # estuviera rota.
+    client_max_body_size 20m;
+
     location / {
         proxy_pass http://127.0.0.1:{{ nginx_cloud_torrent_port }};
         proxy_set_header Host $host;
@@ -29,8 +39,8 @@ server {
     }
 
     # Endpoint de Server-Sent Events (SSE) para actualizaciones en tiempo real
-    location /sync {
-        proxy_pass http://127.0.0.1:{{ nginx_cloud_torrent_port }}/sync;
+    location /events {
+        proxy_pass http://127.0.0.1:{{ nginx_cloud_torrent_port }}/events;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -42,5 +52,20 @@ server {
         proxy_read_timeout 3600s;
         proxy_http_version 1.1;
         chunked_transfer_encoding off;
+    }
+
+    # Descarga y streaming de los archivos ya bajados. Sin buffering: si no, NGINX
+    # copia el archivo entero a su disco antes de empezar a emitirlo, lo que con
+    # archivos de varios GB rompe el seek del reproductor y llena /var/lib/nginx.
+    location /download/ {
+        proxy_pass http://127.0.0.1:{{ nginx_cloud_torrent_port }}/download/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_http_version 1.1;
     }
 }

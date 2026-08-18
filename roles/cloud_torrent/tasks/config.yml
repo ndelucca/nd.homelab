@@ -1,0 +1,64 @@
+---
+# Siembra la config del motor. NO es cosmético: el binario no tiene ni flag ni
+# variable de entorno para el directorio de descargas — la única fuente es
+# DownloadDirectory dentro de este JSON. Si el archivo no existe, el default
+# compilado es "./downloads", relativo al WorkingDirectory del unit, así que las
+# descargas caerían en el disco de appdata en vez del de media, en silencio y con
+# el servicio perfectamente `active`.
+#
+# force: false a propósito. La app reescribe este archivo (write atómico, 0600)
+# cada vez que se guarda la configuración desde la web UI, así que Ansible lo crea
+# en la primera corrida y después no se pelea con el runtime. Para volver a los
+# valores del rol: borrar el archivo y re-correr.
+#
+# El template no lleva la cabecera de {{ ansible_managed }}: JSON no admite
+# comentarios y el loader rechaza el archivo como malformado.
+- name: Seed Cloud Torrent engine configuration
+  ansible.builtin.template:
+    src: cloud-torrent.json.j2
+    dest: "{{ cloud_torrent_config_path }}"
+    owner: "{{ cloud_torrent_user }}"
+    group: "{{ cloud_torrent_group }}"
+    mode: '0600'
+    force: false
+  become: true
+  notify: Restart cloud-torrent
+
+# Chequeo read-only sobre el archivo que ya está en disco (el caso normal: viene
+# del cloud-torrent de jpillora, cuyos campos de más el loader ignora sin drama).
+# Lo que sí importa es que DownloadDirectory apunte al disco de media: si quedó en
+# el default relativo, las descargas van al disco equivocado.
+- name: Read the live Cloud Torrent engine configuration
+  ansible.builtin.slurp:
+    src: "{{ cloud_torrent_config_path }}"
+  become: true
+  register: cloud_torrent_live_config
+  failed_when: false
+  changed_when: false
+  check_mode: false
+
+# Se lee con un regex y no con from_json a propósito: un archivo corrupto haría
+# explotar el parseo con un traceback de Jinja en vez de con el warning que este
+# chequeo existe para dar.
+- name: Extract the live download directory
+  ansible.builtin.set_fact:
+    cloud_torrent_live_download_dir: '{{ (cloud_torrent_live_config.content | b64decode) | regex_search(''"DownloadDirectory"\s*:\s*"([^"]*)"'', ''\1'') | default([], true) | first | default("", true) }}'
+  when: cloud_torrent_live_config.content is defined
+
+# Contención, no igualdad: un subdirectorio del media root (hoy el server tiene
+# media/Movies, elegido desde la web UI) es perfectamente válido y está en el
+# disco correcto. Lo que hay que cazar es que apunte AFUERA — el caso del default
+# "./downloads", que resuelve contra el WorkingDirectory y manda todo al disco de
+# appdata.
+- name: Warn if the download directory is off the media disk
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: DownloadDirectory={{ cloud_torrent_live_download_dir | default('(sin definir)', true) }}
+      está afuera de {{ cloud_torrent_downloads_dir }}: las descargas no van al disco de media.
+      Corregilo desde la web UI, o borrá {{ cloud_torrent_config_path }} y re-corré el rol.
+  vars:
+    cloud_torrent_media_root: "{{ cloud_torrent_downloads_dir | regex_replace('/+$', '') }}"
+  when:
+    - cloud_torrent_live_config.content is defined
+    - cloud_torrent_live_download_dir | default('') != cloud_torrent_media_root
+    - not (cloud_torrent_live_download_dir | default('')).startswith(cloud_torrent_media_root ~ '/')

@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: Naza
-  description: Install and configure Cloud Torrent web-based torrent client
+  description: Install and configure Cloud Torrent (ndelucca/nd.cloud.torrent) web-based torrent client
   license: MIT
   min_ansible_version: "2.14"
 

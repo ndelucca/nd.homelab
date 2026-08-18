@@ -1,11 +1,21 @@
 ---
-cloud_torrent_version: "0.9.4"
+# Fork propio de jpillora/cloud-torrent (que está archivado): mismo motor
+# (anacrolix/torrent), pero UI server-rendered y el stream de SSE movido de /sync
+# a /events. El vhost de NGINX depende de eso — ver roles/nginx/templates/conf.d/.
+cloud_torrent_repo_url: "https://github.com/ndelucca/nd.cloud.torrent"
+cloud_torrent_version: "1.0.0"
 cloud_torrent_arch: amd64
-cloud_torrent_download_url: "https://github.com/jpillora/cloud-torrent/releases/download/v{{ cloud_torrent_version }}/cloud-torrent_{{ cloud_torrent_version }}_linux_{{ cloud_torrent_arch }}.gz"
-# SHA256 del archive linux/amd64 pineado, tomado del archivo de checksums del
-# release (cloud-torrent_{{ cloud_torrent_version }}_checksums.txt). Actualizar si
-# cambia la versión o la arch pineada.
-cloud_torrent_sha256: "ef8b5e21730d50a962af8cf7bbc46a6c46aa8ed3285ee39c1a9728ccee67f95a"
+# Asset del release del tag v{{ cloud_torrent_version }}. El nombre lo arma
+# goreleaser con su name_template por defecto (proyecto_version_os_arch), y el
+# nombre de proyecto es el del repo, puntos incluidos. Verificar contra el release
+# real al subir de versión: si el template cambia, el get_url da 404.
+cloud_torrent_release_asset: "nd.cloud.torrent_{{ cloud_torrent_version }}_linux_{{ cloud_torrent_arch }}.gz"
+cloud_torrent_download_url: "{{ cloud_torrent_repo_url }}/releases/download/v{{ cloud_torrent_version }}/{{ cloud_torrent_release_asset }}"
+# SHA256 del asset linux/amd64 pineado, tomado del archivo de checksums del
+# release (nd.cloud.torrent_{{ cloud_torrent_version }}_checksums.txt). Actualizar
+# si cambia la versión o la arch pineada. install.yml aborta con un mensaje claro
+# si está vacío y hay que descargar.
+cloud_torrent_sha256: "2b93f0316cf4b798a974c42befaad8be32c94e7e4bbee362445cbb513cb003a0"
 cloud_torrent_install_dir: /usr/local/bin
 # El estado (config + metadata de torrents) vive en el disco de appdata
 # (app_data_root, definido en group_vars/homeservers/storage.yml).
@@ -20,10 +30,10 @@ cloud_torrent_service_state: started
 cloud_torrent_port: 9091
 cloud_torrent_host: 127.0.0.1
 
-# Puerto de peers (entrante) de BitTorrent. Es el IncomingPort por defecto del
-# motor de torrents, persistido en cloud_torrent_config_path (el motor no tiene
-# flag de CLI para esto; se cambia desde la web UI para sobrescribirlo). Se nombra
-# acá para que no sea un número mágico sin trazar. Abrirlo en la LAN está gobernado
+# Puerto de peers (entrante) de BitTorrent. Es el IncomingPort del motor de
+# torrents, que vive en cloud_torrent_config_path (no hay flag de CLI para esto).
+# El rol lo siembra en la config inicial y después manda la web UI. Abrirlo en la
+# LAN está gobernado
 # por el toggle de abajo y está OFF por defecto: el host es solo LAN sin
 # port-forward en el router, así que igual no pueden llegar peers entrantes desde
 # internet. El peering saliente (NAT) funciona sin ningún puerto abierto. Cambiar
@@ -35,6 +45,15 @@ cloud_torrent_open_peer_port: false
 cloud_torrent_title: "Cloud Torrent"
 cloud_torrent_downloads_dir: "{{ app_media_root }}"
 cloud_torrent_config_path: "{{ cloud_torrent_working_dir }}/cloud-torrent.json"
+
+# Valores iniciales de la config del motor (cloud-torrent.json). Sólo se aplican
+# cuando el archivo no existe: después la web UI es la dueña. Ver tasks/config.yml.
+# Los defaults replican los del binario salvo DownloadDirectory, que es el punto
+# entero de sembrar el archivo — ver el comentario de tasks/config.yml.
+cloud_torrent_auto_start: true
+cloud_torrent_enable_upload: true
+cloud_torrent_enable_seeding: false
+cloud_torrent_disable_encryption: false
 
 # Autenticación (deshabilitada a pedido del usuario).
 cloud_torrent_enable_auth: false

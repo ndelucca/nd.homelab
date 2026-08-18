@@ -1,6 +1,6 @@
 [Unit]
 Description=Cloud Torrent - Web-based torrent client
-Documentation=https://github.com/jpillora/cloud-torrent
+Documentation={{ cloud_torrent_repo_url }}
 After=network.target
 # No arrancar si el disco de appdata (estado + descargas) no está montado.
 RequiresMountsFor={{ storage_appdata_disk }}
@@ -20,7 +20,8 @@ ExecStart={{ cloud_torrent_install_dir }}/cloud-torrent \
   --auth {{ cloud_torrent_auth_user }}:{{ cloud_torrent_auth_password }}{% endif %}
 
 
-Environment="CLOUD_TORRENT_DOWNLOADS={{ cloud_torrent_downloads_dir }}"
+# Sin Environment= para el directorio de descargas: el binario no lo lee de ahí.
+# Sale de DownloadDirectory en {{ cloud_torrent_config_path }} — ver tasks/config.yml.
 
 Restart=on-failure
 RestartSec=5s
