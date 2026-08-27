@@ -1,16 +1,24 @@
 ---
-# TLS para la Pi con MainsailOS (impresora 3D): emite su propio certificado real
-# vía el challenge ACME DNS-01 (deSEC) y sirve la UI de Mainsail sobre HTTPS.
+# Configuración de la Pi con MainsailOS (impresora 3D). Dos cosas:
 #
-# DNS-01 solo crea un registro TXT mediante la API de deSEC, así que nada queda
-# expuesto a internet y la Pi no depende del servidor Fedora.
+# 1. TLS. Emite su propio certificado real vía el challenge ACME DNS-01 (deSEC) y
+#    sirve la UI de Mainsail sobre HTTPS. DNS-01 solo crea un registro TXT
+#    mediante la API de deSEC, así que nada queda expuesto a internet y la Pi no
+#    depende del servidor Fedora.
+#
+# 2. Configuración de Klipper. La despliega desde el repo nd.printer, que es la
+#    fuente de verdad, preservando el bloque SAVE_CONFIG que escribe Klipper.
 #
 # SIEMPRE limitar a la impresora; nunca al servidor Fedora:
 #   ansible-playbook playbooks/printers.yml -l ndelucca-raspberry-printer
 #   ansible-playbook playbooks/printers.yml -l ndelucca-raspberry-printer --tags acme
 #   ansible-playbook playbooks/printers.yml -l ndelucca-raspberry-printer --check
+#
+# Antes de aplicar un cambio de configuración de Klipper, ver el diff:
+#   ansible-playbook playbooks/printers.yml -l ndelucca-raspberry-printer \
+#     --tags klipper_config --check --diff
 
-- name: Configure HTTPS on the MainsailOS printer
+- name: Configure the MainsailOS printer
   hosts: printers
   gather_facts: true
 
@@ -22,3 +30,6 @@
 
     - role: mainsail_tls
       tags: ['mainsail_tls', 'tls']
+
+    - role: klipper_config
+      tags: ['klipper_config', 'klipper']

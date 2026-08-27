@@ -1,0 +1,39 @@
+---
+# Despliega los archivos gestionados desde el checkout a printer_data/config.
+#
+# Se copia en vez de enlazar a propósito. El setup anterior servía macros.cfg por
+# symlink al working tree del repo, lo que tiene dos problemas para automatizar:
+# una edición desde el editor de Mainsail ensucia el working tree y hace fallar
+# el siguiente pull, y no hay forma de previsualizar el cambio con --check --diff
+# porque el contenido no lo escribe Ansible. Con copias en 0444 una edición
+# accidental se revierte sola en la próxima corrida, que es el comportamiento
+# declarativo correcto.
+
+- name: Deploy the managed Klipper configuration files
+  ansible.builtin.copy:
+    src: "{{ klipper_config_src }}/{{ item }}"
+    dest: "{{ klipper_config_dir }}/{{ item }}"
+    remote_src: true
+    mode: "{{ klipper_config_file_mode }}"
+    # follow false para que, si el destino todavia es un symlink, se reemplace
+    # por un archivo real en vez de escribir a traves del enlace.
+    follow: false
+  become: false
+  loop: "{{ klipper_config_managed_files }}"
+  loop_control:
+    label: "{{ item }}"
+  register: klipper_config_deployed
+  notify: Restart klipper
+
+- name: Collect the files that actually changed
+  ansible.builtin.set_fact:
+    klipper_config_changed_files: >-
+      {{ klipper_config_deployed.results | default([])
+         | selectattr('changed') | map(attribute='item') | list }}
+
+- name: Report what changed
+  ansible.builtin.debug:
+    msg: >-
+      {{ klipper_config_effective_version }}:
+      {{ klipper_config_changed_files | join(', ') if klipper_config_changed_files
+         else 'no changes, the printer was already up to date' }}

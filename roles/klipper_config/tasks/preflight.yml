@@ -1,0 +1,59 @@
+---
+# Controles que deben pasar antes de tocar un solo archivo de la impresora.
+# Los dos primeros son los mismos que usa roles/mainsailos: el host tiene que ser
+# la Raspberry con Debian, y no puede haber una impresión en curso.
+
+- name: Assert the target is a Debian host (never run on the Fedora server)
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == "Debian"
+    fail_msg: >-
+      klipper_config only supports Debian/MainsailOS hosts, but this host is
+      {{ ansible_facts['distribution'] }} ({{ ansible_facts['os_family'] }}). Refusing to run.
+    success_msg: "Host is {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }} - OK."
+
+- name: Query Moonraker for the current print state
+  ansible.builtin.uri:
+    url: "{{ klipper_config_moonraker_url }}/printer/objects/query?print_stats"
+    method: GET
+    headers: "{{ klipper_config_api_headers }}"
+    status_code: [200]
+  become: false
+  register: klipper_config_print_state
+  failed_when: false
+  changed_when: false
+  check_mode: false
+
+- name: Abort if a print is in progress
+  ansible.builtin.fail:
+    msg: >-
+      The printer is currently {{ klipper_config_print_state.json.result.status.print_stats.state }}.
+      Refusing to touch the configuration mid-print. Wait until the print finishes
+      (or is cancelled) and run again.
+  when:
+    - klipper_config_print_state.status | default(0) == 200
+    - klipper_config_print_state.json.result.status.print_stats.state | default('') == 'printing'
+
+- name: Warn if Moonraker could not be reached for the print-state check
+  ansible.builtin.debug:
+    msg: >-
+      Could not query Moonraker print state (HTTP
+      {{ klipper_config_print_state.status | default('n/a') }}). Continuing, but make
+      sure the printer is idle.
+  when: klipper_config_print_state.status | default(0) != 200
+
+- name: Check the printer data config directory exists
+  ansible.builtin.stat:
+    path: "{{ klipper_config_dir }}"
+  register: klipper_config_dir_stat
+  become: false
+
+- name: Require the printer data directory
+  ansible.builtin.assert:
+    that:
+      - klipper_config_dir_stat.stat.exists
+      - klipper_config_dir_stat.stat.isdir
+    fail_msg: >-
+      {{ klipper_config_dir }} does not exist. This role configures an existing
+      MainsailOS install; it does not bootstrap one.
+    quiet: true

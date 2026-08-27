@@ -1,0 +1,72 @@
+---
+# Lo que convierte esto en un despliegue seguro y no en un `cp` con más pasos.
+#
+# Klipper valida la configuración recién al arrancar: si el parser rechaza algo,
+# se queda en state 'error' con el mensaje exacto en state_message. Acá se fuerza
+# el restart, se espera el veredicto y, si es malo, se falla mostrando el motivo
+# y cómo volver atrás.
+
+- name: Flush the restart handler before checking health
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for Klipper to finish restarting and report a verdict
+  ansible.builtin.uri:
+    url: "{{ klipper_config_moonraker_url }}/printer/info"
+    headers: "{{ klipper_config_api_headers }}"
+    timeout: 15
+    status_code: [200]
+  register: klipper_config_info
+  # Klipper pasa por 'startup' mientras carga; y Moonraker queda unos segundos
+  # inalcanzable (status -1) durante el reinicio. Los defaults pesimistas hacen
+  # que eso reintente en vez de evaluar undefined.
+  until: >-
+    (klipper_config_info.status | default(-1)) == 200
+    and (klipper_config_info.json.result.state | default('startup')) != 'startup'
+  retries: "{{ klipper_config_ready_retries }}"
+  delay: "{{ klipper_config_ready_delay }}"
+  changed_when: false
+  failed_when: false
+  become: false
+  when: not ansible_check_mode
+
+- name: Fail loudly if Klipper rejected the configuration
+  ansible.builtin.fail:
+    msg:
+      - "KLIPPER NO ARRANCO CON LA CONFIGURACION NUEVA"
+      - "state:   {{ klipper_config_info.json.result.state | default('unreachable') }}"
+      - "mensaje: {{ klipper_config_info.json.result.state_message | default('(sin mensaje)') }}"
+      - "Para volver atras, en la Pi:"
+      - "  cp {{ klipper_config_dir }}/printer.cfg.premigracion {{ klipper_config_dir }}/printer.cfg"
+      - "  curl -X POST {{ klipper_config_moonraker_url }}/printer/firmware_restart"
+  when:
+    - not ansible_check_mode
+    - (klipper_config_info.json.result.state | default('error')) != 'ready'
+
+- name: Check that the key services are active
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+  register: klipper_config_service_state
+  loop: "{{ klipper_config_services }}"
+  loop_control:
+    label: "{{ item }}"
+  become: true
+  when: not ansible_check_mode
+
+- name: Assert all key services are running
+  ansible.builtin.assert:
+    that:
+      - item.status.ActiveState == "active"
+    fail_msg: "Service {{ item.item }} is {{ item.status.ActiveState }} (expected active)."
+    success_msg: "{{ item.item }} is active."
+  loop: "{{ klipper_config_service_state.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: not ansible_check_mode
+
+- name: Report the deployed state
+  ansible.builtin.debug:
+    msg: >-
+      Klipper esta en {{ klipper_config_info.json.result.state | default('?') }}
+      con {{ klipper_config_effective_version }}
+      ({{ klipper_config_info.json.result.software_version | default('?') }}).
+  when: not ansible_check_mode

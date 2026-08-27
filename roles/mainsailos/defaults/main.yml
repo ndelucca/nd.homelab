@@ -48,7 +48,9 @@ mainsailos_managed_repos:                # capturados en el manifiesto de rollba
   - "/home/{{ ansible_user }}/crowsnest"
   - "/home/{{ ansible_user }}/mainsail-config"
   - "/home/{{ ansible_user }}/moonraker-timelapse"
-  - "/home/{{ ansible_user }}/klipper-conf"
+  # Lo clona y mantiene roles/klipper_config. Era klipper-conf, que se fusiono
+  # con nd.orcaslicer y se renombro a nd.printer.
+  - "/home/{{ ansible_user }}/nd.printer"
 mainsailos_mainsail_version_file: "/home/{{ ansible_user }}/mainsail/.version"
 
 mainsailos_apt_upgrade_type: safe        # safe | dist | full

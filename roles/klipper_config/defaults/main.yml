@@ -1,0 +1,58 @@
+---
+# Variables por defecto del role klipper_config.
+#
+# Despliega la configuración de Klipper de la impresora desde el repo nd.printer,
+# que es la única fuente de verdad. Sobrescribir por grupo en
+# inventory/group_vars/printers/ o por host en inventory/host_vars/.
+
+# De dónde sale la configuración. El repo es público, así que se clona por HTTPS
+# y no hace falta ninguna credencial en la Pi.
+klipper_config_repo: https://github.com/ndelucca/nd.printer.git
+klipper_config_ref: main
+klipper_config_checkout: "/home/{{ ansible_user }}/nd.printer"
+klipper_config_git_update: true
+
+# Qué versión desplegar. Vacío significa leer versions/CURRENT del checkout, que
+# es la fuente de verdad de cuál está viva. Fijar un valor acá (ej. "v2") sirve
+# para hacer rollback sin tocar el repo.
+klipper_config_version: ""
+
+klipper_config_dir: "/home/{{ ansible_user }}/printer_data/config"
+
+# Los archivos que gestiona este role. mainsail.cfg NO está y no debe estar: en
+# la Pi es un symlink a ~/mainsail-config/mainsail.cfg, el checkout upstream que
+# mantiene el [update_manager mainsail-config] de Moonraker. Lo mismo
+# timelapse.cfg. Versionar una copia solo garantiza que derive en silencio.
+klipper_config_managed_files:
+  - hardware.cfg
+  - limits.cfg
+  - macros.cfg
+
+# 0444 a propósito: Klipper nunca escribe estos archivos, y el modo de solo
+# lectura evita que el editor de Mainsail los pise sin pasar por el repo.
+# printer.cfg queda en 0644 porque Klipper SÍ lo escribe (bloque SAVE_CONFIG).
+klipper_config_file_mode: '0444'
+klipper_config_printer_cfg_mode: '0644'
+
+# Prefijo con el que Klipper marca el bloque que escribe solo al final de
+# printer.cfg: la malla de cama, el z_offset del probe y los PID. La migración lo
+# preserva textualmente.
+klipper_config_save_marker: '#*#'
+
+# 127.0.0.1 literal mantiene las peticiones en el camino de confianza de loopback
+# de Moonraker, así que no hace falta API key.
+klipper_config_moonraker_url: "http://127.0.0.1:7125"
+klipper_config_moonraker_api_key: ""
+klipper_config_api_headers: >-
+  {{ {'X-Api-Key': klipper_config_moonraker_api_key}
+     if (klipper_config_moonraker_api_key | length > 0) else {} }}
+
+# Reiniciar Klipper cuando cambie algún archivo, y esperar a que vuelva a ready.
+klipper_config_restart: true
+klipper_config_ready_retries: 30
+klipper_config_ready_delay: 4
+
+klipper_config_services:
+  - klipper
+  - moonraker
+  - nginx

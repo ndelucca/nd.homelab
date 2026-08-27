@@ -1,0 +1,109 @@
+---
+# Migración de una sola vez: convierte el printer.cfg monolítico en el archivo de
+# includes que este role sabe mantener.
+#
+# Es el paso más delicado del despliegue, por dos motivos:
+#
+#  - Klipper escribe al final de printer.cfg el bloque SAVE_CONFIG, donde persiste
+#    la malla de cama, el z_offset del probe y los PID. Ese bloque es estado
+#    calibrado y no se puede perder, así que se extrae y se vuelve a pegar.
+#  - macros.cfg hoy es un symlink al checkout viejo (~/klipper-conf). Si no se
+#    borra, el deploy escribiría a través del enlace y ensuciaría ese repo.
+#
+# Idempotente: detecta si printer.cfg todavía tiene secciones de hardware y no
+# hace nada si ya está migrado.
+
+- name: Check whether printer.cfg exists
+  ansible.builtin.stat:
+    path: "{{ klipper_config_dir }}/printer.cfg"
+  become: false
+  register: klipper_config_printer_cfg
+
+- name: Read the current printer.cfg
+  ansible.builtin.slurp:
+    src: "{{ klipper_config_dir }}/printer.cfg"
+  become: false
+  register: klipper_config_printer_raw
+  when: klipper_config_printer_cfg.stat.exists
+
+- name: Decode the current printer.cfg
+  ansible.builtin.set_fact:
+    klipper_config_body: >-
+      {{ (klipper_config_printer_raw.content | b64decode)
+         if klipper_config_printer_cfg.stat.exists else '' }}
+
+# La presencia de [stepper_x] es la marca de que el archivo todavia es el
+# monolitico: despues de migrar, esa seccion vive en hardware.cfg.
+- name: Decide whether the migration is needed
+  ansible.builtin.set_fact:
+    klipper_config_needs_migration: "{{ '[stepper_x]' in klipper_config_body }}"
+
+- name: Report the migration decision
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'printer.cfg is monolithic: migrating to the include layout.'
+         if klipper_config_needs_migration
+         else 'printer.cfg is already split: nothing to migrate.' }}
+
+- name: Back up the pre-migration printer.cfg (once)
+  ansible.builtin.copy:
+    src: "{{ klipper_config_dir }}/printer.cfg"
+    dest: "{{ klipper_config_dir }}/printer.cfg.premigracion"
+    remote_src: true
+    force: false
+    mode: '0644'
+  become: false
+  when: klipper_config_needs_migration | bool
+
+- name: Extract the SAVE_CONFIG tail that Klipper owns
+  ansible.builtin.set_fact:
+    klipper_config_tail: >-
+      {{ klipper_config_save_marker
+         ~ klipper_config_body.split(klipper_config_save_marker, 1)[1] }}
+  when:
+    - klipper_config_needs_migration | bool
+    - klipper_config_save_marker in klipper_config_body
+
+- name: Use an empty tail when Klipper has not written one yet
+  ansible.builtin.set_fact:
+    klipper_config_tail: ""
+  when:
+    - klipper_config_needs_migration | bool
+    - klipper_config_save_marker not in klipper_config_body
+
+- name: Report what is being preserved
+  ansible.builtin.debug:
+    msg: >-
+      Preserving {{ klipper_config_tail | length }} bytes of SAVE_CONFIG
+      ({{ 'bed mesh present' if '[bed_mesh default]' in klipper_config_tail
+          else 'NO BED MESH FOUND - check before printing' }}).
+  when: klipper_config_needs_migration | bool
+
+- name: Read the printer.cfg template from the checkout
+  ansible.builtin.slurp:
+    src: "{{ klipper_config_src }}/printer.cfg.example"
+  become: false
+  register: klipper_config_template_raw
+  when: klipper_config_needs_migration | bool
+
+- name: Write the new printer.cfg with the preserved SAVE_CONFIG tail
+  ansible.builtin.copy:
+    content: |
+      {{ klipper_config_template_raw.content | b64decode }}
+      {{ klipper_config_tail }}
+    dest: "{{ klipper_config_dir }}/printer.cfg"
+    mode: "{{ klipper_config_printer_cfg_mode }}"
+  become: false
+  when: klipper_config_needs_migration | bool
+  notify: Restart klipper
+
+# Solo macros.cfg. mainsail.cfg y timelapse.cfg tambien son symlinks pero apuntan
+# a repos que mantiene Moonraker y deben quedarse como estan.
+- name: Remove the stale macros.cfg symlink into the old checkout
+  ansible.builtin.file:
+    path: "{{ klipper_config_dir }}/macros.cfg"
+    state: absent
+  become: false
+  when:
+    - klipper_config_needs_migration | bool
+    - klipper_config_dir_stat.stat.exists

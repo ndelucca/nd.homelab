@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: Naza
+  description: >-
+    Deploy the Klipper configuration of the 3D printer from the nd.printer repo,
+    preserving the SAVE_CONFIG block that Klipper owns, and verify that Klipper
+    comes back ready afterwards.
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+  galaxy_tags:
+    - klipper
+    - mainsailos
+    - moonraker
+    - raspberrypi
+    - config
+
+dependencies: []

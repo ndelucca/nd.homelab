@@ -1,0 +1,26 @@
+---
+# Punto de entrada del role klipper_config.
+#
+# El orden importa: nunca tocar nada sin haber chequeado que la impresora esta
+# libre, y nunca desplegar sin haber convertido primero el printer.cfg
+# monolitico en el archivo de includes que este role sabe mantener.
+
+- name: Run preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['klipper_config', 'preflight']
+
+- name: Update the configuration checkout on the printer
+  ansible.builtin.import_tasks: checkout.yml
+  tags: ['klipper_config', 'checkout']
+
+- name: Migrate a monolithic printer.cfg to the include layout (one shot)
+  ansible.builtin.import_tasks: migrate.yml
+  tags: ['klipper_config', 'migrate']
+
+- name: Deploy the managed configuration files
+  ansible.builtin.import_tasks: configure.yml
+  tags: ['klipper_config', 'configure']
+
+- name: Verify Klipper came back healthy
+  ansible.builtin.import_tasks: verify.yml
+  tags: ['klipper_config', 'verify']

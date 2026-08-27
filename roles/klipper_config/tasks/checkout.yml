@@ -1,0 +1,56 @@
+---
+# Trae la configuración a la Pi desde el repo nd.printer.
+#
+# El repo es la fuente de verdad: se clona EN la impresora y no se copia desde el
+# controller, así lo que se despliega es exactamente lo que está pusheado. Si
+# hace falta desplegar algo, primero hay que pushearlo.
+#
+# Corre como {{ ansible_user }} y no como root: todo lo de printer_data es suyo,
+# y un checkout de root dejaría archivos que Moonraker no puede leer.
+
+- name: Clone or update the nd.printer checkout
+  ansible.builtin.git:
+    repo: "{{ klipper_config_repo }}"
+    dest: "{{ klipper_config_checkout }}"
+    version: "{{ klipper_config_ref }}"
+    update: "{{ klipper_config_git_update | bool }}"
+    # El working tree lo escribe solo Ansible; una modificacion local es un
+    # accidente y no algo que valga la pena conservar.
+    force: true
+  become: false
+  register: klipper_config_git
+
+- name: Read the version marker from the checkout
+  ansible.builtin.slurp:
+    src: "{{ klipper_config_checkout }}/versions/CURRENT"
+  become: false
+  register: klipper_config_current_raw
+  when: klipper_config_version | length == 0
+
+- name: Resolve which version to deploy
+  ansible.builtin.set_fact:
+    klipper_config_effective_version: >-
+      {{ klipper_config_version
+         if (klipper_config_version | length > 0)
+         else (klipper_config_current_raw.content | b64decode | trim) }}
+
+- name: Build the path to the version directory
+  ansible.builtin.set_fact:
+    klipper_config_src: "{{ klipper_config_checkout }}/versions/{{ klipper_config_effective_version }}"
+
+- name: Check the version directory exists
+  ansible.builtin.stat:
+    path: "{{ klipper_config_src }}"
+  become: false
+  register: klipper_config_src_stat
+
+- name: Require the version directory
+  ansible.builtin.assert:
+    that:
+      - klipper_config_src_stat.stat.exists
+      - klipper_config_src_stat.stat.isdir
+    fail_msg: >-
+      {{ klipper_config_src }} not found. versions/CURRENT says
+      '{{ klipper_config_effective_version }}' but that directory is not in the repo.
+    success_msg: "Deploying {{ klipper_config_effective_version }} from {{ klipper_config_checkout }}."
+    quiet: true
