@@ -12,24 +12,59 @@ Lee esto antes de hacer nada. Casi todas las fases ya están hechas y pusheadas.
 | F3 cambios de comportamiento | HECHO | `limits.cfg` y `macros.cfg` de v3 |
 | F4 presets de Orca | HECHO | `orca/src/profiles.py`, `presets/` regenerado |
 | F5 `orca.py check` + CI | HECHO | `orca/src/{klippercfg,checkcfg}.py`, `.github/workflows/check.yml` |
-| F6 rol de Ansible | **ESCRITO PERO NUNCA EJECUTADO** | `roles/klipper_config/` en nd.homelab. Pasa `ansible-lint` en perfil production |
+| F6 rol de Ansible | ESCRITO, pasa `ansible-lint` en perfil production. **Nunca ejecutado como playbook** | `roles/klipper_config/` en nd.homelab |
 | F7 documentación | HECHO | READMEs, `orca/docs/`, artifact republicado |
+| Despliegue a la Pi | **HECHO A MANO** el 2026-08-27, replicando paso a paso lo que hace el rol | Klipper quedó en `state: ready` al primer intento |
+
+### El despliegue a la impresora ya se hizo
+
+Se hizo manualmente por SSH (doble salto por el servidor), replicando exactamente
+la secuencia del rol: preflight, backup, checkout, migración con preservación del
+bloque `SAVE_CONFIG`, borrado del symlink viejo, copia en `0444`, restart y poll.
+
+Estado verificado contra la máquina después del despliegue:
+
+```
+ Klipper                      ready, v0.13.0-699-gc707dd192, 0 warnings
+ [gcode_arcs] resolution      0.1
+ [idle_timeout] timeout       3600  gcode: TURN_OFF_HEATERS / M84
+ [printer] max_accel          2000
+ geometria y z_offset         sin cambios respecto de v2
+ macros definidos             14, los mismos que antes
+ variable_pa                  {'PLA':0.04,'PETG':0.06,'ABS':0.05,'TPU':0.6}
+ START_PRINT                  lee MATERIAL, carga la malla, setea el PA
+ malla 'default'              preservada
+ exclude_object               cargado (EXCLUDE_OBJECT_DEFINE responde ok)
+ servicios                    klipper moonraker crowsnest nginx activos
+```
+
+Backups que quedaron en la Pi, por si hay que volver atrás:
+
+```
+ ~/printer_data/config/printer.cfg.premigracion        el monolitico original
+ ~/printer_data_backups_manual/config-<ts>.tar.gz      el directorio completo
+```
+
+Restaurar: `tar xzf <el tar> -C ~/printer_data` y después
+`curl -X POST http://127.0.0.1:7125/printer/firmware_restart`.
 
 ### Lo que falta
 
-1. **Desplegar a la impresora.** La Pi sigue con la configuración vieja: un
-   `printer.cfg` monolítico y un symlink `macros.cfg -> klipper-conf/versions/v1`.
-   `versions/v3` **nunca fue cargado por Klipper**, así que no está probado contra
-   el parser real. Ese es el riesgo abierto más importante.
+1. **Reimprimir la pieza de referencia** y comparar, según "Verificación de punta a
+   punta". Es lo único que queda para cerrar el ciclo.
 
-2. **Autorizar la clave SSH en la Pi** (comando más abajo, en "Acceso a la Pi").
-   Sin eso Ansible no se puede conectar.
+2. **Correr el rol de Ansible una vez**, para ejercitarlo de verdad. Ahora debería
+   ser idempotente y no cambiar nada, porque la Pi ya está en el estado destino.
+   Requiere resolver el punto 3.
 
-3. **Reimprimir la pieza de referencia** y comparar, según "Verificación de punta a
-   punta".
+3. **Autorizar la clave SSH del cliente en la Pi.** Diagnóstico: la clave que
+   figura en `authorized_keys` con el comentario `-acer`
+   (`SHA256:DU+VSU4gW5ol/yi3BqmlfpIW9qMXxcbRb8Cmj92Ogso`) **no es** la que presenta
+   hoy esa máquina (`SHA256:ZhdEXmNOTH8E1W7+XgyRcdT9kJPx1wFdtpPodY+InPw`). Se
+   regeneró en algún momento. Hay que agregar la actual, o restaurar la vieja.
 
-4. Opcional: borrar el directorio local `~/3dprint`, que quedó huérfano tras la
-   fusión, y el checkout viejo `/home/ndelucca/klipper-conf` en la Pi.
+4. Opcional: borrar el directorio local `~/3dprint`, huérfano tras la fusión, y el
+   checkout viejo `/home/ndelucca/klipper-conf` en la Pi, que ya no lo apunta nadie.
 
 ## Contexto
 
