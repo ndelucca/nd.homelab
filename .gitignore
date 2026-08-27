@@ -1,6 +1,9 @@
 # Ansible vault password file
 .vault_pass
 
+# Cache local de ansible-lint / ansible-core
+.ansible/
+
 # Ansible retry files
 *.retry
 
