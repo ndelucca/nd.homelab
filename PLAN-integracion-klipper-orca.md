@@ -1,5 +1,36 @@
 # Plan: integrar la configuración de Klipper y OrcaSlicer en un solo repo desplegable
 
+## ESTADO: casi todo ejecutado el 2026-08-27
+
+Lee esto antes de hacer nada. Casi todas las fases ya están hechas y pusheadas.
+
+| Fase | Estado | Dónde quedó |
+|---|---|---|
+| F0 plan en los repos | HECHO | este archivo, en nd.printer y nd.homelab |
+| F1 fusión de repos | HECHO | `ndelucca/nd.printer` (era klipper-conf). `nd.orcaslicer` archivado. Historia de las dos mitades preservada |
+| F2 `versions/v3` | HECHO | 15 secciones de hardware migradas y verificadas clave por clave contra v2 |
+| F3 cambios de comportamiento | HECHO | `limits.cfg` y `macros.cfg` de v3 |
+| F4 presets de Orca | HECHO | `orca/src/profiles.py`, `presets/` regenerado |
+| F5 `orca.py check` + CI | HECHO | `orca/src/{klippercfg,checkcfg}.py`, `.github/workflows/check.yml` |
+| F6 rol de Ansible | **ESCRITO PERO NUNCA EJECUTADO** | `roles/klipper_config/` en nd.homelab. Pasa `ansible-lint` en perfil production |
+| F7 documentación | HECHO | READMEs, `orca/docs/`, artifact republicado |
+
+### Lo que falta
+
+1. **Desplegar a la impresora.** La Pi sigue con la configuración vieja: un
+   `printer.cfg` monolítico y un symlink `macros.cfg -> klipper-conf/versions/v1`.
+   `versions/v3` **nunca fue cargado por Klipper**, así que no está probado contra
+   el parser real. Ese es el riesgo abierto más importante.
+
+2. **Autorizar la clave SSH en la Pi** (comando más abajo, en "Acceso a la Pi").
+   Sin eso Ansible no se puede conectar.
+
+3. **Reimprimir la pieza de referencia** y comparar, según "Verificación de punta a
+   punta".
+
+4. Opcional: borrar el directorio local `~/3dprint`, que quedó huérfano tras la
+   fusión, y el checkout viejo `/home/ndelucca/klipper-conf` en la Pi.
+
 ## Contexto
 
 Naza tiene una Ender 3 S1 Pro con Klipper sobre una Raspberry Pi 3B+ (MainsailOS,
