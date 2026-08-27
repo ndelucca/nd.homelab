@@ -50,20 +50,88 @@ Macros realmente definidos en la Pi (14): `CANCEL_PRINT`, `END_PRINT`, `M0`,
 `SET_PRINT_STATS_INFO`, `START_PRINT`, `_CLIENT_EXTRUDE`, `_CLIENT_LINEAR_MOVE`,
 `_CLIENT_RETRACT`, `_TOOLHEAD_PARK_PAUSE_CANCEL`, `m300`. **No hay `STATUS`.**
 
-Sincronización: `~/printer_data/config/` está exactamente en `versions/v2` del repo.
-`macros.cfg` y `mainsail.cfg` son idénticos byte a byte; `printer.cfg` difiere solo
-en el bloque `SAVE_CONFIG` con la malla 6x6, que Klipper escribe y el repo
-correctamente no versiona. La malla SÍ existe en la Pi.
+### El mecanismo de deploy que ya existe: symlinks
+
+Esto es lo más importante que hay que saber antes de tocar nada.
+`~/printer_data/config/` NO es un directorio de archivos sueltos. Es una mezcla:
+
+```
+ macros.cfg    -> ../../klipper-conf/versions/v1/macros.cfg    SYMLINK, apunta a v1
+ mainsail.cfg  -> ~/mainsail-config/mainsail.cfg               SYMLINK al repo upstream
+ timelapse.cfg -> ~/moonraker-timelapse/klipper_macro/...      SYMLINK
+ printer.cfg      archivo real, 3725 bytes                     lo escribe Klipper
+ moonraker.conf   archivo real                                 lo escribe el instalador
+ crowsnest.conf   archivo real                                 idem
+ sonar.conf       archivo real                                 idem
+```
+
+Consecuencias, todas relevantes para el plan:
+
+- **El repo `klipper-conf` SÍ está clonado en la Pi**, en `/home/ndelucca/klipper-conf`,
+  en `main`, con working tree limpio, apuntando a `ssh://git@github.com/ndelucca/klipper-conf`.
+  La entrada `mainsailos_managed_repos` de `nd.homelab` es cierta hoy.
+- **El symlink de `macros.cfg` apunta a `v1`, no a `v2`.** O sea que `v2` nunca se
+  desplegó. Funcionalmente da igual porque los dos `macros.cfg` son byte a byte
+  idénticos (mismo MD5), pero significa que crear un directorio `vN` no despliega
+  nada por sí solo: hay que reapuntar el symlink.
+- **`mainsail.cfg` se sirve desde `~/mainsail-config`, el repo que actualiza Moonraker.**
+  La copia versionada en `klipper-conf` nunca se usó. Sacarla del repo (decisión ya
+  tomada) no cambia absolutamente nada en la máquina.
+- **`printer.cfg` es un archivo real y nunca se desplegó desde el repo.** Para ese
+  archivo el flujo sí va de la Pi al repo, a mano.
+- Cuando Moonraker reporta un archivo de config como `r` (solo lectura) es porque es
+  un **symlink**, no porque tenga permisos restringidos. Los archivos del repo en la
+  Pi están en modo 755. No existe ninguna protección de escritura hoy.
+
+Contenido: `macros.cfg` es idéntico al del repo. `printer.cfg` coincide con
+`versions/v2/printer.cfg` salvo el bloque `SAVE_CONFIG` con la malla 6x6, que Klipper
+escribe y el repo correctamente no versiona. **La malla SÍ existe en la Pi.**
 
 `START_PRINT` acepta hoy solo `BED_TEMP` (default 60) y `EXTRUDER_TEMP` (default
 200). `END_PRINT` no acepta parámetros.
 
-**Acceso:** SSH a la Pi NO funciona (la clave `id_ed25519` se ofrece y el servidor
-la rechaza; probado desde Git Bash y WSL). Toda lectura de la máquina se hace por
-la API de Moonraker, cuya URL está en `3dprint/.printer-host` (archivo gitignoreado,
-nunca publicarlo). Para que Ansible pueda desplegar hay que autorizar la clave
-pública en `~/.ssh/authorized_keys` de `ndelucca` en la Pi; es un prerrequisito
-manual de la fase F6.
+### Acceso a la Pi
+
+SSH **directo** a la Pi no funciona: la clave `id_ed25519` de la máquina de trabajo
+se ofrece y la Pi la rechaza (probado desde Git Bash y desde WSL). Pero **el servidor
+sí tiene acceso**, así que se llega con doble salto:
+
+```sh
+ssh ndelucca@ndelucca.dedyn.io 'ssh ndelucca@192.168.10.12 "<comando>"'
+```
+
+Para habilitar el acceso directo hay que agregar esta clave pública a
+`~/.ssh/authorized_keys` de `ndelucca` en la Pi. Es un paso manual pendiente:
+
+```sh
+ssh ndelucca@ndelucca.dedyn.io 'ssh ndelucca@192.168.10.12 "echo \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJqikCQpxJfijxlWlOlrp3b0uun5bT4tv+zOzWzJMb/8\" >> ~/.ssh/authorized_keys"'
+```
+
+Además, en WSL el archivo `~/.ssh/id_ed25519` está como `root:root` modo 644 y
+OpenSSH lo va a rechazar: corregir a `ndelucca` modo 600.
+
+Las lecturas de estado en vivo (secciones resueltas, macros definidos) se hacen por
+la API de Moonraker, cuya URL está en `.printer-host` (archivo gitignoreado, **nunca
+publicarlo**: la instancia no tiene autenticación).
+
+### Limitación del entorno de trabajo
+
+**Ansible no se puede ejecutar desde la máquina Windows**, y además `.vault_pass` no
+existe en el checkout local. Sin ese archivo ni siquiera se carga el inventario,
+porque `inventory/hosts.yml` trae `ansible_become_password` como valor `!vault` inline.
+
+Lo que **sí** se puede validar localmente (WSL, con un `.vault_pass` dummy como hace
+el CI):
+
+```sh
+yamllint .
+ansible-lint
+ansible-playbook playbooks/printers.yml --syntax-check
+```
+
+Lo que **no**: `--check --diff` ni la aplicación real contra la Pi. El rol de F6 se
+escribe y se lintea acá, pero lo ejecuta el usuario desde donde corre Ansible
+habitualmente.
 
 ---
 
@@ -544,6 +612,12 @@ Convierte el `printer.cfg` monolítico de la Pi en el archivo de includes.
   extraer    la cola SAVE_CONFIG: desde la linea que empieza con
              '#*# <---------------------- SAVE_CONFIG' hasta el final
         │
+  symlink    BORRAR el symlink macros.cfg (hoy apunta a
+             ../../klipper-conf/versions/v1/macros.cfg). F6.6 escribe un
+             archivo real en su lugar.
+             NO TOCAR mainsail.cfg ni timelapse.cfg: esos symlinks apuntan a
+             repos que gestiona Moonraker y deben quedar como estan.
+        │
   escribir   printer.cfg.example + '\n' + cola preservada
         │
   desplegar  hardware.cfg / limits.cfg / macros.cfg  (F6.6)
@@ -551,6 +625,18 @@ Convierte el `printer.cfg` monolítico de la Pi en el archivo de includes.
 
 Guardar la tarea con `when: not ansible_check_mode` donde corresponda para que
 `--check --diff` muestre el plan sin ejecutar.
+
+**Por qué se abandona el symlink y se pasa a copias.** El setup actual sirve
+`macros.cfg` por symlink al working tree del repo. Funciona, pero tiene dos
+problemas para automatizar: cualquier edición desde el editor de Mainsail ensucia
+el working tree y hace fallar el siguiente `git pull`, y no hay forma de previsualizar
+el cambio con `--check --diff` porque el contenido no lo escribe Ansible. Con copias
+en modo `0444` una edición accidental se revierte sola en la próxima corrida, que es
+el comportamiento declarativo correcto, y el diff se ve antes de aplicar.
+
+El checkout viejo `/home/ndelucca/klipper-conf` queda huérfano tras la migración.
+Dejarlo en su lugar como red de seguridad y documentar que se puede borrar después
+de la primera impresión exitosa.
 
 **6.6 `tasks/configure.yml`.** `ansible.builtin.copy` con `remote_src: true` desde
 `{{ klipper_config_checkout }}/versions/{{ version }}/` hacia
