@@ -1,4 +1,42 @@
 ---
+# EL ORDEN DE ESTE ARCHIVO ES SIGNIFICATIVO. Los handlers corren en orden de
+# DEFINICION, no de notificacion, y el restart de Klipper es un POST a la API de
+# Moonraker. Si el de Moonraker estuviera despues, ese POST caeria contra un
+# servicio que se esta reiniciando. Por eso Moonraker va primero, y por eso
+# espera a estar arriba antes de devolver el control.
+
+# moonraker.conf lo lee Moonraker al arrancar, asi que un cambio ahi no se
+# recarga: hay que reiniciar el servicio. Va por systemd y no por la API por lo
+# obvio: la API que habria que llamar es justamente la que se esta reiniciando.
+- name: Restart the moonraker service
+  ansible.builtin.systemd:
+    name: moonraker
+    state: restarted
+  become: true
+  listen: Restart moonraker
+  when: klipper_config_restart | bool
+
+# failed_when: false a proposito. Si Moonraker no vuelve, el mensaje util no es
+# el de un uri que agoto reintentos: es el de verify.yml, que explica que sin
+# Moonraker no hay web ni API y como restaurar el backup por ssh.
+- name: Wait for the Moonraker API to answer again
+  ansible.builtin.uri:
+    url: "{{ klipper_config_moonraker_url }}/server/info"
+    headers: "{{ klipper_config_api_headers }}"
+    timeout: 10
+    status_code: [200]
+  become: false
+  register: klipper_config_moonraker_up
+  until: (klipper_config_moonraker_up.status | default(-1)) == 200
+  retries: "{{ klipper_config_moonraker_retries }}"
+  delay: "{{ klipper_config_moonraker_delay }}"
+  changed_when: false
+  failed_when: false
+  listen: Restart moonraker
+  when:
+    - klipper_config_restart | bool
+    - not ansible_check_mode
+
 # El restart de Klipper NO va por systemd sino por Moonraker: asi Moonraker se
 # entera del reinicio y no queda con estado viejo. La espera a que vuelva a
 # 'ready' la hace tasks/verify.yml, que corre despues del flush de handlers.

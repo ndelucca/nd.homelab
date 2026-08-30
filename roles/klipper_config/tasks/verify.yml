@@ -9,6 +9,41 @@
 - name: Flush the restart handler before checking health
   ansible.builtin.meta: flush_handlers
 
+# Moonraker primero, y no por orden alfabetico: si no volvio, todo lo que sigue
+# consulta una API que no existe y el veredicto de Klipper seria un
+# 'unreachable' que culpa al servicio equivocado. Ademas es el fallo mas caro de
+# los dos: sin Moonraker no hay web ni API, solo ssh.
+- name: Check that Moonraker answered after the deploy
+  ansible.builtin.uri:
+    url: "{{ klipper_config_moonraker_url }}/server/info"
+    headers: "{{ klipper_config_api_headers }}"
+    timeout: 10
+    status_code: [200]
+  register: klipper_config_moonraker_info
+  until: (klipper_config_moonraker_info.status | default(-1)) == 200
+  retries: "{{ klipper_config_moonraker_retries }}"
+  delay: "{{ klipper_config_moonraker_delay }}"
+  changed_when: false
+  failed_when: false
+  become: false
+  when: not ansible_check_mode
+
+- name: Fail loudly if Moonraker did not come back
+  ansible.builtin.fail:
+    msg:
+      - "MOONRAKER NO ARRANCO CON LA CONFIGURACION NUEVA"
+      - "Sin Moonraker no hay web ni API: la unica via para arreglarlo es ssh."
+      - "Para ver el motivo exacto, en la Pi:"
+      - "  journalctl -u moonraker -n 50 --no-pager"
+      - "Para volver atras (el archivo esta en 0444, por eso el rm primero):"
+      - "  rm -f {{ klipper_config_dir }}/{{ klipper_config_moonraker_file }}"
+      - "  cp {{ klipper_config_dir }}/{{ klipper_config_moonraker_backup }} {{ klipper_config_dir }}/{{ klipper_config_moonraker_file }}"
+      - "  sudo systemctl restart moonraker"
+  when:
+    - not ansible_check_mode
+    - klipper_config_moonraker_file | length > 0
+    - (klipper_config_moonraker_info.status | default(-1)) != 200
+
 - name: Wait for Klipper to finish restarting and report a verdict
   ansible.builtin.uri:
     url: "{{ klipper_config_moonraker_url }}/printer/info"

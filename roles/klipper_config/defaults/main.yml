@@ -28,6 +28,30 @@ klipper_config_managed_files:
   - limits.cfg
   - macros.cfg
 
+# moonraker.conf va aparte de la lista de arriba, y no por prolijidad: no es
+# configuración de Klipper y no se recarga igual. Los tres .cfg de arriba los
+# relee la propia Moonraker cuando se le pide `POST /printer/restart`; este
+# archivo lo lee Moonraker al ARRANCAR, así que un cambio exige reiniciar el
+# servicio — y eso tira abajo, por unos segundos, la API con la que este mismo
+# role verifica todo lo demás. De ahí que tenga su propio handler, su propia
+# espera y su propio veredicto en verify.yml.
+#
+# Vaciar esta variable desactiva el manejo. No hace falta para hacer rollback a
+# v1 o v2: esas versiones no traen el archivo y la tarea se saltea sola.
+klipper_config_moonraker_file: moonraker.conf
+
+# Copia de seguridad, una sola vez (force: false), del moonraker.conf que ya
+# estaba en la Pi. Es la única red que hay antes del primer despliegue: hasta
+# ahora ese archivo no lo gestionaba nadie, así que su contenido no está en
+# ningún repo y sobrescribirlo sin copia sería irreversible.
+klipper_config_moonraker_backup: moonraker.conf.predespliegue
+
+# Cuánto esperar a que la API de Moonraker vuelva después de reiniciarla. Más
+# corto que la espera de Klipper porque Moonraker arranca en un par de segundos
+# y no tiene que hablar con el MCU.
+klipper_config_moonraker_retries: 30
+klipper_config_moonraker_delay: 2
+
 # 0444 a propósito: Klipper nunca escribe estos archivos, y el modo de solo
 # lectura evita que el editor de Mainsail los pise sin pasar por el repo.
 # printer.cfg queda en 0644 porque Klipper SÍ lo escribe (bloque SAVE_CONFIG).

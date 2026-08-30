@@ -25,11 +25,74 @@
   register: klipper_config_deployed
   notify: Restart klipper
 
+# ---------------------------------------------------------------------------
+# moonraker.conf. Aparte de la lista de arriba porque es de otro servicio.
+#
+# Es la tercera mitad del sistema: nd.printer versiona Klipper y OrcaSlicer con
+# el argumento de que están acopladas, y la pieza que las CONECTA es Moonraker.
+# [octoprint_compat] es lo único que hace funcionar el host_type: octoprint del
+# perfil de impresora, y [update_manager mainsail-config] es lo que mantiene el
+# checkout al que apunta el symlink mainsail.cfg del que depende printer.cfg.
+#
+# El riesgo es distinto al de los .cfg de Klipper y conviene tenerlo escrito: si
+# Klipper rechaza su configuración, Moonraker sigue arriba y te cuenta por la
+# web qué pasó. Si Moonraker no arranca, no hay web NI API, y la única vía es
+# ssh. Por eso acá hay backup, y por eso verify.yml lo revisa aparte y con sus
+# propias instrucciones de rollback.
+# ---------------------------------------------------------------------------
+
+- name: Check whether this version of nd.printer ships a moonraker.conf
+  ansible.builtin.stat:
+    path: "{{ klipper_config_src }}/{{ klipper_config_moonraker_file }}"
+  become: false
+  register: klipper_config_moonraker_src
+  when: klipper_config_moonraker_file | length > 0
+
+- name: Check whether the printer already has a moonraker.conf
+  ansible.builtin.stat:
+    path: "{{ klipper_config_dir }}/{{ klipper_config_moonraker_file }}"
+  become: false
+  register: klipper_config_moonraker_dest
+  when: klipper_config_moonraker_file | length > 0
+
+# force: false, o sea que se escribe una sola vez: la copia que interesa es la
+# del archivo NO gestionado, el de antes del primer despliegue. Una vez que el
+# repo manda, el historial vive en git y esta copia deja de tener sentido.
+- name: Back up the unmanaged moonraker.conf, once
+  ansible.builtin.copy:
+    src: "{{ klipper_config_dir }}/{{ klipper_config_moonraker_file }}"
+    dest: "{{ klipper_config_dir }}/{{ klipper_config_moonraker_backup }}"
+    remote_src: true
+    mode: '0644'
+    force: false
+  become: false
+  when:
+    - klipper_config_moonraker_file | length > 0
+    - klipper_config_moonraker_src.stat.exists | default(false)
+    - klipper_config_moonraker_dest.stat.exists | default(false)
+
+- name: Deploy the managed moonraker.conf
+  ansible.builtin.copy:
+    src: "{{ klipper_config_src }}/{{ klipper_config_moonraker_file }}"
+    dest: "{{ klipper_config_dir }}/{{ klipper_config_moonraker_file }}"
+    remote_src: true
+    mode: "{{ klipper_config_file_mode }}"
+    follow: false
+  become: false
+  when:
+    - klipper_config_moonraker_file | length > 0
+    - klipper_config_moonraker_src.stat.exists | default(false)
+  register: klipper_config_moonraker_deployed
+  notify: Restart moonraker
+
 - name: Collect the files that actually changed
   ansible.builtin.set_fact:
     klipper_config_changed_files: >-
-      {{ klipper_config_deployed.results | default([])
-         | selectattr('changed') | map(attribute='item') | list }}
+      {{ (klipper_config_deployed.results | default([])
+          | selectattr('changed') | map(attribute='item') | list)
+         + ([klipper_config_moonraker_file]
+            if (klipper_config_moonraker_deployed.changed | default(false))
+            else []) }}
 
 - name: Report what changed
   ansible.builtin.debug:
