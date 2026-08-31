@@ -28,6 +28,19 @@ klipper_config_managed_files:
   - limits.cfg
   - macros.cfg
 
+# El archivo de mainsail y el nuestro que declara [gcode_macro _CLIENT_VARIABLE],
+# que es la única forma de configurar PAUSE / RESUME / CANCEL_PRINT. No se
+# despliegan ni se tocan: se LEEN, para verificar que los nombres de variables
+# que declaramos sigan siendo los que mainsail.cfg lee. Ver mainsail_contract.yml.
+klipper_config_mainsail_file: mainsail.cfg
+klipper_config_client_var_file: macros.cfg
+
+# Ese contrato falla en silencio —el default de mainsail vuelve a ganar y nada
+# avisa—, así que acá falla ruidoso: el bloque se acaba de desplegar y
+# desplegarlo sin efecto es un deploy fallido. El role mainsailos llama al mismo
+# archivo con esto en false, porque allá venimos de actualizar el stack entero.
+klipper_config_fail_on_mainsail_drift: true
+
 # moonraker.conf va aparte de la lista de arriba, y no por prolijidad: no es
 # configuración de Klipper y no se recarga igual. Los tres .cfg de arriba los
 # relee la propia Moonraker cuando se le pide `POST /printer/restart`; este

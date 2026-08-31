@@ -24,3 +24,10 @@
 - name: Verify Klipper came back healthy
   ansible.builtin.import_tasks: verify.yml
   tags: ['klipper_config', 'verify']
+
+# Va al final y aparte de verify.yml a propósito: verify pregunta "arrancó?", y
+# esto pregunta "lo que desplegamos hace algo?". Son dos preguntas distintas y
+# la segunda no tiene sintoma visible, que es justo por lo que hay que hacerla.
+- name: Check that mainsail.cfg still reads our _CLIENT_VARIABLE block
+  ansible.builtin.import_tasks: mainsail_contract.yml
+  tags: ['klipper_config', 'mainsail_contract']

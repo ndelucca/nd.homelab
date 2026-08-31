@@ -23,6 +23,25 @@
   tags: ['mainsailos', 'mcu']
   when: mainsailos_update_klipper_stack | bool
 
+# El checkout de mainsail-config se actualiza acá adentro, y con el pueden
+# cambiar los nombres de las variables de _CLIENT_VARIABLE que nd.printer
+# declara para configurar PAUSE / RESUME / CANCEL_PRINT. Ese acoplamiento no
+# falla ruidoso: los macros de mainsail vuelven a sus defaults y nadie avisa.
+#
+# Es el mismo tipo de deriva que mira mcu_check, y por eso va al lado: dos
+# mitades que se actualizan por separado y que hay que volver a contrastar
+# despues de tocar una. Acá solo advierte -abortar el update entero por algo que
+# no impide imprimir seria peor que el problema-; en klipper_config, donde el
+# bloque se acaba de desplegar, falla.
+- name: Check that mainsail.cfg still reads the _CLIENT_VARIABLE block
+  ansible.builtin.include_role:
+    name: klipper_config
+    tasks_from: mainsail_contract.yml
+  vars:
+    klipper_config_fail_on_mainsail_drift: false
+  tags: ['mainsailos', 'mainsail_contract']
+  when: mainsailos_update_klipper_stack | bool
+
 - name: Upgrade OS packages
   ansible.builtin.import_tasks: apt.yml
   tags: ['mainsailos', 'apt']

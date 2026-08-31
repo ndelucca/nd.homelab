@@ -1,0 +1,132 @@
+---
+# El contrato invisible con mainsail.cfg.
+#
+# macros.cfg despliega un [gcode_macro _CLIENT_VARIABLE], que es la única manera
+# de configurar PAUSE / RESUME / CANCEL_PRINT. Esos tres macros no son nuestros:
+# los define mainsail.cfg, que en la Pi es un symlink al checkout upstream que
+# mantiene el [update_manager mainsail-config] de Moonraker.
+#
+# Lo que hay que vigilar no es que el acoplamiento exista, sino CÓMO falla. El
+# bloque es data pasiva: los macros de mainsail lo leen con
+# `client.X|default(...)`. Si upstream renombra una variable —o si nosotros
+# escribimos mal un nombre— no hay error de parseo, Klipper arranca igual y no
+# dice nada: el default de mainsail vuelve a ganar y nuestra configuración deja
+# de tener efecto EN SILENCIO. Con park_at_cancel eso significa que una
+# impresión cancelada deja el nozzle sobre la pieza, y te enterás cancelando una
+# impresión, que es exactamente el peor momento.
+#
+# Por qué vive acá y no en nd.printer: `orca.py check` valida la FUENTE y corre
+# en CI, sin la máquina delante, y mainsail.cfg no está en ese repo a propósito
+# (versionar una copia sólo garantiza que derive). Este role es lo único que
+# corre donde el archivo existe de verdad. Es el mismo corte que nd.printer ya
+# tiene entre `check` (la fuente) y `audit` (lo que quedó instalado).
+#
+# Y por eso además lo llama el role mainsailos: el checkout de mainsail-config
+# se actualiza SOLO, desde la UI de Mainsail, sin que Ansible se entere. Si esto
+# corriera únicamente al desplegar klipper_config, la deriva podría pasar meses
+# antes de que alguien la mire.
+
+- name: Read the mainsail.cfg that printer.cfg includes
+  # Es un symlink al checkout upstream; slurp lo sigue.
+  ansible.builtin.slurp:
+    src: "{{ klipper_config_dir }}/{{ klipper_config_mainsail_file }}"
+  register: klipper_config_mainsail_raw
+  become: false
+  changed_when: false
+  failed_when: false
+  # Read-only: tiene sentido que corra también en --check, que es justo cuando
+  # querés saber si el bloque que estás por desplegar va a servir de algo.
+  check_mode: false
+
+- name: Read the deployed file that declares _CLIENT_VARIABLE
+  ansible.builtin.slurp:
+    src: "{{ klipper_config_dir }}/{{ klipper_config_client_var_file }}"
+  register: klipper_config_macros_raw
+  become: false
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Note that the mainsail contract could not be checked
+  ansible.builtin.debug:
+    msg: >-
+      No pude leer {{ klipper_config_dir }}/{{ klipper_config_mainsail_file }}:
+      el contrato con _CLIENT_VARIABLE queda sin verificar.
+  when: klipper_config_mainsail_raw.content is not defined
+
+- name: Extract the client variables we declare and the ones mainsail reads
+  # El bloque va de su encabezado hasta la próxima sección o el fin del archivo.
+  # [\s\S] en vez de . porque regex_search no usa DOTALL.
+  ansible.builtin.set_fact:
+    klipper_config_client_declared: >-
+      {{ (klipper_config_macros_raw.content | b64decode
+          | regex_search('\[gcode_macro _CLIENT_VARIABLE\][\s\S]*?(?=\n\[|$)')
+          | default('', true))
+         | regex_findall('(?m)^variable_([a-z0-9_]+)\s*:') }}
+    klipper_config_client_read: >-
+      {{ klipper_config_mainsail_raw.content | b64decode
+         | regex_findall('client\.([a-z0-9_]+)') | unique }}
+  when:
+    - klipper_config_mainsail_raw.content is defined
+    - klipper_config_macros_raw.content is defined
+
+- name: Determine which of our client variables mainsail no longer reads
+  ansible.builtin.set_fact:
+    klipper_config_client_drift: >-
+      {{ klipper_config_client_declared | difference(klipper_config_client_read) }}
+  when: klipper_config_client_declared is defined
+
+- name: Note that this version ships no _CLIENT_VARIABLE block
+  # Pasa con un rollback a v1 o v2, que no lo traen. No es un fallo: significa
+  # que PAUSE, RESUME y CANCEL_PRINT corren con los defaults de mainsail, que es
+  # como estuvieron siempre hasta v3.
+  ansible.builtin.debug:
+    msg: >-
+      {{ klipper_config_effective_version | default('esta versión') }} no
+      declara _CLIENT_VARIABLE: PAUSE, RESUME y CANCEL_PRINT corren con los
+      defaults de mainsail. Nada que verificar.
+  when:
+    - klipper_config_client_declared is defined
+    - klipper_config_client_declared | length == 0
+
+- name: Report that the mainsail contract holds
+  ansible.builtin.debug:
+    msg: >-
+      _CLIENT_VARIABLE: mainsail.cfg lee las
+      {{ klipper_config_client_declared | length }} variables que declaramos
+      ({{ klipper_config_client_declared | sort | join(', ') }}).
+  when:
+    - klipper_config_client_drift is defined
+    - klipper_config_client_declared | length > 0
+    - klipper_config_client_drift | length == 0
+
+- name: Warn that mainsail.cfg stopped reading part of _CLIENT_VARIABLE
+  ansible.builtin.debug:
+    msg:
+      - "EL CONTRATO CON MAINSAIL.CFG SE ROMPIO, Y SE ROMPIO EN SILENCIO"
+      - "Estas variables de _CLIENT_VARIABLE no las lee nadie:"
+      - "  {{ klipper_config_client_drift | sort | join(', ') }}"
+      - "Klipper arranca igual y no avisa: los macros de mainsail vuelven a sus"
+      - "defaults. Con park_at_cancel eso significa que una impresion cancelada"
+      - "deja el nozzle sobre la pieza hasta que se enfria solo."
+      - "Como se llaman ahora sale de:"
+      - "  grep -o 'client\\.[a-z_]*' {{ klipper_config_dir }}/{{ klipper_config_mainsail_file }} | sort -u"
+      - "y el bloque a corregir esta en versions/<CURRENT>/macros.cfg de nd.printer."
+  when:
+    - klipper_config_client_drift is defined
+    - klipper_config_client_drift | length > 0
+
+- name: Fail on a broken mainsail contract
+  # Falla por defecto EN ESTE ROLE y sólo acá: el bloque se acaba de desplegar,
+  # y desplegar algo que no tiene efecto es un deploy fallido, no un aviso. El
+  # role mainsailos llama a este mismo archivo con el flag en false, porque allá
+  # venimos de actualizar el stack entero y abortar el resto de la corrida por
+  # algo que no impide imprimir sería peor que el problema.
+  ansible.builtin.fail:
+    msg: >-
+      _CLIENT_VARIABLE declara {{ klipper_config_client_drift | sort | join(', ') }},
+      que mainsail.cfg no lee: desplegar ese bloque no hizo nada.
+  when:
+    - klipper_config_fail_on_mainsail_drift | bool
+    - klipper_config_client_drift is defined
+    - klipper_config_client_drift | length > 0
