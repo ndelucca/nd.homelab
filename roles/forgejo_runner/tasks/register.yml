@@ -41,3 +41,29 @@
     XDG_RUNTIME_DIR: "/run/user/{{ forgejo_runner_uid }}"
     FR_TOKEN: "{{ forgejo_runner_registration_token }}"
   no_log: true
+
+# El registro de arriba es one-shot (`creates: .runner`), así que cambiar
+# forgejo_runner_labels re-templatea config.yml pero deja las labels VIEJAS dentro de
+# .runner. Queda una divergencia silenciosa entre las dos fuentes: ambigüedad sobre qué
+# imagen usa realmente cada label, y una trampa para el que lea .runner para entenderlo.
+# Se reconcilia en su lugar, sin re-registrar: así se conserva la identidad del runner
+# (id/uuid/token) y no queda un runner huérfano offline en Forgejo.
+- name: Read the runner registration state
+  ansible.builtin.slurp:
+    src: "{{ forgejo_runner_data_dir }}/.runner"
+  become: true
+  become_user: "{{ forgejo_runner_user }}"
+  register: forgejo_runner_state_raw
+  no_log: true  # .runner lleva el token de auth del runner
+
+- name: Reconcile the labels recorded at registration with the configured ones
+  ansible.builtin.copy:
+    content: "{{ (forgejo_runner_state_raw.content | b64decode | from_json) | combine({'labels': forgejo_runner_labels}) | to_nice_json }}"
+    dest: "{{ forgejo_runner_data_dir }}/.runner"
+    owner: "{{ forgejo_runner_user }}"
+    group: "{{ forgejo_runner_group }}"
+    mode: '0644'
+  become: true
+  when: (forgejo_runner_state_raw.content | b64decode | from_json).labels != forgejo_runner_labels
+  notify: Container restart
+  no_log: true  # el contenido reescrito incluye el token; no debe aparecer en --diff
