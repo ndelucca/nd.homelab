@@ -1,0 +1,87 @@
+---
+# Variables por defecto del role os_update.
+#
+# Upgrade de los paquetes del SO Fedora del home server. Es el equivalente para el
+# servidor de lo que `mainsailos` es para la Raspberry: una orquestación liviana sobre
+# `dnf upgrade`, con backup previo, reboot bajo bandera y verificación posterior.
+#
+# NO va en site.yml a propósito: site.yml es convergencia de configuración y debe poder
+# correrse en cualquier momento; esto mueve el kernel y systemd y pide una ventana.
+
+# --- Gate de backup -----------------------------------------------------------------
+# Antes de mover paquetes bajo los pies de los servicios, exigir que exista un snapshot
+# de restic reciente. Se reusa el umbral del dead-man's-switch del role backup para no
+# tener dos números que se contradigan.
+os_update_require_fresh_backup: true
+os_update_max_backup_age_hours: "{{ backup_freshness_max_age_hours | default(26) }}"
+# Disparar backup.service y esperarlo antes del upgrade. El gate de arriba igual corre
+# después, así que un backup que falla en silencio no pasa desapercibido.
+os_update_run_backup: true
+os_update_backup_timeout: 1800   # segundos de espera a que termine backup.service
+
+# --- Upgrade ------------------------------------------------------------------------
+# true => sólo advisories de seguridad (`dnf upgrade --security`). El default es el
+# upgrade completo: en Fedora quedarse a mitad de camino entre releases de paquetes
+# genera más problemas de dependencias de los que evita.
+os_update_security_only: false
+os_update_autoremove: true
+
+# --- Reboot -------------------------------------------------------------------------
+# `dnf needs-restarting -r` decide; esta bandera sólo autoriza. Poner false para que
+# avise en vez de reiniciar.
+os_update_reboot_if_required: true
+os_update_reboot_timeout: 900
+os_update_post_reboot_delay: 30
+
+# --- Verificación -------------------------------------------------------------------
+# Reintentos de los chequeos de units. Tras un reboot en frío hay carreras de arranque
+# que se resuelven solas (ver el comentario en tasks/verify.yml), así que se espera en vez
+# de fallar al primer vistazo. 12 x 15s = hasta 3 min por unit.
+os_update_service_retries: 12
+os_update_service_delay: 15
+
+# Usuario dueño de los contenedores rootless (sus units son de usuario, no de sistema).
+os_update_service_user: "{{ app_storage_user | default('ndelucca') }}"
+os_update_service_uid: "{{ app_storage_uid | default(1000) }}"
+
+# Units de sistema. Cockpit se verifica por su socket: el .service es activado por él y
+# está parado mientras nadie tenga la UI abierta, así que exigirlo `active` daría falso rojo.
+os_update_system_services:
+  - AdGuardHome.service
+  - nginx.service
+  - firewalld.service
+  - jellyfin.service
+  - filebrowser.service
+  - cloud-torrent.service
+os_update_system_sockets:
+  - cockpit.socket
+
+# Units de usuario (Quadlet). Vuelven solas en el boot porque `ndelucca` tiene lingering
+# habilitado; si eso se rompe, es exactamente lo que este paso tiene que detectar.
+os_update_user_services:
+  - forgejo.service
+  - forgejo-runner.service
+  - immich-pod.service
+  - kavita.service
+  - uptime-kuma.service
+  - nd_market.service
+
+# Vhosts a golpear de punta a punta después del reboot. Se resuelven contra el propio
+# server para no depender del resolver del nodo de control.
+os_update_http_checks:
+  - {subdomain: "gallery", codes: [200, 302]}
+  - {subdomain: "books", codes: [200, 302]}
+  - {subdomain: "git", codes: [200, 302]}
+  - {subdomain: "status", codes: [200, 302]}
+  - {subdomain: "files", codes: [200, 302]}
+  - {subdomain: "torrent", codes: [200, 302, 401]}
+  - {subdomain: "jellyfin", codes: [200, 302]}
+  - {subdomain: "market", codes: [200, 302]}
+  - {subdomain: "adguard", codes: [200, 302]}
+  - {subdomain: "cockpit", codes: [200, 302]}
+
+# Dominios a resolver contra AdGuard para probar que el DNS de la casa volvió. El
+# watchdog de service_maintenance existe justamente porque AdGuard falla en cold-boot.
+os_update_dns_checks:
+  - {name: "{{ base_domain }}", expect: "192.168.10.10"}
+  - {name: "git.{{ base_domain }}", expect: "192.168.10.10"}

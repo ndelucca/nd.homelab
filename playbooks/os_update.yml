@@ -1,0 +1,34 @@
+---
+# Actualizar los paquetes del SO Fedora del home server.
+#
+# Es el gemelo de mainsailos_update.yml para el servidor. Hace `dnf upgrade`, reinicia
+# sólo si el SO lo pide, y verifica que TODO haya vuelto: units de sistema, containers
+# rootless, cada vhost por HTTPS y la resolución de AdGuard.
+#
+# Deliberadamente FUERA de site.yml: site.yml converge configuración y tiene que poder
+# correrse cuando sea; esto mueve el kernel y systemd, y necesita una ventana.
+#
+# Ojo: éste es el ÚNICO camino por el que se actualizan Jellyfin (RPMFusion), podman,
+# nginx, restic y el kernel — todas las tareas dnf de los roles usan `state: present`.
+#
+# SIEMPRE limitar al servidor; nunca a la Raspberry (el preflight aborta igual si el
+# host no es Fedora, pero el -l es la barrera principal).
+#
+# Uso:
+#   ansible-playbook playbooks/os_update.yml -l ndelucca-server --check --diff
+#   ansible-playbook playbooks/os_update.yml -l ndelucca-server
+#   ansible-playbook playbooks/os_update.yml -l ndelucca-server \
+#       -e os_update_reboot_if_required=false   # avisar en vez de auto-reiniciar
+#   ansible-playbook playbooks/os_update.yml -l ndelucca-server \
+#       -e os_update_security_only=true         # sólo advisories de seguridad
+#   ansible-playbook playbooks/os_update.yml -l ndelucca-server --tags verify
+#
+# NO cubre `dnf system-upgrade` (salto de release de Fedora): eso es manual.
+
+- name: Update the Fedora home server
+  hosts: homeservers
+  gather_facts: true
+
+  roles:
+    - role: os_update
+      tags: ['os_update', 'server', 'update']

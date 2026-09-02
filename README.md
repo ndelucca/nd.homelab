@@ -60,6 +60,7 @@ playbooks/
   hosts.yml                         # gestionar entradas de /etc/hosts
   remove_adguard.yml                # desmontar la instalación de AdGuard
   update.yml                        # reportar actualizaciones disponibles de imágenes de contenedor
+  os_update.yml                     # dnf upgrade del server: backup, reboot condicional y verificación
 roles/<role>/                       # un role por incumbencia: tasks/ defaults/ templates/ handlers/ meta/
 docs/                               # BOOTSTRAP, RESTORE, TLS-AND-DNS, ADGUARD_CONFIG_SETUP
 raspberry-scripts/                  # helpers sueltos para las Raspberry Pi (pendientes de refactor)
@@ -151,6 +152,22 @@ persistente de Mitogen; ese var es inerte cuando Mitogen está apagado.
   variable de versión en el `defaults/main.yml` del role y re-corriendo con el
   tag de ese role. `playbooks/update.yml` reporta cuándo hay imágenes más nuevas
   disponibles upstream.
+- **Los paquetes del SO NO se mueven con `site.yml`**: todas las tareas `dnf`
+  usan `state: present`, así que `site.yml` converge configuración pero nunca
+  actualiza kernel, podman, nginx, openssl, restic ni Jellyfin (RPMFusion). Para
+  eso está `playbooks/os_update.yml`, el gemelo de `mainsailos_update.yml` para
+  el servidor: exige un snapshot restic fresco antes de tocar nada, hace `dnf
+  upgrade`, reinicia sólo si el SO lo pide y después verifica units de sistema,
+  containers rootless, cada vhost por HTTPS y la resolución de AdGuard. Necesita
+  una ventana, así que vive fuera de `site.yml`.
+
+  ```sh
+  ansible-playbook playbooks/os_update.yml -l ndelucca-server --check
+  ansible-playbook playbooks/os_update.yml -l ndelucca-server
+  ansible-playbook playbooks/os_update.yml -l ndelucca-server -e os_update_reboot_if_required=false
+  ```
+
+  No cubre `dnf system-upgrade` (salto de release de Fedora): eso es manual.
 
 ## Backups y recuperación ante desastres
 

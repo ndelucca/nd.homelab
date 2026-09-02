@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  author: Naza
+  description: >-
+    Upgrade the Fedora home server's OS packages with a verified backup gate, a
+    conditional reboot and end-to-end verification of every service afterwards.
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+
+  galaxy_tags:
+    - fedora
+    - dnf
+    - update
+    - homeserver
+
+dependencies: []
+
+collections:
+  - ansible.builtin

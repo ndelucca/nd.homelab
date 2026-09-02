@@ -1,0 +1,50 @@
+---
+# `dnf upgrade` de todo el sistema. Es la única vía por la que se actualizan Jellyfin
+# (RPMFusion), podman, nginx, restic y el kernel: todas las tareas dnf del repo usan
+# `state: present`, así que sin esto nada se mueve nunca.
+
+- name: List available upgrades
+  ansible.builtin.command: >-
+    dnf --refresh -q check-update {{ '--security' if os_update_security_only | bool else '' }}
+  register: os_update_available
+  changed_when: false
+  # check-update sale 100 cuando HAY updates, 0 cuando no hay: ninguno de los dos es error.
+  failed_when: os_update_available.rc not in [0, 100]
+  check_mode: false
+
+# Se guarda ANTES de actualizar y se reporta al final. Podría parecer más natural
+# diffear el set de paquetes antes/después, pero el backend dnf5 de Fedora devuelve
+# `results` vacío en el módulo dnf, así que la lista de check-update es la única fuente
+# fiable de "qué se movió" sin agregar tareas extra.
+- name: Record the packages pending an upgrade
+  ansible.builtin.set_fact:
+    os_update_pending_packages: >-
+      {{ os_update_available.stdout_lines
+         | reject('equalto', '')
+         | reject('search', '^(Upgrades|Obsoleting|Installing|Last metadata)')
+         | map('split') | map('first') | list | sort }}
+
+- name: Report what would be upgraded
+  ansible.builtin.debug:
+    msg: >-
+      {{ os_update_pending_packages | length }} package(s) with updates
+      available{{ ' (security only)' if os_update_security_only | bool else '' }}:
+      {{ os_update_pending_packages | join(', ') if os_update_pending_packages else 'none' }}
+
+- name: Upgrade packages
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+    security: "{{ os_update_security_only | bool }}"
+    update_cache: true
+  become: true
+  register: os_update_result
+  when: not ansible_check_mode
+
+- name: Remove packages no longer required
+  ansible.builtin.dnf:
+    autoremove: true
+  become: true
+  when:
+    - os_update_autoremove | bool
+    - not ansible_check_mode

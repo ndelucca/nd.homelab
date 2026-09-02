@@ -1,0 +1,136 @@
+---
+# Verificación de punta a punta. `systemctl is-active` no alcanza: un bump de podman
+# puede cambiar la generación de Quadlet y dejar un container arriba pero roto, así que
+# además se golpea cada vhost por HTTP y se prueba el DNS de la casa.
+#
+# Todos los chequeos de units REINTENTAN en vez de mirar una sola vez. Después de un
+# reboot en frío hay carreras de arranque legítimas que se resuelven solas: el ejemplo
+# real es forgejo-runner, que arranca, intenta declararse contra git.<dominio>, se come
+# un 502 de NGINX porque el contenedor de Forgejo todavía no está listo, sale con error
+# y systemd lo reintenta a los 30s. Sin reintentos acá eso daba un rojo falso.
+
+- name: Check system services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+  register: os_update_system_state
+  loop: "{{ os_update_system_services }}"
+  loop_control:
+    label: "{{ item }}"
+  become: true
+  until: os_update_system_state.status.ActiveState == "active"
+  retries: "{{ os_update_service_retries | int }}"
+  delay: "{{ os_update_service_delay | int }}"
+  failed_when: false
+  changed_when: false
+
+- name: Assert system services are active
+  ansible.builtin.assert:
+    that:
+      - item.status.ActiveState == "active"
+    fail_msg: "System unit {{ item.item }} is {{ item.status.ActiveState }} (expected active)."
+    success_msg: "{{ item.item }} is active."
+  loop: "{{ os_update_system_state.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check listening sockets
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+  register: os_update_socket_state
+  loop: "{{ os_update_system_sockets }}"
+  loop_control:
+    label: "{{ item }}"
+  become: true
+
+- name: Assert sockets are listening
+  ansible.builtin.assert:
+    that:
+      - item.status.ActiveState in ["active", "listening"]
+    fail_msg: "Socket {{ item.item }} is {{ item.status.ActiveState }} (expected active/listening)."
+    success_msg: "{{ item.item }} is listening."
+  loop: "{{ os_update_socket_state.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check rootless container units
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    scope: user
+  become: true
+  become_user: "{{ os_update_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ os_update_service_uid }}"
+  register: os_update_user_state
+  loop: "{{ os_update_user_services }}"
+  loop_control:
+    label: "{{ item }}"
+  until: os_update_user_state.status.ActiveState == "active"
+  retries: "{{ os_update_service_retries | int }}"
+  delay: "{{ os_update_service_delay | int }}"
+  failed_when: false
+  changed_when: false
+
+- name: Assert rootless container units are active
+  ansible.builtin.assert:
+    that:
+      - item.status.ActiveState == "active"
+    fail_msg: >-
+      User unit {{ item.item }} is still '{{ item.status.ActiveState }}' after
+      {{ os_update_service_retries }} attempts (expected active). Check
+      `journalctl --user -u {{ item.item }}` — a podman bump can change Quadlet generation.
+    success_msg: "{{ item.item }} is active."
+  loop: "{{ os_update_user_state.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+# Resuelto contra el propio server (--resolve) para probar NGINX aunque el DNS todavía
+# no haya vuelto; el DNS se prueba aparte, abajo.
+- name: Hit every vhost end to end
+  ansible.builtin.uri:
+    url: "https://{{ item.subdomain }}.{{ base_domain }}/"
+    validate_certs: false
+    status_code: "{{ item.codes }}"
+    follow_redirects: none
+    timeout: 20
+  register: os_update_http
+  loop: "{{ os_update_http_checks }}"
+  loop_control:
+    label: "{{ item.subdomain }}"
+  retries: 5
+  delay: 10
+  until: os_update_http is succeeded
+  become: false
+  changed_when: false
+  check_mode: false
+
+- name: Resolve names against AdGuard
+  ansible.builtin.command: dig @127.0.0.1 {{ item.name }} +short +time=3 +tries=2
+  register: os_update_dns
+  loop: "{{ os_update_dns_checks }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Assert AdGuard still answers the split-horizon names
+  ansible.builtin.assert:
+    that:
+      - item.item.expect in item.stdout
+    fail_msg: >-
+      AdGuard did not resolve {{ item.item.name }} to {{ item.item.expect }}
+      (got '{{ item.stdout | trim }}'). The service_maintenance watchdog restarts AdGuard
+      after a cold boot — give it a minute and re-check before panicking.
+    success_msg: "{{ item.item.name }} -> {{ item.stdout | trim }}"
+  loop: "{{ os_update_dns.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+# Es lo primero que hay que mirar si algo no volvió después del reboot.
+- name: Report which packages were upgraded
+  ansible.builtin.debug:
+    msg: >-
+      {{ os_update_pending_packages | default([]) | length }} package(s) upgraded:
+      {{ os_update_pending_packages | default([]) | join(', ') if os_update_pending_packages | default([])
+         else 'none' }}
+  when: not ansible_check_mode
