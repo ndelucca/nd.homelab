@@ -5,7 +5,7 @@ self-hosted — como contenedor Podman rootless gestionado por systemd Quadlet e
 Fedora.
 
 Sigue el mismo patrón que los otros roles de contenedor de este repositorio
-(Immich, Kavita, Home Assistant): el contenedor escucha en `127.0.0.1` y se sirve
+(Immich, Kavita, Uptime-Kuma): el contenedor escucha en `127.0.0.1` y se sirve
 a la LAN a través del reverse proxy central de NGINX, con un subdominio dedicado y
 un rewrite de DNS de AdGuard.
 

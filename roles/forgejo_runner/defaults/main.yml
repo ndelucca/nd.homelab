@@ -18,9 +18,13 @@ forgejo_runner_quadlet_dir: /etc/containers/systemd/users  # Containers de usuar
 forgejo_runner_container_name: forgejo-runner
 forgejo_runner_service_name: forgejo-runner  # unit forgejo-runner.container -> forgejo-runner.service
 
-# Pineado a la serie v12 para acompañar la instancia de Forgejo 15.x LTS.
-# Última v12 al 2026-07: 12.13.0.
-forgejo_runner_version: "12.13.0"
+# Pineado a la serie v13 para acompañar la instancia de Forgejo 16.x.
+# La v13 trae breaking changes de Actions (se removieron los workflow commands
+# set-output / set-env / add-path, el contexto ${{ gitea.* }}, las env vars GITEA_*,
+# la auth de registry por secrets DOCKER_USERNAME/DOCKER_PASSWORD, y la config
+# container.network_mode). Nada de eso lo usa el workflow de nd.market; si se agregan
+# workflows nuevos, revisar contra las release notes de v13.0.0 antes de subir el pin.
+forgejo_runner_version: "13.1.0"
 forgejo_runner_image: "code.forgejo.org/forgejo/runner:{{ forgejo_runner_version }}"
 
 # Instancia contra la que registra. Se usa el dominio interno (resuelto por AdGuard a la
@@ -37,7 +41,7 @@ forgejo_runner_name: "{{ inventory_hostname }}"
 # NOTA: construir imágenes dentro de contenedores rootless anidados es la parte más
 # delicada; puede requerir `--isolation chroot` (o privilegios) — es el punto de iteración.
 forgejo_runner_labels:
-  - "docker:docker://node:20-bookworm"
+  - "docker:docker://node:22-bookworm"
   - "buildah:docker://quay.io/buildah/stable"
   - "native:host"
 

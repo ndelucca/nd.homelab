@@ -1,0 +1,59 @@
+---
+# Reinicia sólo si el SO dice que hace falta, y sólo si la bandera lo autoriza.
+# `needs-restarting -r` sale 0 cuando NO hace falta y 1 cuando sí: no es un error.
+
+- name: Check whether a reboot is required
+  ansible.builtin.command: dnf needs-restarting -r
+  register: os_update_needs_reboot
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Report reboot status
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'A reboot IS required (new kernel/core libraries).'
+         if os_update_needs_reboot.rc == 1
+         else 'No reboot required.' }}
+
+- name: Reboot the server to apply kernel/core updates
+  ansible.builtin.reboot:
+    msg: "Rebooting to apply OS updates (os_update)"
+    reboot_timeout: "{{ os_update_reboot_timeout | int }}"
+    post_reboot_delay: "{{ os_update_post_reboot_delay | int }}"
+    test_command: systemctl is-system-running --wait || true
+  become: true
+  when:
+    - os_update_needs_reboot.rc == 1
+    - os_update_reboot_if_required | bool
+    - not ansible_check_mode
+
+# Las units de usuario (Quadlet) las levanta el manager de usuario, que arranca por
+# lingering DESPUÉS de que sshd ya acepta conexiones. Sin esta espera, verify.yml
+# correría contra un manager a medio arrancar y daría rojos falsos.
+- name: Wait for the user manager to finish starting the container units  # noqa: command-instead-of-module
+  ansible.builtin.command: systemctl --user is-system-running
+  become: true
+  become_user: "{{ os_update_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ os_update_service_uid }}"
+  register: os_update_user_manager
+  until: os_update_user_manager.stdout in ['running', 'degraded']
+  retries: 30
+  delay: 10
+  changed_when: false
+  failed_when: false
+  when:
+    - os_update_needs_reboot.rc == 1
+    - os_update_reboot_if_required | bool
+    - not ansible_check_mode
+
+- name: Warn that a reboot is pending but was not performed
+  ansible.builtin.debug:
+    msg: >-
+      REBOOT REQUIRED but os_update_reboot_if_required is false. Reboot manually, or
+      re-run with -e os_update_reboot_if_required=true. Until then the running kernel
+      and libraries are the old ones.
+  when:
+    - os_update_needs_reboot.rc == 1
+    - not (os_update_reboot_if_required | bool)

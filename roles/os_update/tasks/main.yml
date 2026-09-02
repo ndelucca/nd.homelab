@@ -1,0 +1,24 @@
+---
+# Punto de entrada del role os_update.
+# El orden importa: no tocar paquetes sin un backup verificado, y no declarar el
+# upgrade exitoso sin haber visto los servicios volver.
+
+- name: Run preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['os_update', 'preflight']
+
+- name: Back up before upgrading
+  ansible.builtin.import_tasks: backup.yml
+  tags: ['os_update', 'backup']
+
+- name: Upgrade OS packages
+  ansible.builtin.import_tasks: upgrade.yml
+  tags: ['os_update', 'upgrade']
+
+- name: Reboot if the OS requires it
+  ansible.builtin.import_tasks: reboot.yml
+  tags: ['os_update', 'reboot']
+
+- name: Verify services and report what changed
+  ansible.builtin.import_tasks: verify.yml
+  tags: ['os_update', 'verify']

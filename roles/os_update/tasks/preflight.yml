@@ -1,0 +1,55 @@
+---
+# Controles que deben pasar antes de tocar un solo paquete.
+
+- name: Assert the target is a Fedora host (never run on the Debian printer)
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == "Fedora"
+    fail_msg: >-
+      os_update only supports the Fedora home server, but this host is
+      {{ ansible_facts['distribution'] }} ({{ ansible_facts['os_family'] }}). Refusing to run.
+    success_msg: "Host is Fedora {{ ansible_facts['distribution_version'] }} - OK."
+
+# Un upgrade que arranca sobre un servicio ya roto deja imposible saber después si lo
+# rompió el upgrade. Se exige salir de un estado limpio.
+# No hay módulo que enumere units en estado failed: `systemd` opera sobre una unit
+# concreta. La consulta es de sólo lectura.
+- name: Collect failed system units  # noqa: command-instead-of-module
+  ansible.builtin.command: systemctl list-units --state=failed --no-legend --plain
+  register: os_update_failed_system
+  changed_when: false
+  check_mode: false
+
+- name: Collect failed user units  # noqa: command-instead-of-module
+  ansible.builtin.command: systemctl --user list-units --state=failed --no-legend --plain
+  become: true
+  become_user: "{{ os_update_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ os_update_service_uid }}"
+  register: os_update_failed_user
+  changed_when: false
+  check_mode: false
+
+- name: Abort if anything is already failed
+  ansible.builtin.assert:
+    that:
+      - os_update_failed_system.stdout | trim | length == 0
+      - os_update_failed_user.stdout | trim | length == 0
+    fail_msg: |-
+      There are failed units BEFORE the upgrade. Fix them first, otherwise there is no
+      way to tell afterwards whether the upgrade caused the breakage.
+        system: {{ os_update_failed_system.stdout | trim | default('none') }}
+        user:   {{ os_update_failed_user.stdout | trim | default('none') }}
+    success_msg: "No failed units - OK."
+
+- name: Check free space on the root filesystem
+  ansible.builtin.assert:
+    that:
+      - (ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | first).size_available > 5368709120
+    fail_msg: >-
+      Less than 5 GiB free on / — a dnf upgrade that downloads a new kernel and container
+      images can fill it. Free space first.
+    success_msg: >-
+      / has
+      {{ ((ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | first).size_available / 1073741824) | round(1) }}
+      GiB free - OK.

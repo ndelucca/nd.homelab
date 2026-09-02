@@ -1,0 +1,92 @@
+---
+# Backup previo. Dispara la MISMA unit que el timer diario (no una ruta paralela que
+# podría divergir), la espera, y recién después verifica frescura contra el repo.
+
+- name: Trigger the daily backup unit
+  ansible.builtin.systemd:
+    name: backup.service
+    state: started
+    scope: user
+  become: true
+  become_user: "{{ os_update_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ os_update_service_uid }}"
+  when:
+    - os_update_run_backup | bool
+    - not ansible_check_mode
+
+- name: Wait for the backup to finish
+  ansible.builtin.systemd:
+    name: backup.service
+    scope: user
+  become: true
+  become_user: "{{ os_update_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ os_update_service_uid }}"
+  register: os_update_backup_state
+  until: os_update_backup_state.status.ActiveState != "activating"
+  retries: "{{ (os_update_backup_timeout | int / 10) | int }}"
+  delay: 10
+  changed_when: false
+  when:
+    - os_update_run_backup | bool
+    - not ansible_check_mode
+
+# Result es lo que systemd recuerda del ÚLTIMO arranque de la unit: distingue un
+# 'inactive' porque terminó bien de un 'inactive' porque explotó.
+- name: Assert the backup unit exited cleanly
+  ansible.builtin.assert:
+    that:
+      - os_update_backup_state.status.Result == "success"
+    fail_msg: >-
+      backup.service last exited with Result='{{ os_update_backup_state.status.Result }}'
+      (expected 'success'). Check `journalctl --user -u backup.service`. Refusing to
+      upgrade without a good backup.
+    success_msg: "backup.service exited cleanly - OK."
+  when:
+    - os_update_run_backup | bool
+    - not ansible_check_mode
+
+# Los defaults de otro role no están en scope acá. Se carga el archivo del role backup en
+# vez de re-derivar backup_repo/backup_password_file, para que la ruta del repo tenga una
+# sola fuente de verdad y no derive si cambia allá.
+- name: Load the backup role's defaults to locate the restic repository
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../roles/backup/defaults/main.yml"
+  when: os_update_require_fresh_backup | bool
+
+# Gate independiente de la unit: le pregunta al repo, no a systemd. Cubre el caso en que
+# la unit "terminó bien" pero no dejó snapshot (disco desmontado, repo vacío).
+- name: Read the age in hours of the latest restic snapshot
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: |
+      set -o pipefail
+      restic snapshots --json --latest 1 --no-lock 2>/dev/null | python3 -c '
+      import sys, json, re, datetime, time
+      d = json.load(sys.stdin)
+      t = re.sub(r"\.\d+", "", d[-1]["time"])
+      age = time.time() - datetime.datetime.fromisoformat(t).timestamp()
+      print(int(age // 3600))
+      '
+  environment:
+    RESTIC_REPOSITORY: "{{ backup_repo }}"
+    RESTIC_PASSWORD_FILE: "{{ backup_password_file }}"
+  become: true
+  become_user: "{{ os_update_service_user }}"
+  register: os_update_snapshot_age
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: os_update_require_fresh_backup | bool
+
+- name: Assert the latest snapshot is fresh enough
+  ansible.builtin.assert:
+    that:
+      - os_update_snapshot_age.rc == 0
+      - os_update_snapshot_age.stdout | trim | int <= (os_update_max_backup_age_hours | int)
+    fail_msg: >-
+      Could not confirm a restic snapshot newer than {{ os_update_max_backup_age_hours }}h
+      (got: '{{ os_update_snapshot_age.stdout | default('') | trim }}'). Refusing to upgrade.
+    success_msg: "Latest restic snapshot is {{ os_update_snapshot_age.stdout | trim }}h old - OK."
+  when: os_update_require_fresh_backup | bool

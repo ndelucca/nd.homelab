@@ -1,6 +1,0 @@
----
-# Los handlers de este role los provee el role compartido container_base (incluido
-# desde tasks/install.yml). Este rol pasa el contrato vía el vars: de cada include_role
-# (container_base_user/uid/service_name/selinux_paths) y notifica los
-# handlers genéricos: `container daemon-reload-user`, `container restart`,
-# `container apply selinux context`.
