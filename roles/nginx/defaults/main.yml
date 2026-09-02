@@ -32,8 +32,6 @@ nginx_cloud_torrent_port: 9091
 nginx_cockpit_port: 9090
 nginx_immich_port: 2283
 nginx_kavita_port: 5000
-nginx_orcaslicer_port: 3001
-nginx_home_assistant_port: 8123
 nginx_forgejo_port: 3000
 nginx_uptime_kuma_port: 3011
 nginx_nd_market_port: 28310
@@ -42,7 +40,7 @@ nginx_nd_market_port: 28310
 # conf.d/10-services.conf.j2 (un redirect HTTP->HTTPS + un bloque server HTTPS
 # cada uno, con cert compartido + headers de seguridad + X-Forwarded-*). Los
 # vhosts a medida que necesitan locations nombradas extra o un upstream atípico
-# (jellyfin /socket + CSP, cloud-torrent SSE, orcaslicer https/no-http2)
+# (jellyfin /socket + CSP, cloud-torrent SSE)
 # conservan su propio conf.d/*.conf.j2.
 # Parámetros por entrada:
 #   subdomain         '' = apex ({{ nginx_domain }}), si no <sub>.{{ nginx_domain }}
@@ -57,7 +55,6 @@ nginx_vhosts:
   - {subdomain: "adguard", port: "{{ nginx_adguard_port }}"}
   - {subdomain: "books", port: "{{ nginx_kavita_port }}"}
   - {subdomain: "git", port: "{{ nginx_forgejo_port }}", client_max_body_size: "0"}
-  - {subdomain: "home", port: "{{ nginx_home_assistant_port }}"}
   - {subdomain: "status", port: "{{ nginx_uptime_kuma_port }}"}
   # nd.market usa Server-Sent Events (/stream/{symbol}, /claude/stream/{id}), no WebSockets:
   # sin proxy_buffering off los precios en vivo se acumulan en el buffer y no llegan.

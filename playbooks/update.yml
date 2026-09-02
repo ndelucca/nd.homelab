@@ -2,8 +2,8 @@
 # Helper de actualización a demanda.
 #
 # Las imágenes de contenedor ahora están FIJADAS en los defaults de cada rol
-# (immich_version, home_assistant_version, monitoring_version, digest de
-# kavita_image, forgejo_version, orcaslicer_image, ...). Las actualizaciones son
+# (immich_version, monitoring_version, digest de
+# kavita_image, forgejo_version, adguard_version, ...). Las actualizaciones son
 # deliberadas y quedan registradas en git:
 #
 #   1. Subir la variable de versión/digest en roles/<app>/defaults/main.yml

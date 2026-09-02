@@ -20,7 +20,7 @@ monitoring_data_dir: "{{ monitoring_base_dir }}/data"
 monitoring_quadlet_dir: /etc/containers/systemd/users  # containers de usuario gestionados por el sistema
 
 # Solo localhost; NGINX maneja el acceso externo.
-monitoring_port: 3011        # puerto del host (3011 está libre; 3001 es OrcaSlicer)
+monitoring_port: 3011        # puerto del host (3011 está libre)
 monitoring_container_port: 3001
 monitoring_host: 127.0.0.1
 
@@ -60,10 +60,8 @@ monitoring_service_ports:
   kavita: 5000                                           # kavita_port
   filebrowser: "{{ filebrowser_port | default(8080) }}"  # group var (services.yml)
   cloud_torrent: 9091                                    # cloud_torrent_port
-  home_assistant: 8123                                   # home_assistant_port
   cockpit: 9090                                          # puerto fijo del socket de Cockpit
   adguard: 8081                                          # adguard_admin_port
-  orcaslicer: 3001                                       # orcaslicer_port
   nginx: 443                                             # HTTPS de NGINX
 
 # Checks HTTP(S), uno por servicio, golpeados directamente en el loopback del host
@@ -76,10 +74,8 @@ monitoring_http_checks:
   - {name: "Kavita (books)", url: "http://127.0.0.1:{{ monitoring_service_ports.kavita }}"}
   - {name: "FileBrowser (files)", url: "http://127.0.0.1:{{ monitoring_service_ports.filebrowser }}"}
   - {name: "Cloud Torrent", url: "http://127.0.0.1:{{ monitoring_service_ports.cloud_torrent }}/healthz"}  # endpoint de liveness, exento de auth
-  - {name: "Home Assistant", url: "http://127.0.0.1:{{ monitoring_service_ports.home_assistant }}"}
   - {name: "Cockpit", url: "https://127.0.0.1:{{ monitoring_service_ports.cockpit }}"}
   - {name: "AdGuard Home", url: "http://127.0.0.1:{{ monitoring_service_ports.adguard }}"}
-  - {name: "OrcaSlicer", url: "https://127.0.0.1:{{ monitoring_service_ports.orcaslicer }}", accepted_codes: ["200-499"]}  # 401 = arriba, requiere auth
   - {name: "NGINX (reverse proxy)", url: "https://127.0.0.1:{{ monitoring_service_ports.nginx }}"}
 
 # Rangos de códigos de estado HTTP aceptados (tolerar redirecciones a login/dashboards).

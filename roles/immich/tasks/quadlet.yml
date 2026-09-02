@@ -12,7 +12,7 @@
   notify:
     - Container daemon-reload-user
     # Volumen category-less (hostPath sin :Z): relabelear a container_file_t:s0 ANTES del restart,
-    # o el container nuevo crashea contra la categoría MCS vieja (mismo caso que kavita/orcaslicer).
+    # o el container nuevo crashea contra la categoría MCS vieja (mismo caso que kavita).
     - Container apply selinux context
     - Container restart
 

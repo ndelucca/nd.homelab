@@ -40,12 +40,6 @@
     - role: kavita
       tags: ['kavita', 'books', 'reading']
 
-    - role: orcaslicer
-      tags: ['orcaslicer', '3dprint', 'slicer']
-
-    - role: home_assistant
-      tags: ['home_assistant', 'automation', 'smart-home']
-
     - role: forgejo
       tags: ['forgejo', 'git', 'vcs']
 

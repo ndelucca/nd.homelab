@@ -35,8 +35,6 @@ internet**.
 | `torrent.` | Cloud Torrent ([fork propio](https://github.com/ndelucca/nd.cloud.torrent)) | `cloud_torrent` | binario nativo |
 | `gallery.` | Immich (fotos) | `immich` | pod Podman `.kube` |
 | `books.` | Kavita (lectura) | `kavita` | Podman `.container` |
-| `slicer.` | OrcaSlicer (web) | `orcaslicer` | Podman `.container` |
-| `home.` | Home Assistant | `home_assistant` | Podman `.container` |
 | `git.` | Forgejo (+ git SSH :2222) | `forgejo` | Podman `.container` |
 | `status.` | Uptime-Kuma | `monitoring` | Podman `.container` |
 | `market.` | nd.market (Markets) | `nd_market` | Podman `.container` (Forgejo Actions) |
@@ -69,7 +67,7 @@ raspberry-scripts/                  # helpers sueltos para las Raspberry Pi (pen
 
 Los roles siguen un esqueleto consistente: `preflight → install → [configure] →
 quadlet → selinux → service`. Los roles de contenedores rootless-Podman/Quadlet
-(kavita, immich, forgejo, home_assistant, orcaslicer, monitoring) comparten su
+(kavita, immich, forgejo, monitoring, nd_market) comparten su
 **install + handlers, el paso de SELinux y el paso de service** vía el role
 **`container_base`**: cada uno los incluye por nombre (`include_role … tasks_from:
 install` / `selinux` / `service`) y expone las variables de contrato
