@@ -32,6 +32,6 @@ kavita_firewall_enabled: false  # false porque NGINX maneja el acceso externo
 kavita_manage_selinux: true
 
 # Imagen de Podman. El tag :latest de upstream flota, así que pineamos por digest por
-# reproducibilidad. Para actualizar: pullear la imagen nueva y actualizar el digest acá
-# (el digest de abajo era la imagen que corría cuando se pineó).
-kavita_image: "docker.io/jvmilazz0/kavita@sha256:ca6af7a18d7124d014702983c2364e485294f808c1552e9555f2595b7cda7982"
+# reproducibilidad. Se pinea tag + digest: el tag documenta la versión, el digest la fija.
+# Para actualizar: pullear la imagen nueva y subir ambos acá.
+kavita_image: "docker.io/jvmilazz0/kavita:0.9.1@sha256:454f2a77ac740b70c58cc7300a11122fc9ce7b7e2161ef5b0d1df8f81067cc85"
