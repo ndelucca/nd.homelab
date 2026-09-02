@@ -7,9 +7,9 @@
 # con adguard_schema_version más abajo — el config templado lleva un schema_version
 # que debe coincidir con el schema nativo del binario, o AdGuard re-migra el config
 # en cada reinicio y puede descartar campos que el template no modela. El schema
-# nativo de v0.107.77 es 34 (LastSchemaVersion de confmigrate). Poné 'latest' solo
+# nativo de v0.107.79 sigue siendo 34 (LastSchemaVersion de confmigrate). Poné 'latest' solo
 # si además dejás de templar por completo AdGuardHome.yaml. Subí ambos juntos.
-adguard_version: v0.107.77
+adguard_version: v0.107.79
 adguard_github_repo: AdguardTeam/AdGuardHome
 adguard_install_dir: /usr/local/bin
 adguard_working_dir: /opt/AdGuardHome
@@ -118,5 +118,5 @@ adguard_rewrites_enabled: true
 adguard_protection_enabled: true
 
 # Versión del schema. DEBE coincidir con el schema nativo del adguard_version fijado
-# (ver la nota allá). v0.107.77 -> 34. Subí ambos juntos al actualizar.
+# (ver la nota allá). v0.107.79 -> 34. Subí ambos juntos al actualizar.
 adguard_schema_version: 34
