@@ -45,6 +45,9 @@
     group: "{{ adguard_group }}"
     mode: '0600'
   become: true
+  # El config renderizado incluye los hashes bcrypt de adguard_users: sin no_log,
+  # `--diff` los imprime. El slurp y el set_fact de arriba ya lo hacen.
+  no_log: true
   when: adguard_configure_app | bool
   notify: restart adguardhome
 

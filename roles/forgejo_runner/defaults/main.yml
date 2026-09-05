@@ -52,7 +52,7 @@ forgejo_runner_capacity: 1  # jobs en paralelo
 forgejo_runner_forgejo_container: "{{ forgejo_container_name | default('forgejo') }}"
 
 # Token de registro. Si se deja vacío, se genera automáticamente vía la CLI del contenedor
-# de Forgejo (ver tasks/token.yml). Alternativa: setearlo vía Vault (vault_forgejo_runner_token).
+# de Forgejo (ver tasks/token.yml).
 forgejo_runner_registration_token: ""
 
 forgejo_runner_service_enabled: true

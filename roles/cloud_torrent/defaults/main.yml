@@ -56,10 +56,13 @@ cloud_torrent_enable_seeding: false
 cloud_torrent_disable_encryption: false
 
 # Autenticación (deshabilitada a pedido del usuario).
+# OJO al activar: la credencial se interpola en el ExecStart de la unit, que se
+# despliega con mode 0644 (world-readable) y además queda visible en `ps` para
+# cualquier usuario local. El servicio ya está sólo en loopback detrás de NGINX,
+# así que si necesitás auth conviene ponerla en el vhost, no acá. Si aun así la
+# activás, pasá la credencial por EnvironmentFile 0600 y bajá el mode de la unit.
 cloud_torrent_enable_auth: false
 cloud_torrent_auth_user: ""
 cloud_torrent_auth_password: ""
-
-cloud_torrent_firewall_enabled: true
 
 cloud_torrent_manage_selinux: true

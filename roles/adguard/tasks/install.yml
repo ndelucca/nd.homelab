@@ -151,7 +151,7 @@
   args:
     creates: /etc/systemd/system/{{ adguard_service_name }}.service
   notify:
-    - Daemon-reload
+    - Adguard daemon-reload
 
 - name: Override AdGuard Home service to run as ndelucca user
   ansible.builtin.lineinfile:
@@ -160,7 +160,7 @@
     line: 'User={{ adguard_user }}'
     insertafter: '^\[Service\]'
   become: true
-  notify: Daemon-reload
+  notify: Adguard daemon-reload
 
 - name: Override AdGuard Home service group
   ansible.builtin.lineinfile:
@@ -169,7 +169,7 @@
     line: 'Group={{ adguard_group }}'
     insertafter: '^User='
   become: true
-  notify: Daemon-reload
+  notify: Adguard daemon-reload
 
 - name: Set ownership of working directory
   ansible.builtin.file:

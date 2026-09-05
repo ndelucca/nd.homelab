@@ -8,7 +8,6 @@
 # Pull=newer, baja la imagen nueva; el nombre de la imagen vive en la unit, no se deriva).
 
 deploy_ssh_user: ndelucca
-deploy_ssh_group: ndelucca
 
 # Clave PÚBLICA de deploy (la privada va como secret DEPLOY_SSH_KEY a nivel usuario en
 # Forgejo). Generar el par fuera de banda:  ssh-keygen -t ed25519 -f deploy_key -C home-deploy

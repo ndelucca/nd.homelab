@@ -8,7 +8,7 @@
     mode: '0644'
   become: true
   notify:
-    - Daemon-reload
+    - Filebrowser daemon-reload
     - Restart filebrowser
 
 - name: Flush handlers to reload systemd

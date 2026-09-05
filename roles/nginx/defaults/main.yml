@@ -24,17 +24,26 @@ nginx_ssl_headers_snippet: /etc/nginx/snippets/ssl_headers.conf
 nginx_selfsigned_cert: /etc/pki/nginx/server.crt
 nginx_selfsigned_key: /etc/pki/nginx/server.key
 
-# Puertos de los servicios backend
-nginx_adguard_port: 8081
-nginx_filebrowser_port: 8080
-nginx_jellyfin_port: 8096
-nginx_cloud_torrent_port: 9091
-nginx_cockpit_port: 9090
-nginx_immich_port: 2283
-nginx_kavita_port: 5000
-nginx_forgejo_port: 3000
-nginx_uptime_kuma_port: 3011
-nginx_nd_market_port: 28310
+# Puertos de los servicios backend.
+#
+# Derivados de las vars canónicas de inventory/group_vars/homeservers/services.yml,
+# no copiados: un literal acá se desincroniza en silencio cuando la app cambia de
+# puerto y NGINX queda proxeando a un puerto muerto (502) — ya pasó con nd_market.
+#
+# OJO: la fuente tiene que ser una var de INVENTARIO. Con `private_role_vars = True`
+# (ansible.cfg) los defaults de otro rol NO son visibles desde acá, así que apuntar a
+# `kavita_port` del rol kavita caería al literal de fallback sin avisar.
+# El `| default(N)` sólo mantiene el rol utilizable fuera de este inventario.
+nginx_adguard_port: "{{ adguard_admin_port | default(8081) }}"
+nginx_filebrowser_port: "{{ filebrowser_port | default(8080) }}"
+nginx_jellyfin_port: "{{ jellyfin_http_port | default(8096) }}"
+nginx_cloud_torrent_port: "{{ cloud_torrent_port | default(9091) }}"
+nginx_cockpit_port: "{{ cockpit_port | default(9090) }}"
+nginx_immich_port: "{{ immich_port | default(2283) }}"
+nginx_kavita_port: "{{ kavita_port | default(5000) }}"
+nginx_forgejo_port: "{{ forgejo_port | default(3000) }}"
+nginx_uptime_kuma_port: "{{ monitoring_port | default(3011) }}"
+nginx_nd_market_port: "{{ nd_market_port | default(28310) }}"
 
 # Vhosts de reverse proxy renderizados desde esta lista por
 # conf.d/10-services.conf.j2 (un redirect HTTP->HTTPS + un bloque server HTTPS

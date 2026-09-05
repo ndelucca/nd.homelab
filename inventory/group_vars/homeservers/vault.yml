@@ -5,10 +5,15 @@
 # services.yml / storage.yml. Editar con:
 #   ansible-vault edit inventory/group_vars/homeservers/vault.yml
 # o re-encriptar un solo valor con:
-#   ansible-vault encrypt_string --name <var> '<value>'
+#   ansible-vault encrypt_string --name vault_<var> '<value>'
+#
+# CONVENCIÓN: toda clave de este archivo lleva el prefijo `vault_`, igual que
+# all/vault.yml. La variable que consume el rol se define en services.yml como
+# `<rol>_<cosa>: "{{ vault_<rol>_<cosa> }}"`, así al leer un rol se ve de un
+# vistazo qué valor sale del vault y cuál es config en texto plano.
 
 # Usuario admin de AdGuard Home (contraseña guardada como hash bcrypt).
-adguard_users:
+vault_adguard_users:
   - name: ndelucca
     password: !vault |
       $ANSIBLE_VAULT;1.1;AES256
@@ -23,7 +28,7 @@ adguard_users:
 # Contraseña de Postgres de Immich. Fijada a la que ya usa el Postgres en
 # ejecución, para que las re-corridas dejen de regenerarla (lo que rompería la
 # autenticación al recrear el pod).
-immich_db_password: !vault |
+vault_immich_db_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   30386330353164663531393462323862316533643066656161346439373965343739633834633065
   6466643537383136633036663361626362303430623833320a653230643532333862346239303265
@@ -34,7 +39,7 @@ immich_db_password: !vault |
 
 
 # Contraseña de admin de Forgejo.
-forgejo_admin_password: !vault |
+vault_forgejo_admin_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   33663564313962633930383837663837333233343166623839333063313462383032376466353262
   6438326364326631623933376334376130376533653931320a353463643231383138636436633231
@@ -44,7 +49,7 @@ forgejo_admin_password: !vault |
 
 # PAT de GitHub para los pull mirrors de Forgejo (scope clásico 'repo', o
 # fine-grained con lectura de Contents+Metadata).
-forgejo_github_token: !vault |
+vault_forgejo_github_token: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   39363065663939633837316536386431383631326461626465333061313435383936626339306138
   3961363066646536653164636230393436633534633134660a613734646534343838616633333763
@@ -57,7 +62,7 @@ forgejo_github_token: !vault |
 # acá Y se escribe en un archivo 0600 en el equipo, así el DR no necesita nada
 # memorizado. No es un secreto a custodiar (el disco de backup es local a la
 # misma máquina).
-backup_password: !vault |
+vault_backup_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   38363134303330306665626236633966633461303736373636323337353664323564353135343235
   3663386435343231353130643238333539623033373334340a316164343730653863353636353266
@@ -66,7 +71,7 @@ backup_password: !vault |
   31643939363334383763613131353837646531396466663032646538666261316565343836303131
   3363653166303534336631376330303066646262663034656630
 
-deploy_ssh_private_key: !vault |
+vault_deploy_ssh_private_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           38343838323430613337366638383366333265396230393035346663303639633765383438666336
           6464313164646537656463323338333736636266366534300a353363656636333565386333393331

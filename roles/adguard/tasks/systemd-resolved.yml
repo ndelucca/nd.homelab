@@ -62,10 +62,15 @@
     state: stopped
     timeout: 30
   ignore_errors: true
-  when: adguard_owns_port_53.stdout != 'owned'
+  # En check mode el shell de arriba se saltea y stdout queda vacío (el gate daría
+  # True); wait_for tampoco corre en check mode, pero el guard lo deja explícito.
+  when:
+    - not (adguard_owns_port_53.skipped | default(false))
+    - adguard_owns_port_53.stdout != 'owned'
 
 - name: Verify DNS port is free
   ansible.builtin.shell: |
+    set -o pipefail
     ss -tulnp | grep -q ":53\s" && echo "occupied" || echo "free"
   register: adguard_port_53_check
   changed_when: false

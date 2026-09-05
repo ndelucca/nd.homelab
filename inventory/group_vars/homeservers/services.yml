@@ -137,7 +137,40 @@ acme_certificates:
       - "{{ nginx_domain }}"
       - "*.{{ nginx_domain }}"
 
+# --- Secretos: indirección hacia vault.yml --------------------------------------
+# Los valores encriptados viven en vault.yml con el prefijo `vault_`; acá se mapean
+# a la variable que consume cada rol. La indirección es a propósito: al leer un rol
+# se ve de un vistazo qué sale del vault y qué es config en texto plano.
+adguard_users: "{{ vault_adguard_users }}"
+immich_db_password: "{{ vault_immich_db_password }}"
+forgejo_admin_password: "{{ vault_forgejo_admin_password }}"
+forgejo_github_token: "{{ vault_forgejo_github_token }}"
+backup_password: "{{ vault_backup_password }}"
+deploy_ssh_private_key: "{{ vault_deploy_ssh_private_key }}"
+
+# --- Puertos de los servicios: ÚNICA fuente de verdad ---------------------------
+# Viven acá, en group_vars, y no en los defaults de cada rol, porque ansible.cfg usa
+# `private_role_vars = True`: los defaults de un rol NO son visibles desde otro, así
+# que un `{{ kavita_port }}` dentro del rol nginx caería siempre a su literal de
+# fallback sin avisar. Las vars de inventario sí son de scope global, así que los
+# roles nginx y firewall pueden derivar de acá y mantenerse en sync de verdad.
+#
+# Cada rol conserva su propio default (mismo valor) para seguir siendo usable solo;
+# el valor que manda en este host es el de abajo. Al cambiar un puerto, se cambia
+# ACÁ y NGINX + firewall lo siguen automáticamente.
+adguard_admin_port: 8081
 filebrowser_port: 8080
+jellyfin_http_port: 8096
+jellyfin_https_port: 8920
+cloud_torrent_port: 9091
+cockpit_port: 9090
+immich_port: 2283
+kavita_port: 5000
+forgejo_port: 3000
+forgejo_ssh_port: 2222
+monitoring_port: 3011
+nd_market_port: 28310
+
 filebrowser_firewall_zone: FedoraServer
 filebrowser_root_dir: /srv/disks
 

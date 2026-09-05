@@ -1,0 +1,26 @@
+---
+galaxy_info:
+  author: Naza
+  description: >-
+    Local disk-to-disk backups with restic: daily snapshots of the irreplaceable
+    app state and media to the backup disk, weekly prune/check, freshness alerts
+    and a monthly restore drill. Runs entirely as the rootless service user.
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+
+  galaxy_tags:
+    - backup
+    - restic
+    - snapshots
+    - recovery
+
+dependencies: []
+
+collections:
+  - ansible.posix
+  - community.general

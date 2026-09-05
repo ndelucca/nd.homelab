@@ -44,5 +44,3 @@ jellyfin_https_port: 8920
 jellyfin_firewall_enabled: true
 
 jellyfin_manage_selinux: true
-
-jellyfin_enable_hardware_acceleration: false

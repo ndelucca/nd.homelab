@@ -1,0 +1,26 @@
+---
+galaxy_info:
+  author: Naza
+  description: >-
+    NGINX reverse proxy terminating TLS for every app on the LAN. Renders the
+    standard vhosts from nginx_vhosts, keeps a self-signed bootstrap certificate
+    as a floor, and serves each backend from loopback.
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+
+  galaxy_tags:
+    - nginx
+    - proxy
+    - tls
+    - web
+
+dependencies: []
+
+collections:
+  - ansible.posix
+  - community.general

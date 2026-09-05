@@ -34,6 +34,7 @@
 
 - name: Check availability of the service port {{ container_base_port | default('(n/a)') }}
   ansible.builtin.shell: |
+    set -o pipefail
     ss -tulnp | grep -q ":{{ container_base_port }}\s" && echo "occupied" || echo "available"
   register: container_base_port_check
   changed_when: false

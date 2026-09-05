@@ -17,7 +17,7 @@
     mode: '0644'
   become: true
   notify:
-    - Daemon-reload
+    - Jellyfin daemon-reload
     - Restart jellyfin
 
 - name: Flush handlers to reload systemd

@@ -1,8 +1,11 @@
 ---
 # ansible-lint configuration for the home-server project.
-# Start at the "moderate" profile; tighten to "production" once the
-# backlog (see plan: version pins, changed_when guards) is cleared.
-profile: moderate
+#
+# Perfil `production` (el más estricto). Se subió desde `moderate` cuando el backlog
+# que lo justificaba quedó cerrado, para que el gate defienda el nivel alcanzado en
+# vez de permitir que una regresión lo baje sin aviso.
+
+profile: production
 
 exclude_paths:
   - .ansible/
@@ -10,17 +13,22 @@ exclude_paths:
   - vendor/  # Mitogen vendorizado (código de terceros)
   - collections/  # colecciones instaladas por ansible-galaxy (código de terceros)
 
-# Rules intentionally relaxed for a single-maintainer home-lab. Remove
-# entries as the corresponding cleanups land.
 skip_list:
-  - yaml[line-length]  # handled by .yamllint as a warning
+  # yamllint ya reporta las líneas largas como warning (max 160, ver .yamllint).
+  # Duplicarlo acá como error sólo forzaría cortes artificiales en args de módulo.
+  - yaml[line-length]
 
-# Treat these as warnings rather than hard failures for now:
-#  - command-instead-of-module: legit `rpm -q` queries and `git` on the printer
+# Warnings, no errores. Cada entrada corresponde a una decisión deliberada; si el
+# caso que la justifica desaparece, sacala de acá.
 warn_list:
-  - command-instead-of-shell
+  # Los pocos `command` sin changed_when son instaladores con `creates:` o comandos
+  # que el módulo nativo no cubre (lego issue, el uninstaller propio de AdGuard).
   - no-changed-when
-  # command-instead-of-module: native modules/facts now used everywhere the
-  # conversion is clean (getenforce->ansible_selinux, id-u->getent,
-  # rpm-q->package_facts). The two remaining legit queries (`which`,
-  # `dnf repolist`) carry an inline `# noqa`.
+  # `os_update` hace `dnf upgrade` a propósito: es un rol de actualización del SO,
+  # no un converge de configuración.
+  - package-latest
+  # roles/adguard/tasks/systemd-resolved.yml: el backup de resolv.conf copia el
+  # archivo original preservando sus permisos, y el wait_for del puerto 53 usa
+  # ignore_errors porque en estado estable AdGuard ya lo tiene tomado.
+  - risky-file-permissions
+  - ignore-errors
