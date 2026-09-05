@@ -16,6 +16,7 @@
 
 - name: Check if HTTP port is available
   ansible.builtin.shell: |
+    set -o pipefail
     ss -tulnp | grep -q ":{{ jellyfin_http_port }}\s" && echo "occupied" || echo "available"
   register: jellyfin_http_port_check
   changed_when: false
@@ -27,6 +28,7 @@
 
 - name: Check if HTTPS port is available
   ansible.builtin.shell: |
+    set -o pipefail
     ss -tulnp | grep -q ":{{ jellyfin_https_port }}\s" && echo "occupied" || echo "available"
   register: jellyfin_https_port_check
   changed_when: false

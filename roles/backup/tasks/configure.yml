@@ -129,7 +129,11 @@
   become_user: "{{ backup_user }}"
   register: backup_repo_init
   changed_when: "'created restic repository' in backup_repo_init.stdout"
-  when: backup_repo_check.rc != 0
+  # `command` no soporta check mode: ahí devuelve un stub con rc=0 y stdout vacío,
+  # así que sin el guard de `skipped` un dry-run afirmaría que el repo ya existe.
+  when:
+    - not (backup_repo_check.skipped | default(false))
+    - backup_repo_check.rc != 0
 
 - name: Flush handlers so the user manager sees the new units
   ansible.builtin.meta: flush_handlers

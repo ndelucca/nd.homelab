@@ -28,6 +28,7 @@
 
 - name: Check if DNS port is available
   ansible.builtin.shell: |
+    set -o pipefail
     ss -tulnp | grep -q ":{{ adguard_dns_port }}\s" && echo "occupied" || echo "available"
   register: adguard_port_check
   changed_when: false
