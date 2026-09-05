@@ -1,5 +1,8 @@
 ---
-- name: Daemon-reload
+# Prefijado con el rol a propósito: los nombres de handler viven en un namespace
+# GLOBAL al play. Si dos roles definen `Daemon-reload`, gana el último cargado y el
+# notify del otro dispara el handler ajeno en silencio (verificado). Ver backup/.
+- name: Cloud_torrent daemon-reload
   ansible.builtin.systemd:
     daemon_reload: true
   become: true
