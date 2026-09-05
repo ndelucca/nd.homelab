@@ -1,166 +1,71 @@
 ---
 name: ansible-host-limiter
-description: Ensures ansible and ansible-playbook commands always include the -l (limit) flag to target only ndelucca-server and prevent accidental execution on raspberry-printer or other hosts. Activate this skill whenever running any ansible or ansible-playbook commands.
+description: Ensures ansible and ansible-playbook commands target only ndelucca-server and never the Debian raspberry-printer or the Acer client. Activate this skill whenever running any ansible or ansible-playbook commands.
 allowed-tools: Bash, Grep, Read
 ---
 
-# Ansible Host Limiter Skill
+# Ansible Host Limiter
 
-## Purpose
+## Qué protege realmente
 
-This skill enforces a critical safety practice for the home-server infrastructure: **always limit ansible commands to specific hosts** to prevent accidental execution on unintended targets like the raspberry-printer.
+El inventario tiene tres hosts: `ndelucca-server` (Fedora), `ndelucca-raspberry-printer`
+(Debian) y `ndelucca-acer` (cliente). Los roles de Fedora fallan en los otros dos.
 
-## Target Hosts
+Hay **tres capas** que lo evitan, y conviene saber cuál hace el trabajo en cada caso:
 
-### Primary Target (Default)
-- **ndelucca-server**: The main home server running Fedora 44
+1. **El `hosts:` del play — la barrera principal.** Todos los playbooks salvo uno ya
+   están acotados a un grupo:
 
-### Hosts to Avoid (Unless Explicitly Requested)
-- **ndelucca-raspberry-printer**: Raspberry Pi running Debian (not Fedora)
-- Any other hosts in the inventory
+   | Playbook | `hosts:` | Alcanza |
+   |---|---|---|
+   | `site.yml`, `os_update.yml`, `update.yml`, `remove_adguard.yml` | `homeservers` | sólo ndelucca-server |
+   | `printers.yml`, `mainsailos_update.yml` | `printers` | sólo la Raspberry |
+   | `hosts.yml` | **`all:!{{ local_host }}`** | **TODOS los hosts** |
 
-## Mandatory Rules
+   `homeservers` tiene un único miembro, así que en esos seis playbooks el `-l` es
+   redundante: no cambia a qué host se conecta.
 
-### Rule 1: Always Use -l Flag
-Every `ansible-playbook` and `ansible` command **MUST** include the `-l` (limit) flag.
+2. **Los `assert` de preflight.** Los roles verifican el SO antes de tocar nada
+   (`os_update`: *"Assert the target is a Fedora host (never run on the Debian printer)"*;
+   `mainsailos`: el assert espejo para Debian).
 
-**Correct:**
-```bash
-ansible-playbook playbooks/jellyfin.yml -l ndelucca-server
-ansible-playbook playbooks/site.yml -l ndelucca-server
-ansible ndelucca-server -m ping
+3. **El flag `-l` — cinturón extra.** Es la única barrera real en los dos casos donde
+   las otras dos no aplican.
+
+## Regla
+
+Usá `-l ndelucca-server` en todo comando `ansible` / `ansible-playbook`. Es redundante
+en la mayoría de los playbooks y no cuesta nada; **es imprescindible** en:
+
+- **`playbooks/hosts.yml`**, el único con `hosts: all:!...`.
+- **Comandos ad-hoc `ansible <patrón> -m ...`**, donde el patrón lo ponés vos y no hay
+  ningún `hosts:` que te cubra. `ansible all -m ping` alcanza la Raspberry y el Acer.
+
+```sh
+ansible-playbook playbooks/site.yml -l ndelucca-server --check --diff   # dry run primero
+ansible-playbook playbooks/site.yml -l ndelucca-server -t nginx         # un solo rol
+ansible ndelucca-server -m ansible.builtin.systemd -a "name=nginx state=restarted" --become
 ```
 
-**Incorrect (NEVER DO THIS):**
-```bash
-ansible-playbook playbooks/jellyfin.yml
-ansible-playbook playbooks/site.yml
-ansible all -m ping
-```
+No inventes nombres de playbook: **no existen** `playbooks/jellyfin.yml` ni
+`playbooks/nginx.yml`. Cada servicio se despliega con el tag de su rol sobre
+`site.yml` (ver la lista de tags en el propio `site.yml`).
 
-### Rule 2: Default to ndelucca-server
-Unless the user explicitly requests a different target, **always default to `-l ndelucca-server`**.
+## Antes de correr, verificá
 
-### Rule 3: Confirm Before Multi-Host Execution
-If the user asks to run commands on multiple hosts or "all" hosts, **ask for explicit confirmation** before proceeding.
+- [ ] El `-l` está presente.
+- [ ] El target es `ndelucca-server`, salvo pedido explícito.
+- [ ] Corriste `--check --diff` primero si el comando muta algo.
+- [ ] Para `immich`, `--check` **sin** `--diff` (el pod YAML lleva la password de PG;
+      ya tiene `no_log`, pero el hábito ahorra sustos).
 
-## Implementation Guidelines
+## Si el usuario pide varios hosts
 
-### When Running Playbooks
+Preguntá antes de ejecutar: *"Esto alcanzaría también a ndelucca-raspberry-printer
+(Debian). ¿Lo limito a ndelucca-server?"* y esperá confirmación.
 
-1. **User says**: "Run the jellyfin playbook"
-   **You execute**:
-   ```bash
-   ansible-playbook playbooks/jellyfin.yml -l ndelucca-server
-   ```
+## Notas
 
-2. **User says**: "Deploy nginx"
-   **You execute**:
-   ```bash
-   ansible-playbook playbooks/site.yml --tags nginx -l ndelucca-server
-   ```
-
-3. **User says**: "Run the site playbook"
-   **You execute**:
-   ```bash
-   ansible-playbook playbooks/site.yml -l ndelucca-server
-   ```
-
-### When Running Ad-Hoc Commands
-
-1. **User says**: "Restart nginx"
-   **You execute**:
-   ```bash
-   ansible ndelucca-server -m ansible.builtin.systemd -a "name=nginx state=restarted" --become
-   ```
-
-2. **User says**: "Check disk space"
-   **You execute**:
-   ```bash
-   ansible ndelucca-server -m shell -a "df -h"
-   ```
-
-### When User Requests Multi-Host Execution
-
-**User says**: "Run this on all servers"
-
-**You respond**: "This command would affect multiple hosts including ndelucca-raspberry-printer. Are you sure you want to run it on all hosts, or should I limit it to ndelucca-server only?"
-
-Wait for user confirmation before proceeding.
-
-## Safety Checklist
-
-Before executing any ansible command, verify:
-- [ ] The `-l` flag is present
-- [ ] The target is `ndelucca-server` (or user explicitly requested otherwise)
-- [ ] The command is appropriate for the targeted host
-- [ ] The playbook/role supports the target OS (ndelucca-server runs Fedora 44)
-
-## Common Commands with Correct Syntax
-
-```bash
-# Run site playbook (all roles)
-ansible-playbook playbooks/site.yml -l ndelucca-server
-
-# Run specific playbook
-ansible-playbook playbooks/jellyfin.yml -l ndelucca-server
-ansible-playbook playbooks/nginx.yml -l ndelucca-server
-
-# Run with tags
-ansible-playbook playbooks/site.yml --tags nginx -l ndelucca-server
-
-# Ad-hoc command to restart service
-ansible ndelucca-server -m ansible.builtin.systemd -a "name=jellyfin state=restarted" --become
-
-# Ad-hoc command to check service status
-ansible ndelucca-server -m ansible.builtin.systemd -a "name=nginx" --become
-
-# Syntax check
-ansible-playbook playbooks/site.yml --syntax-check -l ndelucca-server
-```
-
-## Error Prevention
-
-### Common Mistakes to Avoid
-
-1. **Running without -l flag**: This will execute on ALL hosts in inventory
-2. **Using `all` as host pattern**: Affects all hosts including raspberry-printer
-3. **Forgetting --become**: Some tasks require sudo privileges
-
-### What to Do If User Asks to Run Without Limiting
-
-**Never** run ansible commands without the `-l` flag unless the user:
-1. Explicitly says "run on all hosts" or "run on raspberry-printer"
-2. Confirms they understand it will affect multiple hosts
-3. You've warned them about the consequences
-
-## Examples of Correct Behavior
-
-### Example 1: Implicit Target
-```
-User: "run the playbook first, make sure nothing brakes"
-You: Execute: ansible-playbook playbooks/site.yml -l ndelucca-server
-```
-
-### Example 2: Service Management
-```
-User: "restart jellyfin"
-You: Execute: ansible ndelucca-server -m ansible.builtin.systemd -a "name=jellyfin state=restarted" --become
-```
-
-### Example 3: Configuration Update
-```
-User: "deploy the nginx changes"
-You: Execute: ansible-playbook playbooks/site.yml --tags nginx -l ndelucca-server
-```
-
-## Notes
-
-- The raspberry-printer runs Debian, not Fedora, so Fedora-specific playbooks will fail on it
-- Always working directory: `/home/ndelucca/nd.homelab`
-- Inventory files are in: `inventory/hosts.yml` and `playbooks/hosts.yml`
-- Most playbooks are in: `playbooks/` directory
-
-## Summary
-
-**Golden Rule**: Every ansible-playbook and ansible command MUST include `-l ndelucca-server` unless explicitly instructed otherwise by the user.
+- Directorio de trabajo: `/home/ndelucca/nd.homelab`.
+- Inventario: `inventory/hosts.yml` (`playbooks/hosts.yml` es un playbook que gestiona
+  `/etc/hosts`, no un inventario — no los confundas).

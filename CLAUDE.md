@@ -4,18 +4,37 @@ Ansible para el home server Fedora (`ndelucca-server`, `192.168.10.10`). La arqu
 de servicios y el flujo de backups están en [README.md](README.md); acá van sólo las reglas de
 operación que no se deducen leyendo los roles.
 
-## Regla no negociable: `-l ndelucca-server`
-
-Todo comando `ansible` / `ansible-playbook` lleva `-l ndelucca-server`. Sin el flag, el inventario
-incluye la Raspberry de la impresora (Debian) y el cliente Acer, y los roles de Fedora explotan
-ahí. Ver el skill `ansible-host-limiter`.
+## Regla: `-l ndelucca-server` en todo comando
 
 ```sh
 ansible-playbook playbooks/site.yml -l ndelucca-server --check --diff   # dry run primero
 ansible-playbook playbooks/site.yml -l ndelucca-server -t nginx         # un solo rol
 ```
 
+Qué protege de verdad, porque no es lo que parece: **la barrera principal es el `hosts:` del
+play**, no el flag. Los seis playbooks del server ya están acotados a `hosts: homeservers`, que
+tiene un único miembro, así que ahí el `-l` es redundante. Sumale los `assert` de preflight que
+verifican el SO. El `-l` es la única barrera real en dos casos:
+
+- **`playbooks/hosts.yml`**, el único con `hosts: all:!{{ local_host }}`.
+- **Comandos ad-hoc** (`ansible <patrón> -m ...`), donde el patrón lo ponés vos.
+
+Usalo igual siempre: no cuesta nada y evita tener que recordar en cuál de los dos casos estás.
+Ver el skill `ansible-host-limiter`.
+
 Corré siempre el `--check --diff` antes de aplicar. Es un server de verdad con datos de verdad.
+
+### Qué NO valida `--check`
+
+El dry-run cubre menos de lo que sugiere. Tres puntos ciegos conocidos:
+
+- **`command`/`shell` no corren**: devuelven un stub con `rc: 0` y `stdout: ""`. Todo `when:`
+  que dependa de un register de esos evalúa contra valores falsos. Los guards del repo usan
+  `not (<reg>.skipped | default(false))`; si agregás un chequeo nuevo, seguí ese patrón.
+- **Un bump de imagen da verde falso**: ningún Quadlet tiene `Pull=`, así que la imagen nueva
+  se baja recién en el `start` del unit. En `--check` el template dice "changed", los handlers
+  no corren y el `wait_for` del puerto pasa contra el servicio VIEJO. **Pre-pulleá a mano.**
+- **Los handlers no se disparan**, así que nada de lo que dependa de un restart se verifica.
 
 ## Skills
 
@@ -29,10 +48,31 @@ Corré siempre el `--check --diff` antes de aplicar. Es un server de verdad con 
 Ante cualquier diferencia entre un snippet de un skill y un rol vivo (`roles/nginx`,
 `roles/kavita`, `roles/forgejo`), **manda el rol vivo**.
 
+## Puertos: viven en `services.yml`, no en los defaults del rol
+
+`ansible.cfg` usa **`private_role_vars = True`**: los defaults de un rol **NO** son visibles
+desde otro. Un `{{ kavita_port | default(5000) }}` escrito en `roles/nginx/defaults` cae
+*siempre* al literal 5000 sin avisar — parece cableado y no lo está.
+
+Por eso el puerto canónico de cada servicio vive en
+`inventory/group_vars/homeservers/services.yml` (las vars de inventario sí son de scope
+global), y `roles/nginx` + `roles/firewall` derivan de ahí. Cada rol conserva su propio
+default con el mismo valor para seguir siendo usable solo.
+
+**Al cambiar un puerto: se cambia en `services.yml` y listo.** NGINX y el firewall lo siguen.
+Si lo cambiás sólo en el rol de la app, NGINX proxea a un puerto muerto (502) y el firewall
+bloquea el viejo dejando abierto el nuevo. Ya pasó con `nd_market`.
+
+La misma trampa aplica a cualquier var que un rol quiera leer de otro: si no está en el
+inventario, no la ve.
+
 ## Secretos y dominio
 
 - `base_domain` en `group_vars/all/main.yml` es la única fuente de verdad del dominio; todo lo
   demás se deriva. No hardcodees `ndelucca.dedyn.io` en un rol.
+- **Convención**: toda clave de un `vault.yml` lleva el prefijo `vault_`, y `services.yml`
+  la mapea a la variable que consume el rol (`immich_db_password: "{{ vault_immich_db_password }}"`).
+  Así al leer un rol se ve de un vistazo qué sale del vault y qué es config en texto plano.
 - Los secretos son valores `!vault` inline dentro de archivos `vault.yml`, así que
   `ansible-vault view` **no sirve** sobre ellos. Para leer uno, usá el loader:
   ```sh
