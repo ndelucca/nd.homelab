@@ -56,7 +56,6 @@ forgejo_manage_selinux: true
 # en cada sync).
 forgejo_pull_mirror_enabled: false                  # interruptor maestro (activar en host_vars)
 forgejo_mirror_interval: "8h0m0s"                   # >= [mirror].MIN_INTERVAL (10m)
-forgejo_github_user: "{{ forgejo_admin_user }}"     # de quién enumerar los repos de GitHub
 forgejo_mirror_owner: "{{ forgejo_admin_user }}"    # dueño de los mirrors dentro de Forgejo
 forgejo_mirror_include_forks: true
 forgejo_mirror_include_archived: true

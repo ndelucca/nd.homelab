@@ -21,7 +21,6 @@ monitoring_quadlet_dir: /etc/containers/systemd/users  # containers de usuario g
 
 # Solo localhost; NGINX maneja el acceso externo.
 monitoring_port: 3011        # puerto del host (3011 está libre)
-monitoring_container_port: 3001
 monitoring_host: 127.0.0.1
 
 # Fijado a un patch release exacto de la línea 2.x (el tag :2 flota); subí
@@ -36,9 +35,6 @@ monitoring_image: "docker.io/louislam/uptime-kuma:{{ monitoring_version }}"
 monitoring_service_name: uptime-kuma
 monitoring_service_enabled: true
 monitoring_service_state: started
-
-# Firewall cerrado; alcanzable solo vía NGINX.
-monitoring_firewall_enabled: false
 
 monitoring_manage_selinux: true
 

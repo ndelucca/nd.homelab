@@ -20,8 +20,12 @@ adguard_service_name: AdGuardHome
 adguard_service_enabled: true
 adguard_service_state: started
 
-# Puertos de red (usados por el role de firewall)
+# Puertos de red. Sólo adguard_dns_port y el DHCP los abre el rol firewall;
+# adguard_admin_port se consume desde nginx (vhost adguard.) y en tasks/service.yml.
 adguard_bind_host: 127.0.0.1
+# Puerto del ASISTENTE de setup inicial de AdGuard, no un puerto de servicio: sólo
+# escucha antes de que exista AdGuardHome.yaml, y en loopback. Coincide nominalmente
+# con forgejo_port (3000) sin conflicto real porque nunca conviven escuchando.
 adguard_bind_port: 3000
 adguard_admin_port: 8081
 adguard_dns_port: 53
@@ -41,7 +45,6 @@ adguard_resolved_fallback_dns:
   - 1.1.1.1
   - 8.8.8.8
 
-adguard_selinux_state: enforcing
 adguard_manage_selinux: true
 
 adguard_configure_app: false  # poné true en el inventario para desplegar el config

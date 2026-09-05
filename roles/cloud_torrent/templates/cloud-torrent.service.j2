@@ -17,6 +17,8 @@ ExecStart={{ cloud_torrent_install_dir }}/cloud-torrent \
   --title "{{ cloud_torrent_title }}" \
   --config-path {{ cloud_torrent_config_path }} \
   --log{% if cloud_torrent_enable_auth %} \
+{# La credencial queda en texto plano en esta unit (0644) y visible en `ps`.
+   Ver la nota en defaults/main.yml antes de activar cloud_torrent_enable_auth. #}
   --auth {{ cloud_torrent_auth_user }}:{{ cloud_torrent_auth_password }}{% endif %}
 
 
