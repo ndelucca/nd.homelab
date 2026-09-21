@@ -94,6 +94,8 @@ contrato de la imagen. Dos cosas que este repo controla y ese no:
   `proxy_buffering off` / `websocket: true`. El default bufferea, y una app de SSE "anda" pero no
   emite nada.
 
+El deploy de `nd_market` llega por el forced-command como `nd_market@sha256:<digest>`:
+el host hace pull de ese digest, lo etiqueta localmente como `:latest` y reinicia la unit.
 El `podman pull` de esas units usa `Pull=newer` contra un registry **privado**, y funciona porque
 `ndelucca` está logueado a mano en el host. **No hay tarea de Ansible que haga ese login**: si se
 reconstruye el server (ver `docs/BOOTSTRAP.md`), hay que rehacerlo o el pull falla en silencio.

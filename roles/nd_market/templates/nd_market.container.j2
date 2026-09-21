@@ -22,7 +22,9 @@ Environment=NDM_CLAUDE_PROVIDER=bridge
 Environment=NDM_CLAUDE_SOCKET={{ nd_market_claude_mount }}/sock
 {% endif %}
 
-# El deploy hace `podman pull` de :latest y reinicia; Pull=newer deja la política explícita.
+# El dispatcher de deploy trae el digest publicado y lo etiqueta como :latest antes de
+# reiniciar; Pull=newer conserva la recuperación automática si la unit arranca por fuera
+# del flujo de Forgejo.
 Pull=newer
 
 [Service]

@@ -1,7 +1,8 @@
 ---
 # Role deploy_ssh — canal de deploy que usa el runner de Forgejo para reiniciar apps.
 #
-# El runner, tras buildear y pushear la imagen, hace `ssh deploy@host <app>`. Una ÚNICA
+# El runner, tras buildear y pushear la imagen, hace `ssh deploy@host <app>` o
+# `ssh deploy@host <app>@sha256:<digest>`. Una ÚNICA
 # clave (secret a nivel usuario en Forgejo, compartida por todos los repos) entra con un
 # forced-command que corre el dispatcher `home-deploy`, el cual valida <app> contra las
 # units de usuario gestionadas y hace `systemctl --user restart <app>` (el Quadlet, con
@@ -15,3 +16,8 @@ deploy_ssh_user: ndelucca
 deploy_ssh_public_key: ""
 
 deploy_ssh_script_path: /usr/local/bin/home-deploy
+
+# Apps que deben desplegarse con un digest inmutable. La clave es el nombre de la
+# unit y el valor es el repositorio OCI sin tag.
+deploy_ssh_immutable_images:
+  nd_market: "git.{{ nginx_domain }}/ndelucca/nd.market"

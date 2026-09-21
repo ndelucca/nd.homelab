@@ -2,7 +2,7 @@
 # home-deploy — dispatcher de deploy (forced-command de la clave DEPLOY_SSH_KEY).
 # Gestionado por Ansible (rol deploy_ssh) — no editar a mano.
 #
-# El runner de Forgejo invoca:  ssh deploy@host <app>
+# El runner de Forgejo invoca:  ssh deploy@host <app> o <app>@sha256:<digest>
 # El nombre <app> llega en $SSH_ORIGINAL_COMMAND (el forced-command ignora el resto).
 # <app> es el nombre del service/unit (convención de la casa: guión_bajo, ej. nd_market),
 # que puede diferir del nombre del repo/imagen (ej. repo nd.market -> unit nd_market).
@@ -15,7 +15,15 @@ set -eu
 : "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
 export XDG_RUNTIME_DIR
 
-app=$(printf '%s' "${SSH_ORIGINAL_COMMAND:-}" | tr -d '\r\n')
+command=$(printf '%s' "${SSH_ORIGINAL_COMMAND:-}" | tr -d '\r\n')
+app="$command"
+ref=""
+case "$command" in
+  *@sha256:*)
+    app=${command%@*}
+    ref=${command#*@}
+    ;;
+esac
 
 # Nombres válidos = nombre de unit systemd: minúsculas, dígitos, guión y guión_bajo.
 case "$app" in
@@ -25,17 +33,51 @@ case "$app" in
     ;;
 esac
 
+{% for immutable_app, immutable_image in deploy_ssh_immutable_images.items() %}
+if [ "$app" = "{{ immutable_app }}" ]; then
+  case "$ref" in
+    sha256:*)
+      digest=${ref#sha256:}
+      case "$digest" in
+        '' | *[!0-9a-fA-F]*)
+          echo "home-deploy: digest inválido para '${app}'" >&2
+          exit 2
+          ;;
+      esac
+      digest_length=$(printf '%s' "$digest" | wc -c)
+      if [ "$digest_length" -ne 64 ]; then
+        echo "home-deploy: digest inválido para '${app}'" >&2
+        exit 2
+      fi
+      ;;
+    *)
+      echo "home-deploy: '${app}' requiere un digest sha256" >&2
+      exit 2
+      ;;
+  esac
+fi
+{% endfor %}
+
 unit="${app}.service"
 if ! systemctl --user cat "$unit" >/dev/null 2>&1; then
   echo "home-deploy: app desconocida (sin unit gestionada): '${app}'" >&2
   exit 3
 fi
 
-# El restart re-ejecuta el `podman run` del Quadlet, que con `Pull=newer` baja la imagen
-# nueva del registry (el Image= de la unit es la fuente de verdad del nombre de la imagen,
-# que NO se deriva del nombre de la app). Si el pull/arranque falla, el restart devuelve
-# error y este script sale distinto de cero.
-echo "home-deploy: restarting ${unit} (Quadlet Pull=newer trae la imagen nueva)"
+{% for immutable_app, immutable_image in deploy_ssh_immutable_images.items() %}
+if [ "$app" = "{{ immutable_app }}" ]; then
+  image="{{ immutable_image }}"
+  echo "home-deploy: pulling ${image}@${ref}"
+  podman pull "${image}@${ref}"
+  podman tag "${image}@${ref}" "${image}:latest"
+else
+{% endfor %}
+  # Para apps sin política de digest se conserva el flujo legacy de Quadlet.
+  :
+{% for immutable_app, immutable_image in deploy_ssh_immutable_images.items() %}
+fi
+{% endfor %}
+echo "home-deploy: restarting ${unit}"
 systemctl --user restart "$unit"
 
 echo "home-deploy: ${app} OK"
