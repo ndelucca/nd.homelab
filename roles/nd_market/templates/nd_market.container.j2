@@ -13,8 +13,13 @@ ContainerName={{ nd_market_container_name }}
 
 UserNS=keep-id:uid={{ nd_market_uid }},gid={{ nd_market_uid }}
 
-# HTTP en loopback; NGINX lo sirve en https://market.{{ nginx_domain }}.
-PublishPort={{ nd_market_host }}:{{ nd_market_port }}:{{ nd_market_container_port }}
+# Red del host, como postgres y forgejo-runner, y NO la red rootless por defecto: con pasta
+# el contenedor recibe la MISMA IP que el host, asi que 192.168.10.10:5432 (el Postgres
+# compartido) es el propio contenedor y da "connection refused". Esto ya paso: el primer
+# deploy con Postgres quedo en loop de reinicio sin poder conectar. Con la red del host la
+# app escucha ella misma en loopback (NDM_ADDR), que es donde NGINX la busca.
+Network=host
+Environment=NDM_ADDR={{ nd_market_host }}:{{ nd_market_port }}
 
 # /data ya no tiene la base (vive en el PostgreSQL compartido); queda para el perfil del
 # consultor (perfil.md) y lo que la app quiera persistir fuera de la base.
