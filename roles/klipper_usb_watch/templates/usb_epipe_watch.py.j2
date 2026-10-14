@@ -1,0 +1,287 @@
+#!/usr/bin/env python3
+# {{ ansible_managed }}
+"""Vigia del enlace USB con la placa de la impresora (CH340, ttyUSB).
+
+Sigue el log del kernel. Cada `{{ klipper_usb_watch_pattern }}` (EPIPE) en
+ttyUSB mata uno de los dos buffers de lectura del driver usb-serial, que no se
+reponen hasta que Klipper reabre el puerto. Con los dos muertos, Klipper pierde
+el MCU. El porque completo esta en roles/klipper_usb_watch/defaults/main.yml.
+
+Ante cada EPIPE:
+  1. guarda una foto del estado (trabajo, temperaturas, fan, posicion, throttle
+     de la Pi) en {{ klipper_usb_watch_log }}, una linea JSON por evento
+  2. SOLO si puede confirmar que la maquina esta ociosa (ver restart_allowed)
+     y la placa sigue en el bus, hace FIRMWARE_RESTART para reponer los buffers
+  3. avisa por la consola de Mainsail (M118)
+
+Regla de oro: nunca reiniciar con una impresion en curso. La duda cuenta como
+impresion: si Moonraker no contesta, si falta un campo, si Klipper no esta en
+"ready" o si hay cualquier gcode ejecutandose, no se reinicia. Un EPIPE con la
+maquina quieta es inofensivo; un FIRMWARE_RESTART con la maquina imprimiendo
+tira la pieza. Preferimos perder un reinicio automatico a perder una pieza.
+
+Uso:  klipper-usb-watch             sigue el kernel para siempre (el unit)
+      klipper-usb-watch --simulate  ejecuta el manejador una vez, sin reiniciar
+      klipper-usb-watch --selftest  prueba restart_allowed contra estados fijos
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.request
+
+MOON = "{{ klipper_usb_watch_moonraker_url }}"
+LOG = "{{ klipper_usb_watch_log }}"
+SERIAL = "{{ klipper_usb_watch_serial }}"
+PATTERN = "{{ klipper_usb_watch_pattern }}"
+SETTLE = {{ klipper_usb_watch_settle_seconds | int }}
+AUTO_RESTART = {{ 'True' if (klipper_usb_watch_auto_restart | bool) else 'False' }}
+READY_SECONDS = {{ klipper_usb_watch_ready_seconds | int }}
+OBJECTS = ("print_stats&webhooks&extruder&heater_bed&fan&toolhead&mcu"
+           "&virtual_sdcard&pause_resume&idle_timeout")
+
+# Estados de print_stats.state en los que NO hay trabajo en curso. Todo lo que
+# no este aca ("printing", "paused", o algo nuevo que no conocemos) bloquea.
+JOB_IDLE_STATES = ("standby", "complete", "cancelled", "error")
+# idle_timeout.state es "Printing" mientras Klipper ejecuta cualquier gcode,
+# venga del archivo, de una macro o de la consola. Solo estos dos son quietud.
+IDLE_TIMEOUT_IDLE_STATES = ("Idle", "Ready")
+
+epipes_since_restart = 0
+
+
+def moon(path, data=None):
+    body = json.dumps(data).encode() if data is not None else None
+    req = urllib.request.Request(
+        MOON + path, data=body, method="POST" if data is not None else "GET",
+        headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=5) as r:
+        return json.load(r)
+
+
+def gcode(script):
+    try:
+        moon("/printer/gcode/script", {"script": script})
+    except Exception as e:
+        print("gcode fallo:", e, flush=True)
+
+
+def throttled():
+    try:
+        out = subprocess.run(["vcgencmd", "get_throttled"], capture_output=True, text=True, timeout=5)
+        return out.stdout.strip().split("=")[-1]
+    except Exception as e:
+        return "error: %s" % e
+
+
+def query_status():
+    """Estado crudo de Klipper via Moonraker, o None si no se pudo leer."""
+    try:
+        return moon("/printer/objects/query?" + OBJECTS)["result"]["status"]
+    except Exception as e:
+        print("moonraker no contesta:", e, flush=True)
+        return None
+
+
+def restart_allowed(status):
+    """Decide si un FIRMWARE_RESTART es seguro. Devuelve (bool, motivo).
+
+    Funcion pura sobre el dict de /printer/objects/query para poder probarla
+    con --selftest. Cada condicion es positiva: hay que PROBAR que la maquina
+    esta ociosa. Cualquier dato faltante o desconocido devuelve False.
+    """
+    if not isinstance(status, dict):
+        return False, "sin respuesta de Moonraker"
+    klipper = status.get("webhooks", {}).get("state")
+    if klipper != "ready":
+        return False, "klipper en estado %r, no ready" % klipper
+    job = status.get("print_stats", {}).get("state")
+    if job not in JOB_IDLE_STATES:
+        return False, "print_stats.state=%r, hay trabajo en curso" % job
+    if status.get("virtual_sdcard", {}).get("is_active") is not False:
+        return False, "virtual_sdcard activa o desconocida"
+    if status.get("pause_resume", {}).get("is_paused") is not False:
+        return False, "impresion pausada o estado desconocido"
+    idle = status.get("idle_timeout", {}).get("state")
+    if idle not in IDLE_TIMEOUT_IDLE_STATES:
+        return False, "idle_timeout.state=%r, Klipper esta ejecutando gcode" % idle
+    return True, "klipper ready, sin trabajo, sin gcode en ejecucion"
+
+
+def snapshot(status):
+    if status is None:
+        return {"moonraker_error": "sin respuesta"}
+    ps = status.get("print_stats", {})
+    ex = status.get("extruder", {})
+    bed = status.get("heater_bed", {})
+    th = status.get("toolhead", {})
+    mcu = status.get("mcu", {}).get("last_stats", {})
+    return {
+        "klipper": status.get("webhooks", {}).get("state"),
+        "job_state": ps.get("state"),
+        "idle_state": status.get("idle_timeout", {}).get("state"),
+        "file": ps.get("filename"),
+        "print_duration_h": round(ps.get("print_duration", 0) / 3600, 2),
+        "progress": round(status.get("virtual_sdcard", {}).get("progress", 0), 3),
+        "hotend": [round(ex.get("temperature", 0)), ex.get("target"), round(ex.get("power", 0), 2)],
+        "bed": [round(bed.get("temperature", 0)), bed.get("target"), round(bed.get("power", 0), 2)],
+        "fan": status.get("fan", {}).get("speed"),
+        "pos": [round(p, 1) for p in th.get("position", [])[:3]],
+        "retransmit": mcu.get("bytes_retransmit"),
+        "rto": mcu.get("rto"),
+    }
+
+
+def log(event):
+    event["time"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    line = json.dumps(event, ensure_ascii=False)
+    try:
+        with open(LOG, "a") as f:
+            f.write(line + "\n")
+    except OSError as e:
+        print("no pude escribir el log:", e, flush=True)
+    print(line, flush=True)
+
+
+def wait_ready(timeout):
+    for _ in range(timeout):
+        time.sleep(1)
+        try:
+            if moon("/printer/info")["result"]["state"] == "ready":
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def handle(line, simulate=False):
+    global epipes_since_restart
+    epipes_since_restart += 1
+    before = query_status()
+    ev = {"kernel": line.strip(), "epipes_since_restart": epipes_since_restart,
+          "throttled": throttled(), "simulated": simulate, **snapshot(before)}
+
+    # Un apagado de la impresora produce dos EPIPE y un USB disconnect en el
+    # mismo segundo: esperar antes de decidir.
+    time.sleep(SETTLE)
+    if not os.path.exists(SERIAL):
+        ev["action"] = "placa fuera del bus (impresora apagada?), sin reinicio"
+        epipes_since_restart = 0
+        log(ev)
+        return
+
+    # Dos lecturas, antes y despues de la espera, y las dos tienen que decir
+    # "ociosa". Si una sola duda, no se reinicia.
+    after = query_status()
+    ok_before, why_before = restart_allowed(before)
+    ok_after, why_after = restart_allowed(after)
+    if not (ok_before and ok_after):
+        why = why_before if not ok_before else why_after
+        ev["action"] = "sin reinicio: " + why
+        log(ev)
+        gcode("M118 USB: EPIPE en ttyUSB (%d desde el ultimo reinicio). No reinicio: %s."
+              % (epipes_since_restart, why))
+        return
+
+    if simulate or not AUTO_RESTART:
+        ev["action"] = ("simulacion: " if simulate else "auto_restart apagado: ") + "aca haria FIRMWARE_RESTART"
+        log(ev)
+        gcode("M118 USB: " + ("prueba del vigia de EPIPE, todo en orden" if simulate
+                              else "EPIPE en ttyUSB con la maquina quieta. Conviene un FIRMWARE_RESTART antes de imprimir."))
+        return
+
+    try:
+        moon("/printer/firmware_restart", {})
+        ok = wait_ready(READY_SECONDS)
+        ev["action"] = "FIRMWARE_RESTART " + ("ok" if ok else "sin ready en %d s" % READY_SECONDS)
+        if ok:
+            epipes_since_restart = 0
+    except Exception as e:
+        ev["action"] = "FIRMWARE_RESTART fallo: %s" % e
+    log(ev)
+    gcode("M118 USB: EPIPE en ttyUSB con la maquina quieta. Hice FIRMWARE_RESTART para reponer los buffers.")
+
+
+def follow():
+    global epipes_since_restart
+    log({"kernel": "vigia iniciado", "epipes_since_restart": 0, **snapshot(query_status())})
+    proc = subprocess.Popen(
+        ["journalctl", "-k", "-f", "-n", "0", "-o", "short-iso"],
+        stdout=subprocess.PIPE, text=True, bufsize=1)
+    for line in proc.stdout:
+        if PATTERN in line and "ttyUSB" in line:
+            handle(line)
+        elif "ch341-uart converter now attached" in line:
+            # Re-enumeracion: el puerto es nuevo y arranca con los dos buffers.
+            epipes_since_restart = 0
+    raise SystemExit("journalctl termino")
+
+
+def selftest():
+    """Prueba restart_allowed: ningun estado con impresion puede dar True."""
+    idle = {
+        "webhooks": {"state": "ready"},
+        "print_stats": {"state": "standby"},
+        "virtual_sdcard": {"is_active": False},
+        "pause_resume": {"is_paused": False},
+        "idle_timeout": {"state": "Idle"},
+    }
+
+    def variant(**changes):
+        s = json.loads(json.dumps(idle))
+        for obj, fields in changes.items():
+            if fields is None:
+                s.pop(obj, None)
+            else:
+                s[obj].update(fields)
+        return s
+
+    must_block = {
+        "moonraker sin respuesta": None,
+        "respuesta vacia": {},
+        "imprimiendo": variant(print_stats={"state": "printing"}, virtual_sdcard={"is_active": True},
+                               idle_timeout={"state": "Printing"}),
+        "pausada": variant(print_stats={"state": "paused"}, pause_resume={"is_paused": True}),
+        "solo print_stats dice printing": variant(print_stats={"state": "printing"}),
+        "solo virtual_sdcard activa": variant(virtual_sdcard={"is_active": True}),
+        "solo pause_resume pausada": variant(pause_resume={"is_paused": True}),
+        "gcode desde consola (homing, macro)": variant(idle_timeout={"state": "Printing"}),
+        "estado de trabajo desconocido": variant(print_stats={"state": "loquesea"}),
+        "klipper en startup": variant(webhooks={"state": "startup"}),
+        "klipper en shutdown": variant(webhooks={"state": "shutdown"}),
+        "klipper en error": variant(webhooks={"state": "error"}),
+        "falta print_stats": variant(print_stats=None),
+        "falta virtual_sdcard": variant(virtual_sdcard=None),
+        "falta pause_resume": variant(pause_resume=None),
+        "falta idle_timeout": variant(idle_timeout=None),
+        "falta webhooks": variant(webhooks=None),
+    }
+    must_allow = {
+        "ociosa en standby": idle,
+        "ociosa tras completar": variant(print_stats={"state": "complete"}, idle_timeout={"state": "Ready"}),
+        "ociosa tras cancelar": variant(print_stats={"state": "cancelled"}),
+        "ociosa tras error de trabajo": variant(print_stats={"state": "error"}),
+    }
+    failed = 0
+    for name, status in must_block.items():
+        ok, why = restart_allowed(status)
+        print("%s  bloquea  %-38s %s" % ("ok " if not ok else "MAL", name, why))
+        failed += ok
+    for name, status in must_allow.items():
+        ok, why = restart_allowed(status)
+        print("%s  permite  %-38s %s" % ("ok " if ok else "MAL", name, why))
+        failed += not ok
+    if failed:
+        raise SystemExit("selftest: %d casos mal" % failed)
+    print("selftest: %d casos ok" % (len(must_block) + len(must_allow)))
+
+
+if __name__ == "__main__":
+    if "--selftest" in sys.argv:
+        selftest()
+    elif "--simulate" in sys.argv:
+        handle("SIMULADO: ch341-uart ttyUSB0: usb_serial_generic_read_bulk_callback - " + PATTERN,
+               simulate=True)
+    else:
+        follow()

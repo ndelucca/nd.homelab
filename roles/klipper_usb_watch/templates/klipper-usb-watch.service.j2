@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+# Vigía del enlace USB con la placa de la impresora. Ver roles/klipper_usb_watch.
+[Unit]
+Description=Vigia de EPIPE en el enlace USB con la placa de la impresora
+Documentation=file://{{ klipper_usb_watch_script }}
+# Moonraker no es un requisito duro: el script tolera que la API no conteste y
+# el evento se registra igual. El After solo evita ruido en el arranque.
+After=network.target moonraker.service
+
+[Service]
+Type=simple
+User={{ klipper_usb_watch_user }}
+ExecStart=/usr/bin/python3 {{ klipper_usb_watch_script }}
+Restart=always
+RestartSec=10
+# Cada evento es una linea JSON; va al journal ademas del log en printer_data.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

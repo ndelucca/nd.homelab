@@ -1,0 +1,67 @@
+---
+# Variables por defecto del role klipper_usb_watch.
+#
+# Vigía del enlace USB entre la Pi y la placa de la impresora. El diagnóstico
+# que lo motiva (14-oct-2026): el CH340 de la placa cuelga su endpoint de
+# lectura cada día y medio, en promedio, con o sin impresión en curso. El
+# kernel lo anota como
+#
+#   ch341-uart ttyUSB0: usb_serial_generic_read_bulk_callback - urb stopped: -32
+#
+# y el driver usb-serial, que tiene DOS buffers de lectura por puerto, da por
+# muerto al que falló y no lo repone hasta que alguien reabre el puerto. Con el
+# segundo muerto Klipper deja de recibir bytes y a los 5 s declara "Lost
+# communication with MCU": la pieza se pierde. Lo único que repone los dos
+# buffers es un FIRMWARE_RESTART, porque Klipper cierra y reabre el tty.
+#
+# El vigía no cura el bajón eléctrico. Hace tres cosas: deja registro del
+# contexto exacto de cada EPIPE (para separar red eléctrica de chip), repone los
+# buffers con un FIRMWARE_RESTART cuando la máquina está quieta (así cada
+# impresión arranca con dos vidas y hacen falta dos eventos en la MISMA
+# impresión para perderla), y avisa por la consola de Mainsail.
+
+# Dónde queda el script y cómo se llama el unit de systemd. Corre como el
+# usuario de la Pi, no como root: journalctl -k, vcgencmd y la API de Moonraker
+# no necesitan más que eso, y el log va al directorio de logs de printer_data,
+# que es del usuario y Mainsail muestra en Machine -> Logs.
+klipper_usb_watch_script: /usr/local/bin/klipper-usb-watch
+klipper_usb_watch_service: klipper-usb-watch
+klipper_usb_watch_user: "{{ ansible_user }}"
+klipper_usb_watch_log: "/home/{{ ansible_user }}/printer_data/logs/usb-epipe.log"
+
+# El dispositivo que declara [mcu] serial en versions/<CURRENT>/hardware.cfg de
+# nd.printer. Copia a propósito: el vigía lo usa solo para distinguir "la placa
+# se fue del bus" (impresora apagada) de "la placa sigue y el buffer murió", y
+# no vale la pena parsear la config de Klipper para eso. Si cambia la placa,
+# cambia acá también.
+klipper_usb_watch_serial: /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0
+
+# Qué línea del kernel cuenta como evento. -32 es EPIPE: el dispositivo
+# respondió STALL. Es la única causa por la que usb-serial retira un buffer de
+# lectura sin reponerlo (drivers/usb/serial/generic.c).
+klipper_usb_watch_pattern: "urb stopped: -32"
+
+# Cuánto esperar entre el EPIPE y la decisión. Un apagado de la impresora
+# produce dos EPIPE y un USB disconnect en el mismo segundo; esperar evita
+# hacer un FIRMWARE_RESTART contra una placa que ya no está.
+klipper_usb_watch_settle_seconds: 5
+
+# Si hacer o no el FIRMWARE_RESTART automático con la máquina quieta. Con esto
+# en false el vigía solo registra y avisa.
+#
+# "Quieta" se prueba en positivo, nunca por descarte: Klipper en ready,
+# print_stats sin trabajo, virtual_sdcard inactiva, nada pausado y
+# idle_timeout fuera de "Printing" (que es el estado mientras se ejecuta
+# cualquier gcode, incluso un homing desde la consola). Si Moonraker no
+# contesta o falta un campo, no se reinicia. Se lee dos veces, antes y
+# después de settle_seconds, y las dos tienen que coincidir. La función que
+# decide (restart_allowed) tiene un --selftest que corre como `validate` al
+# instalar el script: si un cambio rompe la guardia, el script no se instala.
+klipper_usb_watch_auto_restart: true
+
+# Cuánto esperar a que Klipper vuelva a ready después del restart automático.
+klipper_usb_watch_ready_seconds: 40
+
+# 127.0.0.1 literal mantiene las peticiones en el camino de confianza de
+# loopback de Moonraker, así que no hace falta API key.
+klipper_usb_watch_moonraker_url: "http://127.0.0.1:7125"

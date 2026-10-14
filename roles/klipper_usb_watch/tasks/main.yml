@@ -1,0 +1,103 @@
+---
+# Punto de entrada del role klipper_usb_watch: un script y un unit de systemd.
+# El porque del vigía está en defaults/main.yml.
+
+- name: Assert the target is a Debian host (never run on the Fedora server)
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == "Debian"
+    fail_msg: >-
+      klipper_usb_watch only supports Debian/MainsailOS hosts, but this host is
+      {{ ansible_facts['distribution'] }} ({{ ansible_facts['os_family'] }}). Refusing to run.
+    quiet: true
+
+# El log vive en printer_data/logs, que ya existe en cualquier MainsailOS. Si no
+# existe, el host no es una impresora: mejor fallar acá que dejar un unit en
+# crash-loop escribiendo a un directorio que no está.
+- name: Check the printer logs directory exists
+  ansible.builtin.stat:
+    path: "{{ klipper_usb_watch_log | dirname }}"
+  register: klipper_usb_watch_logdir
+  become: false
+
+- name: Require the printer logs directory
+  ansible.builtin.assert:
+    that:
+      - klipper_usb_watch_logdir.stat.exists
+      - klipper_usb_watch_logdir.stat.isdir
+    fail_msg: >-
+      {{ klipper_usb_watch_log | dirname }} does not exist. This role expects an
+      existing MainsailOS install with printer_data in place.
+    quiet: true
+
+# validate corre el --selftest del script antes de dejarlo en su lugar: cubre
+# la sintaxis (un error falla acá, con el mensaje de Python, y no como un unit
+# que reinicia cada 10 segundos) y la guardia contra reiniciar con impresión
+# en curso. Si algún estado con impresión diera "permitido", el script no se
+# instala y el que está corriendo sigue intacto.
+- name: Deploy the watcher script (validated with its own selftest)
+  ansible.builtin.template:
+    src: usb_epipe_watch.py.j2
+    dest: "{{ klipper_usb_watch_script }}"
+    owner: root
+    group: root
+    mode: '0755'
+    validate: /usr/bin/python3 -I %s --selftest
+  become: true
+  notify: Restart klipper-usb-watch
+
+- name: Deploy the systemd unit
+  ansible.builtin.template:
+    src: klipper-usb-watch.service.j2
+    dest: "/etc/systemd/system/{{ klipper_usb_watch_service }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Restart klipper-usb-watch
+
+# En --check el unit todavia no existe en disco y el modulo systemd falla al no
+# encontrarlo; saltearlo es el mismo criterio que usa klipper_config/verify.yml.
+- name: Enable and start the watcher
+  ansible.builtin.systemd:
+    name: "{{ klipper_usb_watch_service }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  become: true
+  when: not ansible_check_mode
+
+- name: Flush the restart handler before checking health
+  ansible.builtin.meta: flush_handlers
+
+- name: Check the watcher is running
+  ansible.builtin.systemd:
+    name: "{{ klipper_usb_watch_service }}"
+  register: klipper_usb_watch_state
+  become: true
+  when: not ansible_check_mode
+
+- name: Assert the watcher is active
+  ansible.builtin.assert:
+    that:
+      - klipper_usb_watch_state.status.ActiveState == "active"
+    fail_msg: >-
+      {{ klipper_usb_watch_service }} is {{ klipper_usb_watch_state.status.ActiveState }}.
+      En la Pi: journalctl -u {{ klipper_usb_watch_service }} -n 30 --no-pager
+    success_msg: "{{ klipper_usb_watch_service }} is active."
+  when: not ansible_check_mode
+
+# La simulación recorre todo el camino real menos el FIRMWARE_RESTART: lee
+# Moonraker, escribe el log y manda el M118 a la consola. Si algo de eso no
+# funciona en la Pi, se ve en este deploy y no en el primer EPIPE de verdad.
+- name: Run one simulated event end to end
+  ansible.builtin.command: "{{ klipper_usb_watch_script }} --simulate"
+  become: false
+  register: klipper_usb_watch_simulated
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Report the simulated event
+  ansible.builtin.debug:
+    msg: "{{ klipper_usb_watch_simulated.stdout_lines | default([]) }}"
+  when: not ansible_check_mode

@@ -9,6 +9,11 @@
 # 2. Configuración de Klipper. La despliega desde el repo nd.printer, que es la
 #    fuente de verdad, preservando el bloque SAVE_CONFIG que escribe Klipper.
 #
+# 3. Vigía del enlace USB con la placa. El CH340 de la placa cuelga su lectura
+#    cada tanto (EPIPE en el kernel) y dos de esos sin reiniciar Klipper matan
+#    la impresión en curso. El vigía registra cada evento con su contexto y
+#    repone los buffers con un FIRMWARE_RESTART cuando la máquina está quieta.
+#
 # SIEMPRE limitar a la impresora; nunca al servidor Fedora:
 #   ansible-playbook playbooks/printers.yml -l ndelucca-raspberry-printer
 #   ansible-playbook playbooks/printers.yml -l ndelucca-raspberry-printer --tags acme
@@ -33,3 +38,6 @@
 
     - role: klipper_config
       tags: ['klipper_config', 'klipper']
+
+    - role: klipper_usb_watch
+      tags: ['klipper_usb_watch', 'klipper']

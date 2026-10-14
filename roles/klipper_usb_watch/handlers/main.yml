@@ -1,0 +1,12 @@
+---
+# Un solo handler: el unit se reinicia cuando cambia el script o el unit file.
+# daemon_reload va acá y no en la tarea del template porque el unit puede
+# cambiar sin que cambie el script y al revés, y el reload es barato.
+- name: Restart the klipper-usb-watch service
+  ansible.builtin.systemd:
+    name: "{{ klipper_usb_watch_service }}"
+    state: restarted
+    daemon_reload: true
+  become: true
+  listen: Restart klipper-usb-watch
+  when: not ansible_check_mode

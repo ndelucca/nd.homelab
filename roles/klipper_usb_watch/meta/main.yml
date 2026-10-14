@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: Naza
+  description: >-
+    Watch the kernel log of the printer's Raspberry Pi for USB EPIPE stalls on
+    the mainboard's CH340 serial link, record the printer state at each event,
+    and restore the serial read buffers with a FIRMWARE_RESTART while idle.
+  license: MIT
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+  galaxy_tags:
+    - klipper
+    - mainsailos
+    - moonraker
+    - raspberrypi
+    - usb
+
+dependencies: []
