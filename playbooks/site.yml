@@ -34,6 +34,11 @@
     - role: cloud_torrent
       tags: ['cloud_torrent', 'torrent', 'media']
 
+    # PostgreSQL compartido. Después de acme/nginx (usa el mismo cert TLS) y antes de
+    # las apps que lo consuman y de backup (que llama a su script de dump).
+    - role: postgres
+      tags: ['postgres', 'db']
+
     - role: immich
       tags: ['immich', 'photos']
 

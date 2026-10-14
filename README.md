@@ -38,6 +38,7 @@ internet**.
 | `git.` | Forgejo (+ git SSH :2222) | `forgejo` | Podman `.container` |
 | `status.` | Uptime-Kuma | `monitoring` | Podman `.container` |
 | `market.` | nd.market (Markets) | `nd_market` | Podman `.container` (Forgejo Actions) |
+| `db.` (**:5432**, sin NGINX) | PostgreSQL compartido | `postgres` | Podman `.container` (`Network=host`) |
 
 Roles transversales: `storage` (discos), `acme` (TLS), `nginx` (proxy),
 `firewall` (firewalld), `backup` (restic → D-Ursa), `service_maintenance`
@@ -48,7 +49,7 @@ expone el CLI de Claude del host a las apps containerizadas; no escucha en red).
 
 ```
 ansible.cfg                         # config del proyecto (archivo de vault password, SSH, become)
-requirements.yml                    # colecciones de Galaxy (ansible.posix, community.general)
+requirements.yml                    # colecciones de Galaxy (ansible.posix, community.general, community.postgresql)
 inventory/
   hosts.yml                         # grupos homeservers / printers / clients
   group_vars/
@@ -61,6 +62,7 @@ playbooks/
   remove_adguard.yml                # desmontar la instalación de AdGuard
   update.yml                        # reportar actualizaciones disponibles de imágenes de contenedor
   os_update.yml                     # dnf upgrade del server: backup, reboot condicional y verificación
+  postgres_upgrade.yml              # upgrade de versión MAJOR del PostgreSQL compartido (dump + restore)
 roles/<role>/                       # un role por incumbencia: tasks/ defaults/ templates/ handlers/ meta/
 docs/                               # BOOTSTRAP, RESTORE, TLS-AND-DNS, ADGUARD_CONFIG_SETUP
 raspberry-scripts/                  # helpers sueltos para las Raspberry Pi (pendientes de refactor)
@@ -68,7 +70,7 @@ raspberry-scripts/                  # helpers sueltos para las Raspberry Pi (pen
 
 Los roles siguen un esqueleto consistente: `preflight → install → [configure] →
 quadlet → selinux → service`. Los roles de contenedores rootless-Podman/Quadlet
-(kavita, immich, forgejo, monitoring, nd_market) comparten su
+(kavita, immich, forgejo, monitoring, nd_market, postgres) comparten su
 **install + handlers, el paso de SELinux y el paso de service** vía el role
 **`container_base`**: cada uno los incluye por nombre (`include_role … tasks_from:
 install` / `selinux` / `service`) y expone las variables de contrato
@@ -168,6 +170,33 @@ persistente de Mitogen; ese var es inerte cuando Mitogen está apagado.
   ```
 
   No cubre `dnf system-upgrade` (salto de release de Fedora): eso es manual.
+
+## PostgreSQL compartido (`db.ndelucca.dedyn.io:5432`)
+
+Una instancia de PostgreSQL para cualquier app, separada del Postgres privado de Immich.
+Escucha en la LAN con TLS (el mismo wildcard que NGINX, así que `sslmode=verify-full`
+funciona) y **no pasa por NGINX**: no es HTTP.
+
+```sh
+psql "host=db.ndelucca.dedyn.io user=ndelucca dbname=<db> sslmode=verify-full"
+```
+
+- **Roles**: `postgres` (superuser, lo usa sólo este repo) y `ndelucca` (crea
+  databases y schemas, diagnóstico y mantenimiento; sin superuser ni `CREATEROLE`).
+  Las passwords están en el vault (`vault_postgres_admin_password`,
+  `vault_postgres_app_password`).
+- **Database nueva**: agregarla a `postgres_databases` en `services.yml` y correr
+  `site.yml -l ndelucca-server -t postgres_databases`. Queda con owner `ndelucca`.
+  Las tablas las crea la app.
+- **Backup**: el backup nocturno deja `globals.sql` + un `<db>.dump` por database en
+  `appdata/postgres/dumps/` y restic los lleva a D-Ursa. Restore con
+  `pg-restore-db` — ver [docs/RESTORE.md](docs/RESTORE.md).
+- **Mantenimiento**: `postgres-maintenance.timer` (semanal): vacuum/analyze,
+  `pg_amcheck`, chequeos de salud y, una vez al mes, un restore drill que carga cada
+  dump en una database temporal.
+- **Actualizar**: un minor es subir `postgres_version` + `postgres_image_digest` y
+  correr `-t postgres`. Un major se hace con `playbooks/postgres_upgrade.yml` (dump +
+  restore a un directorio nuevo; el cluster viejo queda intacto para el rollback).
 
 ## Backups y recuperación ante desastres
 

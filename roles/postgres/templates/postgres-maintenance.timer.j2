@@ -1,0 +1,10 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Weekly PostgreSQL maintenance timer
+
+[Timer]
+OnCalendar={{ postgres_maintenance_schedule }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

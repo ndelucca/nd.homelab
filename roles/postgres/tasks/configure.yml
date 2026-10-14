@@ -1,0 +1,39 @@
+---
+# Despliega postgresql.conf, pg_hba.conf y el env de bootstrap.
+#
+# Los cambios notifican un RELOAD, no un restart: casi todo se relee con SIGHUP y los
+# pocos parámetros que exigen restart los detecta connect.yml (pending_restart).
+
+- name: Deploy postgresql.conf
+  ansible.builtin.template:
+    src: postgresql.conf.j2
+    dest: "{{ postgres_config_dir }}/postgresql.conf"
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: '0640'
+  become: true
+  notify: Postgres reload
+
+- name: Deploy pg_hba.conf
+  ansible.builtin.template:
+    src: pg_hba.conf.j2
+    dest: "{{ postgres_config_dir }}/pg_hba.conf"
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: '0640'
+  become: true
+  notify: Postgres reload
+
+# POSTGRES_PASSWORD sólo lo lee el initdb del PRIMER arranque de cada cluster (y de cada
+# major nuevo). Después manda roles.yml. Vive fuera del directorio que se monta en el
+# container y fuera de la unit, así no aparece en `systemctl cat` ni en un --diff.
+- name: Deploy the initdb environment file
+  ansible.builtin.copy:
+    content: |
+      POSTGRES_PASSWORD={{ postgres_admin_password }}
+    dest: "{{ postgres_secrets_dir }}/initdb.env"
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: '0600'
+  become: true
+  no_log: true

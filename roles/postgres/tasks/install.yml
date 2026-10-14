@@ -1,0 +1,20 @@
+---
+# Instala Podman y dependencias (andamiaje compartido en container_base).
+# include_role también trae los handlers compartidos de container usados más abajo.
+
+- name: Install the rootless Podman runtime and shared container handlers
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: install
+  vars:
+    container_base_user: "{{ postgres_user }}"
+
+# Los módulos community.postgresql corren en el host y hablan con el server por
+# 127.0.0.1: necesitan el driver de Python acá, no dentro del container.
+- name: Install the PostgreSQL driver for the Ansible modules
+  vars:
+    mitogen_task_isolation: fork  # Mitogen: aísla el módulo dnf5 en un fork (evita el crash por el estado global de libdnf5)
+  ansible.builtin.dnf:
+    name: python3-psycopg2
+    state: present
+  become: true

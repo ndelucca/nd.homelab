@@ -1,0 +1,13 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Weekly PostgreSQL maintenance (vacuum, amcheck, health checks, restore drill)
+{% if postgres_notify_unit %}
+OnFailure={{ postgres_notify_unit }}
+{% endif %}
+
+[Service]
+Type=oneshot
+ExecStart={{ postgres_maintenance_script }}
+# Ser amable: el mantenimiento nunca debe dejar sin recursos a las apps.
+Nice=10
+IOSchedulingClass=idle

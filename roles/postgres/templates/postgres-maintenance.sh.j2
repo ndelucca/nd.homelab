@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Mantenimiento semanal de la instancia compartida de PostgreSQL. Corre como
+# {{ postgres_user }} (rootless) vía la user unit postgres-maintenance.service.
+#
+#   1. VACUUM + ANALYZE de todas las databases (autovacuum cubre el día a día; esto
+#      garantiza estadísticas frescas y congela filas viejas aunque una tabla sea quieta).
+#   2. pg_amcheck: detecta corrupción de heap e índices btree.
+#   3. Chequeos de salud que no rompen nada pero conviene saber: edad de xid,
+#      transacciones colgadas, slots de replicación inactivos, índices inválidos.
+#   4. Restore drill (primera corrida del mes, o con --drill): carga cada dump en una
+#      database temporal y la dropea. Prueba que el dump RESTAURA, no sólo que existe.
+#
+# Un fallo en 1, 2 o 4 deja la unit en failed (OnFailure= avisa). Los hallazgos de 3
+# son avisos: notifican pero no fallan la unit.
+set -uo pipefail
+
+CONTAINER="{{ postgres_container_name }}"
+ADMIN="{{ postgres_admin_user }}"
+DUMP_DIR="{{ postgres_dump_dir }}"
+NOTIFY="{{ postgres_notify_script }}"
+
+log() { echo "[postgres-maintenance] $*"; }
+notify() {
+  log "ALERT: $1: $2"
+  if [ -x "${NOTIFY}" ]; then "${NOTIFY}" "$1" "$2" || true; fi
+}
+pg() { podman exec -i "${CONTAINER}" "$@"; }
+sql() { pg psql --username="${ADMIN}" --dbname="${2:-postgres}" --no-psqlrc -At --set=ON_ERROR_STOP=1 -c "$1"; }
+
+rc=0
+fail() { log "ERROR: $1"; rc=1; }
+
+podman container inspect -f '{% raw %}{{.State.Running}}{% endraw %}' "${CONTAINER}" 2>/dev/null | grep -qx true \
+  || { log "ERROR: el container ${CONTAINER} no está corriendo"; exit 1; }
+
+# Restos de un drill interrumpido.
+for db in $(sql "SELECT datname FROM pg_database WHERE datname LIKE '\_drill\_%'"); do
+  sql "DROP DATABASE IF EXISTS \"${db}\" WITH (FORCE)" >/dev/null || true
+done
+
+log "vacuum + analyze de todas las databases"
+pg vacuumdb --username="${ADMIN}" --all --analyze --quiet || fail "vacuumdb falló"
+
+log "pg_amcheck (heap + índices)"
+pg pg_amcheck --username="${ADMIN}" --all --install-missing \
+  || fail "pg_amcheck reportó corrupción o no pudo correr"
+
+log "chequeos de salud"
+xid_age="$(sql "SELECT coalesce(max(age(datfrozenxid)), 0) FROM pg_database")" || xid_age=0
+if [ "${xid_age}" -gt {{ postgres_maintenance_xid_age_warn }} ]; then
+  notify "PostgreSQL: edad de xid alta" "max(age(datfrozenxid)) = ${xid_age}; revisar autovacuum (wraparound)"
+fi
+stuck="$(sql "SELECT count(*) FROM pg_stat_activity WHERE state LIKE 'idle in transaction%' AND xact_start < now() - interval '1 day'")" || stuck=0
+if [ "${stuck}" -gt 0 ]; then
+  notify "PostgreSQL: transacciones colgadas" "${stuck} sesión(es) 'idle in transaction' hace más de 1 día (frenan el vacuum)"
+fi
+slots="$(sql "SELECT count(*) FROM pg_replication_slots WHERE NOT active")" || slots=0
+if [ "${slots}" -gt 0 ]; then
+  notify "PostgreSQL: slots de replicación inactivos" "${slots} slot(s) inactivo(s) reteniendo WAL"
+fi
+for db in $(sql "SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate"); do
+  invalid="$(sql "SELECT count(*) FROM pg_index WHERE NOT indisvalid" "${db}")" || invalid=0
+  if [ "${invalid}" -gt 0 ]; then
+    notify "PostgreSQL: índices inválidos" "${invalid} índice(s) inválido(s) en ${db} (REINDEX o DROP)"
+  fi
+done
+
+{% if postgres_maintenance_drill_enabled %}
+# El timer es semanal: la corrida que cae entre el día 1 y el 7 es la del mes.
+if [ "${1:-}" = "--drill" ] || [ "$(date +%-d)" -le 7 ]; then
+  log "restore drill"
+  shopt -s nullglob
+  dumps=("${DUMP_DIR}"/*.dump)
+  [ -e "${dumps[0]:-}" ] || fail "restore drill: no hay dumps en ${DUMP_DIR}"
+  for file in "${dumps[@]}"; do
+    name="$(basename "${file}" .dump)"
+    drill="_drill_${name:0:50}"
+    if sql "CREATE DATABASE \"${drill}\" TEMPLATE template0" >/dev/null \
+       && pg pg_restore --username="${ADMIN}" --dbname="${drill}" --no-owner --no-acl --exit-on-error < "${file}"; then
+      log "restore drill OK: ${name} ($(sql "SELECT count(*) FROM pg_class WHERE relkind IN ('r','p') AND relnamespace NOT IN (SELECT oid FROM pg_namespace WHERE nspname IN ('pg_catalog','information_schema') OR nspname LIKE 'pg\_toast%')" "${drill}") tablas)"
+    else
+      fail "restore drill: el dump de ${name} NO se pudo restaurar (${file})"
+    fi
+    sql "DROP DATABASE IF EXISTS \"${drill}\" WITH (FORCE)" >/dev/null || true
+  done
+fi
+{% endif %}
+
+# OnFailure= de la unit se encarga del aviso.
+[ "${rc}" -eq 0 ] || exit 1
+log "done"

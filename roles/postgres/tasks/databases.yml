@@ -1,0 +1,72 @@
+---
+# Databases declaradas en postgres_databases (services.yml). Camino rápido:
+#   ansible-playbook playbooks/site.yml -l ndelucca-server -t postgres_databases
+#
+# Sólo crea y ajusta: sacar una entrada de la lista NO dropea la database. Las tablas no
+# se modelan acá — las crea la app (o {{ postgres_app_user }}, que es el dueño).
+
+- name: Manage declared databases
+  when: postgres_reachable | default(false)
+  module_defaults:
+    group/community.postgresql.all:
+      login_host: "{{ postgres_host }}"
+      login_port: "{{ postgres_port }}"
+      login_user: "{{ postgres_admin_user }}"
+      login_password: "{{ postgres_admin_password }}"
+  block:
+    - name: Ensure each declared database exists and is owned by the application role
+      community.postgresql.postgresql_db:
+        name: "{{ item.name }}"
+        owner: "{{ postgres_app_user }}"
+        encoding: UTF8
+        state: present
+      loop: "{{ postgres_databases }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # En --check una database recién declarada todavía no existe, y los pasos de abajo
+    # (que se conectan a ella) fallarían: se saltean para esa database y el dry-run sólo
+    # reporta el alta.
+    - name: List the databases that already exist
+      community.postgresql.postgresql_query:
+        login_db: postgres
+        query: SELECT datname FROM pg_database
+      register: postgres_existing_databases
+      check_mode: false
+      changed_when: false
+      when: ansible_check_mode
+
+    # Por default cualquier rol puede conectarse a cualquier database. Se cierra: entra el
+    # dueño (y el superuser); un rol futuro necesita su GRANT CONNECT explícito.
+    - name: Revoke the default CONNECT privilege from PUBLIC
+      community.postgresql.postgresql_privs:
+        login_db: postgres
+        type: database
+        objs: "{{ item.name }}"
+        privs: CONNECT,TEMPORARY
+        roles: PUBLIC
+        state: absent
+      loop: "{{ postgres_databases }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: not ansible_check_mode or item.name in (postgres_existing_databases.query_result | map(attribute='datname'))
+
+    - name: Ensure declared schemas exist
+      community.postgresql.postgresql_schema:
+        login_db: "{{ item.0.name }}"
+        name: "{{ item.1 }}"
+        owner: "{{ postgres_app_user }}"
+      loop: "{{ postgres_databases | subelements('schemas', skip_missing=True) }}"
+      loop_control:
+        label: "{{ item.0.name }}.{{ item.1 }}"
+      when: not ansible_check_mode or item.0.name in (postgres_existing_databases.query_result | map(attribute='datname'))
+
+    # CREATE EXTENSION suele pedir superuser, por eso se declara acá y no lo hace la app.
+    - name: Ensure declared extensions exist
+      community.postgresql.postgresql_ext:
+        login_db: "{{ item.0.name }}"
+        name: "{{ item.1 }}"
+      loop: "{{ postgres_databases | subelements('extensions', skip_missing=True) }}"
+      loop_control:
+        label: "{{ item.0.name }}: {{ item.1 }}"
+      when: not ansible_check_mode or item.0.name in (postgres_existing_databases.query_result | map(attribute='datname'))

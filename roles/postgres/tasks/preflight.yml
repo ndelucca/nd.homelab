@@ -1,0 +1,84 @@
+---
+# Chequeos de preflight y armado de directorios para PostgreSQL
+
+- name: Common container preflight (Fedora, uid, port, quadlet dir)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: preflight
+  vars:
+    container_base_user: "{{ postgres_user }}"
+    container_base_quadlet_dir: "{{ postgres_quadlet_dir }}"
+
+- name: Map the resolved UID to postgres_uid
+  ansible.builtin.set_fact:
+    postgres_uid: "{{ container_base_uid }}"
+
+# Sin default aleatorio a propósito (mismo criterio que immich_db_password): rotaría la
+# password en cada corrida.
+- name: Ensure both role passwords are provided via vault
+  ansible.builtin.assert:
+    that:
+      - postgres_admin_password | length > 0
+      - postgres_app_password | length > 0
+    fail_msg: >-
+      postgres_admin_password y postgres_app_password deben venir del vault
+      (vault_postgres_admin_password / vault_postgres_app_password en
+      inventory/group_vars/homeservers/vault.yml).
+  no_log: true
+
+# Con UserNS=keep-id:uid=999 el usuario `postgres` del container ES {{ postgres_user }}
+# en el host, así que todo puede (y debe) ser suyo: nada de la trampa de subuids del
+# Postgres de Immich.
+- name: Ensure base directory exists
+  ansible.builtin.file:
+    path: "{{ postgres_base_dir }}"
+    state: directory
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: '0755'
+  become: true
+
+- name: Ensure data, config, secrets and dump directories exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: "{{ item.mode }}"
+  become: true
+  loop:
+    - {path: "{{ postgres_root_dir }}", mode: '0700'}
+    - {path: "{{ postgres_config_dir }}", mode: '0750'}
+    - {path: "{{ postgres_tls_dir }}", mode: '0700'}
+    - {path: "{{ postgres_secrets_dir }}", mode: '0700'}
+    - {path: "{{ postgres_dump_dir }}", mode: '0750'}
+
+# --- Guard de major -----------------------------------------------------------------
+# Cada major vive en <pgroot>/<major>/docker. Si se sube postgres_major y se re-corre el
+# rol a secas, la imagen nueva haría initdb de un cluster VACÍO al lado del viejo y las
+# apps verían una base sin datos. Se corta acá y se manda al playbook de upgrade.
+- name: Find existing PostgreSQL data directories
+  ansible.builtin.find:
+    paths: "{{ postgres_root_dir }}"
+    patterns: PG_VERSION
+    recurse: true
+    depth: 3
+  become: true
+  register: postgres_pgversion_files
+
+- name: Resolve which majors have data on disk
+  ansible.builtin.set_fact:
+    postgres_existing_majors: >-
+      {{ postgres_pgversion_files.files | default([]) | map(attribute='path')
+         | select('search', '/[0-9]+/docker/PG_VERSION$')
+         | map('regex_replace', '^.*/([0-9]+)/docker/PG_VERSION$', '\1') | list | unique }}
+
+- name: Refuse to start an empty cluster next to data from another major
+  ansible.builtin.assert:
+    that:
+      - (postgres_existing_majors | length == 0) or ((postgres_major | string) in postgres_existing_majors)
+    fail_msg: >-
+      Hay datos de PostgreSQL {{ postgres_existing_majors | join(', ') }} en {{ postgres_root_dir }}
+      pero postgres_major es {{ postgres_major }}. Un cambio de major NO se aplica con este rol:
+      corré `ansible-playbook playbooks/postgres_upgrade.yml -l ndelucca-server`.
+  when: not (postgres_upgrade_in_progress | default(false) | bool)

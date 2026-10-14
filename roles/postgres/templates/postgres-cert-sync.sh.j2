@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Copia el cert TLS renovado a donde Postgres lo lee y le pide un reload.
+# Corre como root (la clave origen es root-only), disparado por postgres-cert-sync.path.
+set -euo pipefail
+
+install -o "{{ postgres_user }}" -g "{{ postgres_group }}" -m 0644 \
+  "{{ postgres_tls_cert_src }}" "{{ postgres_tls_dir }}/server.crt"
+install -o "{{ postgres_user }}" -g "{{ postgres_group }}" -m 0600 \
+  "{{ postgres_tls_key_src }}" "{{ postgres_tls_dir }}/server.key"
+
+# SIGHUP: Postgres relee el cert sin cortar conexiones. Si el container no corre no hay
+# nada que recargar (el próximo start ya lee el cert nuevo), así que no es un error.
+if runuser -u "{{ postgres_user }}" -- env XDG_RUNTIME_DIR="/run/user/{{ postgres_uid }}" \
+     podman kill --signal HUP "{{ postgres_container_name }}" >/dev/null 2>&1; then
+  echo "[postgres-cert-sync] cert copiado y Postgres recargado"
+else
+  echo "[postgres-cert-sync] cert copiado; el container no está corriendo, no se recarga"
+fi

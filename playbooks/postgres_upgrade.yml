@@ -1,0 +1,25 @@
+---
+# Upgrade de versión MAJOR del PostgreSQL compartido (rol postgres), sin perder datos.
+#
+# Los bumps de MINOR no pasan por acá: son `site.yml -t postgres` como cualquier imagen.
+#
+# Procedimiento:
+#   1. Subir postgres_major, postgres_version y postgres_image_digest en
+#      roles/postgres/defaults/main.yml.
+#   2. Parar las apps que usan la base (el playbook se niega a seguir si hay clientes).
+#   3. ansible-playbook playbooks/postgres_upgrade.yml -l ndelucca-server
+#
+# Hace: dump completo con la versión vieja (+ copia en el disco de backup) -> arranca el
+# major nuevo en su propio directorio -> restaura roles y databases -> ANALYZE -> verifica.
+# El cluster viejo queda intacto en disco; el rollback es volver las tres variables atrás.
+# No soporta --check. Ver roles/postgres/tasks/upgrade.yml.
+
+- name: Upgrade the shared PostgreSQL server to a new major version
+  hosts: homeservers
+  gather_facts: true
+
+  tasks:
+    - name: Run the PostgreSQL major upgrade
+      ansible.builtin.include_role:
+        name: postgres
+        tasks_from: upgrade

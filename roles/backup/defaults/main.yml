@@ -91,6 +91,7 @@ backup_excludes:
   - "{{ app_media_root }}/Movies"               # re-descargable
   - "{{ app_media_root }}/Series"               # re-descargable
   - "{{ app_data_root }}/immich/postgres"       # datos PG vivos: respaldados vía pg_dump
+  - "{{ app_data_root }}/postgres/pgroot"       # idem, PostgreSQL compartido
   - "{{ app_data_root }}/jellyfin/cache"        # regenerable
   - "{{ app_data_root }}/jellyfin/data/data/transcodes"
   - "{{ app_data_root }}/immich/model-cache"    # modelos de ML, se re-descargan
@@ -141,6 +142,13 @@ backup_immich_enabled: true
 backup_immich_container: immich-database
 backup_immich_db_user: immich
 backup_immich_db_name: immich
+
+# PostgreSQL compartido (rol postgres). El dump lo hace el script que despliega ESE rol
+# (globals + un pg_dump por database, descubiertas en runtime) hacia
+# {{ app_data_root }}/postgres/dumps/. La ruta va literal porque private_role_vars
+# impide leer los defaults del otro rol.
+backup_postgres_enabled: true
+backup_postgres_dump_script: "{{ backup_bin_dir }}/pg-dump-all"
 
 # Bases SQLite (`.backup` online, seguro mientras la app está corriendo).
 backup_sqlite_dbs:

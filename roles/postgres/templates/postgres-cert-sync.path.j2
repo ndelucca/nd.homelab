@@ -1,0 +1,10 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Watch the TLS certificate PostgreSQL serves ({{ postgres_tls_cert_src }})
+
+[Path]
+PathChanged={{ postgres_tls_cert_src }}
+Unit=postgres-cert-sync.service
+
+[Install]
+WantedBy=multi-user.target

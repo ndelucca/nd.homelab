@@ -42,6 +42,21 @@ else
 fi
 {% endif %}
 
+{% if backup_postgres_enabled %}
+# PostgreSQL compartido: globals + un dump por database (online, consistente). El script
+# es del rol postgres; si falla se conservan los dumps previos y el backup sale DEGRADADO.
+if [ -x "{{ backup_postgres_dump_script }}" ]; then
+  log "dumping shared PostgreSQL -> {{ app_data_root }}/postgres/dumps"
+  if ! "{{ backup_postgres_dump_script }}" "{{ app_data_root }}/postgres/dumps"; then
+    log "WARNING: el dump del PostgreSQL compartido falló — se respaldan los dumps previos si existen (backup DEGRADADO)"
+    backup_degraded=1
+  fi
+else
+  log "WARNING: falta {{ backup_postgres_dump_script }} (¿corrió el rol postgres?) — se saltea el dump de PostgreSQL (backup DEGRADADO)"
+  backup_degraded=1
+fi
+{% endif %}
+
 # Bases SQLite: .backup online (seguro mientras la app está corriendo).
 {% for db in backup_sqlite_dbs %}
 SRC="{{ db.path }}"

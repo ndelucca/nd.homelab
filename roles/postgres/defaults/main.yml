@@ -1,0 +1,125 @@
+---
+# Variables por defecto del role postgres.
+#
+# PostgreSQL COMPARTIDO para las apps del server, accesible en la LAN como
+# db.<base_domain>:<postgres_port>. Es independiente del Postgres privado de Immich
+# (roles/immich), que sigue en su pod con su imagen propia.
+
+postgres_user: ndelucca
+postgres_group: ndelucca
+postgres_uid: 1000  # Se obtiene dinámicamente vía getent en preflight
+
+# Directorios — el estado vive en el disco de appdata (app_data_root, definido en
+# group_vars/homeservers/storage.yml).
+postgres_base_dir: "{{ app_data_root }}/postgres"
+# -> /var/lib/postgresql. Desde PG 18 la imagen usa PGDATA=<raíz>/<major>/docker, así que
+# cada major queda en su propio subdirectorio: es la base del upgrade con rollback.
+postgres_root_dir: "{{ postgres_base_dir }}/pgroot"
+postgres_config_dir: "{{ postgres_base_dir }}/config"    # -> /etc/postgresql (ro)
+postgres_tls_dir: "{{ postgres_config_dir }}/tls"
+postgres_secrets_dir: "{{ postgres_base_dir }}/secrets"  # NO se monta en el container
+postgres_dump_dir: "{{ postgres_base_dir }}/dumps"       # lo único que entra a restic
+
+postgres_quadlet_dir: /etc/containers/systemd/users  # Containers de usuario gestionados por el sistema
+postgres_container_name: postgres
+
+# --- Versión ------------------------------------------------------------------------
+# Imagen oficial, pinneada por tag + digest. Un bump de MINOR es cambiar
+# postgres_version + postgres_image_digest y re-correr `-t postgres`. Un bump de MAJOR
+# cambia además postgres_major y se aplica con playbooks/postgres_upgrade.yml (el rol
+# se niega a arrancar un major sin datos si hay datos de otro major).
+postgres_major: 18
+postgres_version: "18.6"
+postgres_image_digest: "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336"
+postgres_image: "docker.io/library/postgres:{{ postgres_version }}-trixie@{{ postgres_image_digest }}"
+
+# --- Red ----------------------------------------------------------------------------
+# El container usa Network=host (sin el proxy de port-forward rootless), así que la
+# frontera de red es listen_addresses + pg_hba + firewall. El puerto canónico vive en
+# services.yml (private_role_vars); este default es el mismo valor.
+postgres_port: 5432
+postgres_host: 127.0.0.1
+# IP de la LAN, no 0.0.0.0, para que nunca quede escuchando en otra interfaz.
+postgres_lan_host: "{{ ansible_facts['default_ipv4'].address }}"
+# Redes que pueden conectarse por TCP (siempre con TLS + scram). Las apps en otros
+# containers rootless llegan por la IP LAN del host y aparecen con esa misma IP.
+postgres_allowed_cidrs:
+  - "{{ ansible_facts['default_ipv4'].network }}/{{ ansible_facts['default_ipv4'].prefix }}"
+postgres_domain: "db.{{ nginx_domain | default(base_domain) }}"
+
+postgres_firewall_enabled: true  # true: el 5432 se expone directo en la LAN (no pasa por NGINX)
+
+# --- TLS ----------------------------------------------------------------------------
+# Postgres termina TLS él mismo con el mismo cert que sirve NGINX (el wildcard de
+# Let's Encrypt, o el self-signed si nginx_tls_mode lo indica). La clave es root-only,
+# así que se copia a postgres_tls_dir con dueño del servicio; un .path unit de sistema
+# re-copia y recarga cuando el rol acme renueva el cert.
+postgres_tls_cert_src: "{{ nginx_ssl_certificate | default('/etc/pki/nginx/server.crt') }}"
+postgres_tls_key_src: "{{ nginx_ssl_certificate_key | default('/etc/pki/nginx/server.key') }}"
+postgres_cert_sync_script: /usr/local/bin/postgres-cert-sync
+
+# --- Roles --------------------------------------------------------------------------
+# Admin (superuser): lo usa SOLO este repo. Password vía vault (services.yml la mapea).
+postgres_admin_user: postgres
+postgres_admin_password: ""
+# Rol de trabajo para las apps y para Naza: crea databases/schemas, lee diagnóstico y
+# hace mantenimiento, pero NO es superuser ni puede crear roles.
+postgres_app_user: ndelucca
+postgres_app_password: ""
+postgres_app_role_flags: "LOGIN,CREATEDB,NOSUPERUSER,NOCREATEROLE,NOREPLICATION,NOBYPASSRLS"
+postgres_app_role_memberships:
+  - pg_monitor          # pg_stat_*, settings, tamaños
+  - pg_maintain         # VACUUM / ANALYZE / REINDEX / CLUSTER sobre cualquier tabla
+  - pg_signal_backend   # cancelar / terminar queries ajenas (no de superuser)
+  - pg_checkpoint
+
+# Databases declaradas. Cada una se crea con OWNER {{ postgres_app_user }}; nunca se
+# borra nada automáticamente. Se define en services.yml:
+#   postgres_databases:
+#     - name: mi_app
+#       schemas: [app]          # opcional
+#       extensions: [pg_trgm]   # opcional (las crea el admin)
+postgres_databases: []
+
+# --- Tuning -------------------------------------------------------------------------
+# El host comparte RAM con Immich/Jellyfin: shared_buffers conservador (1/8, tope 2 GB).
+postgres_shared_buffers_mb: "{{ [(ansible_facts['memtotal_mb'] / 8) | int, 2048] | min }}"
+postgres_effective_cache_size_mb: "{{ (ansible_facts['memtotal_mb'] / 2) | int }}"
+postgres_work_mem_mb: 16
+postgres_maintenance_work_mem_mb: 256
+postgres_max_connections: 100
+postgres_max_wal_size: 2GB
+# /dev/shm del container: los 64 MB default rompen queries paralelas grandes.
+postgres_shm_size: 1g
+postgres_timezone: Etc/UTC
+postgres_log_min_duration_ms: 1000
+# Parámetros extra de postgresql.conf (clave: valor, el valor va tal cual).
+postgres_extra_settings: {}
+
+# --- Servicio -----------------------------------------------------------------------
+postgres_service_name: postgres  # unit postgres.container -> postgres.service
+postgres_service_enabled: true
+postgres_service_state: started
+
+postgres_manage_selinux: true
+
+# --- Mantenimiento, dump y restore ----------------------------------------------------
+postgres_bin_dir: "/home/{{ postgres_user }}/.local/bin"
+postgres_user_unit_dir: "/home/{{ postgres_user }}/.config/systemd/user"
+postgres_dump_script: "{{ postgres_bin_dir }}/pg-dump-all"
+postgres_restore_script: "{{ postgres_bin_dir }}/pg-restore-db"
+postgres_maintenance_script: "{{ postgres_bin_dir }}/postgres-maintenance.sh"
+# Semanal, después del prune de restic (dom 04:30). Autovacuum cubre el día a día.
+postgres_maintenance_schedule: "Sun *-*-* 05:30:00"
+# El restore drill (cargar cada dump en una database temporal) corre en la primera
+# pasada del mes.
+postgres_maintenance_drill_enabled: true
+# Avisar cuando la edad de xid de alguna database supera este valor (wraparound a 2^31).
+postgres_maintenance_xid_age_warn: 1000000000
+# Script de notify del role backup (literal: private_role_vars). Si no existe, el
+# mantenimiento loguea al journal igual.
+postgres_notify_script: "{{ postgres_bin_dir }}/restic-backup-notify.sh"
+postgres_notify_unit: "backup-notify@%n.service"
+
+# Copia extra de los dumps pre-upgrade fuera del disco de datos.
+postgres_upgrade_offsite_dir: "{{ storage_backup_disk }}/postgres-pre-upgrade"

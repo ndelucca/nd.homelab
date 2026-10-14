@@ -80,6 +80,7 @@ monitoring_http_accepted_codes: ["200-399"]
 # Checks de puerto (TCP) para los servicios no-HTTP.
 monitoring_port_checks:
   - {name: "AdGuard DNS", host: "127.0.0.1", port: 53}
+  - {name: "PostgreSQL", host: "127.0.0.1", port: "{{ postgres_port | default(5432) }}"}
 
 # Checks de ping para la alcanzabilidad básica del host.
 monitoring_ping_checks:

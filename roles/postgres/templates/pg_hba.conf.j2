@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# TYPE   DATABASE  USER  ADDRESS  METHOD
+
+# Socket unix (sólo existe dentro del container): el admin entra por peer, sin password.
+# Es el camino de `podman exec` que usan los dumps, el mantenimiento y el restore.
+local    all  {{ postgres_admin_user }}  peer
+local    all  all  scram-sha-256
+
+# Loopback del host (Ansible y apps que corren en el propio server).
+host     all  all  127.0.0.1/32  scram-sha-256
+
+# LAN: siempre con TLS. No hay regla `host` para estas redes, así que una conexión
+# sin TLS se rechaza.
+{% for cidr in postgres_allowed_cidrs %}
+hostssl  all  all  {{ cidr }}  scram-sha-256
+{% endfor %}

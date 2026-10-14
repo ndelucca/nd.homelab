@@ -79,6 +79,28 @@ gunzip -c /srv/disks/D-Draco/appdata/immich/dumps/immich.sql.gz \
   | podman exec -i immich-database psql -U immich -d immich
 ```
 
+**PostgreSQL compartido (`db.`):** los datos vivos (`appdata/postgres/pgroot`) **no**
+están en el backup; la fuente es `appdata/postgres/dumps/` (`globals.sql` + un
+`<db>.dump` por database). El script `pg-restore-db` (lo despliega el rol `postgres`,
+corre como `ndelucca`) los carga:
+
+```bash
+# Una database que se rompió o se borró (falla si existe; --force la dropea y recrea):
+pg-restore-db mi_app
+pg-restore-db --force mi_app
+
+# Instancia entera (D-Draco perdido): primero `site.yml -t postgres` para que exista un
+# server vacío con sus roles, después roles + todas las databases:
+pg-restore-db --all
+
+# Desde un snapshot viejo de restic: sacar el dump a un temporal y pasarlo como archivo.
+restic dump <snapshot-id> /srv/disks/D-Draco/appdata/postgres/dumps/mi_app.dump > /tmp/mi_app.dump
+pg-restore-db --force mi_app /tmp/mi_app.dump
+```
+
+La database vuelve con su dueño y permisos originales. Después de un `--all`, re-corré
+`site.yml -t postgres` para que las passwords de los roles vuelvan a ser las del vault.
+
 **Apps SQLite (Jellyfin, Forgejo, Kavita):** con la app **detenida**, copiá el
 dump por encima de la DB en vivo. Los nombres de los user-service units son
 `jellyfin`, `forgejo` y `kavita` respectivamente (todos quadlets de un solo
@@ -119,5 +141,6 @@ restic dump <snapshot-id> /srv/disks/D-Draco/appdata/forgejo/dumps/forgejo.db > 
 - [ ] `restic check` sin errores
 - [ ] La propiedad es `1000:1000` bajo `D-Draco/appdata` y `D-Draco/media`
 - [ ] Immich: `curl -k https://gallery.ndelucca.dedyn.io` y las fotos visibles
+- [ ] PostgreSQL: `podman exec postgres psql -U postgres -c '\l'` lista las databases esperadas
 - [ ] Forgejo/Jellyfin/Kavita accesibles en sus subdominios, con los datos presentes
 - [ ] `journalctl --user -M ndelucca@ -u backup.service` muestra la próxima corrida OK

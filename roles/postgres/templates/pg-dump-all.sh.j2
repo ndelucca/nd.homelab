@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Dump lógico completo de la instancia compartida de PostgreSQL (online, consistente).
+#
+# Uso: pg-dump-all [directorio-destino]      (default: {{ postgres_dump_dir }})
+#
+# Deja en el destino:
+#   globals.sql    roles (con sus hashes de password) y memberships
+#   <db>.dump      un pg_dump formato custom por database (incluida `postgres`)
+#   manifest.tsv   <db> <cantidad de tablas>, para verificar un restore
+#
+# Las databases se descubren en runtime, así que una creada a mano también se respalda.
+# Lo llaman el backup nocturno (roles/backup) y el playbook de upgrade de major.
+set -euo pipefail
+umask 077   # globals.sql lleva hashes de password
+
+CONTAINER="{{ postgres_container_name }}"
+ADMIN="{{ postgres_admin_user }}"
+DEST="${1:-{{ postgres_dump_dir }}}"
+
+log() { echo "[pg-dump-all] $*"; }
+die() { echo "[pg-dump-all][ERROR] $*" >&2; exit 1; }
+# Sin -i a propósito: con stdin conectado, el primer `podman exec` del loop de abajo se
+# tragaría el resto de la lista de databases y sólo se respaldaría la primera.
+pg() { podman exec "${CONTAINER}" "$@" < /dev/null; }
+
+podman container inspect -f '{% raw %}{{.State.Running}}{% endraw %}' "${CONTAINER}" 2>/dev/null | grep -qx true \
+  || die "el container ${CONTAINER} no está corriendo"
+mkdir -p "${DEST}"
+
+log "globals -> ${DEST}/globals.sql"
+pg pg_dumpall --username="${ADMIN}" --globals-only > "${DEST}/globals.sql.tmp"
+[ -s "${DEST}/globals.sql.tmp" ] || die "el dump de globals vino vacío"
+mv -f "${DEST}/globals.sql.tmp" "${DEST}/globals.sql"
+
+# Las databases temporales del restore drill (_drill_*) no se respaldan.
+dbs="$(pg psql --username="${ADMIN}" --dbname=postgres --no-psqlrc -At -c \
+  "SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate AND datname NOT LIKE '\_drill\_%' ORDER BY datname")"
+[ -n "${dbs}" ] || die "no se pudo listar las databases"
+
+failed=0
+: > "${DEST}/manifest.tsv.tmp"
+while IFS= read -r db; do
+  # El nombre termina siendo un nombre de archivo: se exige uno seguro.
+  if ! [[ "${db}" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+    log "WARNING: database con nombre no soportado para el dump: '${db}' — se saltea"
+    failed=1
+    continue
+  fi
+  log "${db} -> ${DEST}/${db}.dump"
+  if pg pg_dump --username="${ADMIN}" --format=custom --dbname="${db}" > "${DEST}/${db}.dump.tmp" \
+     && [ -s "${DEST}/${db}.dump.tmp" ]; then
+    mv -f "${DEST}/${db}.dump.tmp" "${DEST}/${db}.dump"
+    tables="$(pg psql --username="${ADMIN}" --dbname="${db}" --no-psqlrc -At -c \
+      "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ('r','p') AND n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg\_toast%'")"
+    printf '%s\t%s\n' "${db}" "${tables}" >> "${DEST}/manifest.tsv.tmp"
+  else
+    # Se conserva el dump anterior de esa database (si existe) y se sigue con el resto.
+    rm -f "${DEST}/${db}.dump.tmp"
+    log "WARNING: el dump de ${db} falló o vino vacío"
+    failed=1
+  fi
+done <<< "${dbs}"
+mv -f "${DEST}/manifest.tsv.tmp" "${DEST}/manifest.tsv"
+
+[ "${failed}" -eq 0 ] || die "al menos una database no se pudo respaldar (ver WARNING arriba)"
+log "done"

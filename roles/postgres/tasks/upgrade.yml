@@ -1,0 +1,231 @@
+---
+# Upgrade de versión MAJOR por dump + restore. Lo invoca playbooks/postgres_upgrade.yml
+# DESPUÉS de subir postgres_major / postgres_version / postgres_image_digest en
+# defaults/main.yml.
+#
+# Por qué dump/restore y no pg_upgrade: la imagen oficial sólo trae los binarios de UN
+# major, y a esta escala un dump lógico es más simple y se puede verificar.
+#
+# El cluster viejo NO se toca: queda en <pgroot>/<major viejo>/. Rollback = volver los
+# tres valores de defaults/main.yml atrás y correr `site.yml -t postgres`.
+
+- name: Refuse to run in check mode
+  ansible.builtin.assert:
+    that: not ansible_check_mode
+    fail_msg: "El upgrade de major no tiene dry-run: cada paso depende del resultado real del anterior."
+
+- name: Run the preflight (directories, uid, majors on disk)
+  ansible.builtin.include_tasks: preflight.yml
+  vars:
+    postgres_upgrade_in_progress: true
+
+- name: Run the Podman install step (shared handlers)
+  ansible.builtin.include_tasks: install.yml
+
+- name: Deploy the dump and restore tooling
+  ansible.builtin.include_tasks: maintenance.yml
+
+- name: Read the major version of the running server
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - "{{ postgres_container_name }}"
+      - psql
+      - --username={{ postgres_admin_user }}
+      - --dbname=postgres
+      - --no-psqlrc
+      - -At
+      - -c
+      - SHOW server_version_num
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+  register: postgres_upgrade_running_version
+  changed_when: false
+
+- name: Resolve the source major
+  ansible.builtin.set_fact:
+    postgres_upgrade_from_major: "{{ (postgres_upgrade_running_version.stdout | trim | int) // 10000 }}"
+
+- name: Verify there is an upgrade to do
+  ansible.builtin.assert:
+    that:
+      - postgres_upgrade_from_major | int < postgres_major | int
+      - (postgres_major | string) not in postgres_existing_majors
+    fail_msg: >-
+      Nada que migrar: el server corre PostgreSQL {{ postgres_upgrade_from_major }}, postgres_major es
+      {{ postgres_major }} y en disco hay datos de {{ postgres_existing_majors | join(', ') }}. Para
+      reintentar un upgrade que quedó a medias: hacé el rollback (variables atrás + `site.yml -t
+      postgres`), borrá a mano {{ postgres_root_dir }}/{{ postgres_major }} (el cluster nuevo,
+      incompleto), volvé a subir las variables y corré este playbook de nuevo.
+
+# Lo que se escriba entre el dump y el corte se pierde: se exige que no haya clientes
+# conectados (pará las apps que usan la DB antes de correr esto).
+- name: Count client sessions from outside the server
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - "{{ postgres_container_name }}"
+      - psql
+      - --username={{ postgres_admin_user }}
+      - --dbname=postgres
+      - --no-psqlrc
+      - -At
+      - -c
+      - >-
+        SELECT count(*) FROM pg_stat_activity
+        WHERE backend_type = 'client backend' AND client_addr IS NOT NULL AND pid <> pg_backend_pid()
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+  register: postgres_upgrade_clients
+  changed_when: false
+
+- name: Require that no application is connected
+  ansible.builtin.assert:
+    that: (postgres_upgrade_clients.stdout | trim | int == 0) or (postgres_upgrade_ignore_clients | default(false) | bool)
+    fail_msg: >-
+      Hay {{ postgres_upgrade_clients.stdout | trim }} sesión(es) de clientes conectadas. Pará las apps
+      que usan la base y reintentá (o pasá -e postgres_upgrade_ignore_clients=true y aceptá perder lo
+      que escriban durante el upgrade).
+
+# Se baja la imagen ANTES de tocar nada: si el pull falla, el server viejo sigue arriba.
+- name: Pull the new PostgreSQL image
+  ansible.builtin.command:
+    cmd: podman pull {{ postgres_image }}
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+  changed_when: false
+
+- name: Resolve the pre-upgrade dump directory
+  ansible.builtin.set_fact:
+    postgres_upgrade_dump_path: >-
+      {{ postgres_dump_dir }}/pre-upgrade-{{ postgres_upgrade_from_major }}-to-{{ postgres_major }}-{{ ansible_facts['date_time']['iso8601_basic_short'] }}
+
+- name: Dump the whole instance with the old version
+  ansible.builtin.command:
+    argv:
+      - "{{ postgres_dump_script }}"
+      - "{{ postgres_upgrade_dump_path }}"
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+  changed_when: true
+
+- name: Ensure the off-disk copy directory exists
+  ansible.builtin.file:
+    path: "{{ postgres_upgrade_offsite_dir }}"
+    state: directory
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: '0700'
+  become: true
+
+- name: Keep a copy of the pre-upgrade dump on the backup disk
+  ansible.builtin.copy:
+    src: "{{ postgres_upgrade_dump_path }}"
+    dest: "{{ postgres_upgrade_offsite_dir }}/"
+    remote_src: true
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: preserve
+  become: true
+
+# El rol completo con la imagen nueva: el Quadlet cambia, el restart arranca el major
+# nuevo y su initdb crea <pgroot>/<major>/docker vacío. Las databases declaradas no se
+# crean acá: las trae el restore, con su contenido.
+- name: Deploy the new major (empty cluster)
+  ansible.builtin.include_tasks: main.yml
+  vars:
+    postgres_upgrade_in_progress: true
+    postgres_databases: []
+
+- name: Read the major version of the new server
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - "{{ postgres_container_name }}"
+      - psql
+      - --username={{ postgres_admin_user }}
+      - --dbname=postgres
+      - --no-psqlrc
+      - -At
+      - -c
+      - SHOW server_version_num
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+  register: postgres_upgrade_new_version
+  changed_when: false
+  failed_when: (postgres_upgrade_new_version.stdout | trim | int) // 10000 != postgres_major | int
+
+- name: Restore roles and every database into the new major
+  ansible.builtin.command:
+    argv:
+      - "{{ postgres_restore_script }}"
+      - --all
+      - "{{ postgres_upgrade_dump_path }}"
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+  changed_when: true
+
+# Un restore no trae estadísticas del planner: sin esto las primeras queries van a ciegas.
+- name: Rebuild planner statistics
+  ansible.builtin.command:
+    cmd: podman exec {{ postgres_container_name }} vacuumdb --username={{ postgres_admin_user }} --all --analyze-in-stages
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+  changed_when: true
+
+# manifest.tsv lo escribió pg-dump-all con el server viejo: <db> <cantidad de tablas>.
+- name: Verify every database came back with the same number of tables
+  ansible.builtin.shell:
+    cmd: |
+      set -euo pipefail
+      status=0
+      while IFS=$'\t' read -r db expected; do
+        actual="$(podman exec {{ postgres_container_name }} psql --username={{ postgres_admin_user }} --dbname="${db}" --no-psqlrc -At -c \
+          "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ('r','p') AND n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg\_toast%'")" || actual="ERROR"
+        if [ "${actual}" = "${expected}" ]; then
+          echo "OK   ${db}: ${actual} tablas"
+        else
+          echo "FAIL ${db}: esperaba ${expected}, hay ${actual}"
+          status=1
+        fi
+      done < "{{ postgres_upgrade_dump_path }}/manifest.tsv"
+      exit "${status}"
+    executable: /bin/bash
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+  register: postgres_upgrade_verify
+  changed_when: false
+
+- name: Report the upgrade
+  ansible.builtin.debug:
+    msg: |
+      PostgreSQL {{ postgres_upgrade_from_major }} -> {{ postgres_major }} completo.
+
+      {{ postgres_upgrade_verify.stdout }}
+
+      Dump pre-upgrade: {{ postgres_upgrade_dump_path }}
+      Copia:            {{ postgres_upgrade_offsite_dir }}
+      Cluster viejo:    {{ postgres_root_dir }}/{{ postgres_upgrade_from_major }}  (intacto)
+
+      Rollback: volver postgres_major / postgres_version / postgres_image_digest atrás en
+      roles/postgres/defaults/main.yml y correr `site.yml -l ndelucca-server -t postgres`.
+      Cuando ya confíes en la versión nueva, borrá a mano el cluster viejo y el dump.

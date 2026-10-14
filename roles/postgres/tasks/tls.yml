@@ -1,0 +1,56 @@
+---
+# TLS nativo de Postgres con el mismo cert que sirve NGINX.
+#
+# La clave del cert es root-only (/etc/pki/nginx/...), y Postgres exige que su
+# ssl_key_file sea suyo y 0600. Así que se COPIA a postgres_tls_dir. Dos caminos:
+#   - acá, en cada corrida del rol (idempotente, visible en --check);
+#   - postgres-cert-sync.path, que dispara la misma copia + reload cuando el rol acme
+#     renueva el cert, sin acoplar los dos roles.
+
+- name: Copy the TLS certificate and key for PostgreSQL
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ postgres_tls_dir }}/{{ item.dest }}"
+    remote_src: true
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: "{{ item.mode }}"
+  become: true
+  loop:
+    - {src: "{{ postgres_tls_cert_src }}", dest: server.crt, mode: '0644'}
+    - {src: "{{ postgres_tls_key_src }}", dest: server.key, mode: '0600'}
+  loop_control:
+    label: "{{ item.dest }}"
+  notify: Postgres reload
+
+- name: Deploy the certificate sync script
+  ansible.builtin.template:
+    src: postgres-cert-sync.sh.j2
+    dest: "{{ postgres_cert_sync_script }}"
+    owner: root
+    group: root
+    mode: '0750'
+  become: true
+
+- name: Deploy the certificate sync units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  loop:
+    - postgres-cert-sync.service
+    - postgres-cert-sync.path
+  notify: Postgres daemon-reload-system
+
+- name: Flush handlers so systemd sees the certificate sync units
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable the certificate sync path unit
+  ansible.builtin.systemd:
+    name: postgres-cert-sync.path
+    enabled: true
+    state: started
+  become: true

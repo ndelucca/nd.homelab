@@ -1,0 +1,9 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Sync the renewed TLS certificate into PostgreSQL and reload it
+
+[Service]
+Type=oneshot
+# lego escribe el .crt y el .key por separado: se espera a que termine con los dos.
+ExecStartPre=/usr/bin/sleep 10
+ExecStart={{ postgres_cert_sync_script }}

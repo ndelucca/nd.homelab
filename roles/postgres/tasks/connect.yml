@@ -1,0 +1,111 @@
+---
+# Verifica (y si hace falta repara) la conexión de admin que usan roles.yml y
+# databases.yml, y aplica un restart si quedó algún parámetro pendiente.
+#
+# La password del admin la fija initdb una sola vez. Si después se rota en el vault,
+# Ansible ya no puede entrar con la nueva para cambiarla: por eso el arreglo va por el
+# socket del container (`podman exec`, auth peer), que no depende de la password.
+
+- name: Verify and repair the admin connection
+  module_defaults:
+    group/community.postgresql.all:
+      login_host: "{{ postgres_host }}"
+      login_port: "{{ postgres_port }}"
+      login_user: "{{ postgres_admin_user }}"
+      login_password: "{{ postgres_admin_password }}"
+  block:
+    - name: Check whether the admin can log in with the vault password
+      community.postgresql.postgresql_ping:
+        login_db: postgres
+      register: postgres_admin_ping
+      failed_when: false
+      check_mode: false
+
+    # La password viaja por el entorno (`podman exec --env NAME` + \getenv de psql), nunca
+    # por argv. Mismo truco que roles/forgejo/tasks/admin.yml.
+    - name: Set the admin password from the vault
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --interactive
+          - --env
+          - POSTGRES_NEW_PASSWORD
+          - "{{ postgres_container_name }}"
+          - psql
+          - --username={{ postgres_admin_user }}
+          - --dbname=postgres
+          - --no-psqlrc
+          - --quiet
+          - --set=ON_ERROR_STOP=1
+        stdin: |
+          \getenv new_password POSTGRES_NEW_PASSWORD
+          ALTER ROLE {{ postgres_admin_user }} PASSWORD :'new_password';
+      become: true
+      become_user: "{{ postgres_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+        POSTGRES_NEW_PASSWORD: "{{ postgres_admin_password }}"
+      changed_when: true
+      no_log: true
+      when: not (postgres_admin_ping.is_available | default(false))
+
+    - name: Re-check the admin connection
+      community.postgresql.postgresql_ping:
+        login_db: postgres
+      register: postgres_admin_ping
+      failed_when: false
+      check_mode: false
+
+    # En --check sobre un host donde Postgres todavía no existe no hay a qué conectarse:
+    # los pasos SQL se saltean con aviso en vez de fallar el dry-run entero.
+    - name: Record whether PostgreSQL is reachable
+      ansible.builtin.set_fact:
+        postgres_reachable: "{{ postgres_admin_ping.is_available | default(false) | bool }}"
+
+    - name: Require a working admin connection
+      ansible.builtin.assert:
+        that: postgres_reachable
+        fail_msg: >-
+          No se pudo conectar como {{ postgres_admin_user }} a {{ postgres_host }}:{{ postgres_port }}.
+          Revisá `journalctl --user -M {{ postgres_user }}@ -u {{ postgres_service_name }}`.
+      when: not ansible_check_mode
+
+    - name: Warn that the SQL steps are skipped in this dry run
+      ansible.builtin.debug:
+        msg: "PostgreSQL no responde (¿primer deploy en --check?): se saltean roles y databases."
+      when: not postgres_reachable
+
+    # listen_addresses, shared_buffers, shared_preload_libraries, max_connections, etc.
+    # no se aplican con un reload: Postgres los deja marcados y acá se hace el restart.
+    - name: Find settings that are waiting for a restart
+      community.postgresql.postgresql_query:
+        login_db: postgres
+        query: SELECT name FROM pg_settings WHERE pending_restart ORDER BY name
+      register: postgres_pending_restart
+      check_mode: false
+      changed_when: false
+      when: postgres_reachable
+
+    - name: Restart PostgreSQL to apply the pending settings
+      ansible.builtin.systemd:
+        name: "{{ postgres_service_name }}"
+        state: restarted
+        scope: user
+      become: true
+      become_user: "{{ postgres_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+      when:
+        - postgres_reachable
+        - postgres_pending_restart.rowcount | default(0) > 0
+
+    - name: Wait for PostgreSQL after the restart
+      ansible.builtin.wait_for:
+        host: "{{ postgres_host }}"
+        port: "{{ postgres_port }}"
+        delay: 5
+        timeout: 180
+      when:
+        - postgres_reachable
+        - postgres_pending_restart.rowcount | default(0) > 0

@@ -12,7 +12,7 @@ ansible-playbook playbooks/site.yml -l ndelucca-server -t nginx         # un sol
 ```
 
 Qué protege de verdad, porque no es lo que parece: **la barrera principal es el `hosts:` del
-play**, no el flag. Los seis playbooks del server ya están acotados a `hosts: homeservers`, que
+play**, no el flag. Los siete playbooks del server ya están acotados a `hosts: homeservers`, que
 tiene un único miembro, así que ahí el `-l` es redundante. Sumale los `assert` de preflight que
 verifican el SO. El `-l` es la única barrera real en dos casos:
 
@@ -164,6 +164,34 @@ Al agregar un rol: **nunca etiquetes un directorio padre compartido**, etiquetá
 subdirectorios propios (por eso `jellyfin` lista `Movies`/`Series` en vez del media root). Y no
 pongas un `state: absent` sobre una regla amplia: `cloud_torrent` posee legítimamente la del media
 root y las corridas se pelearían entre sí.
+
+## PostgreSQL compartido (`roles/postgres`)
+
+Instancia para cualquier app en `db.<dominio>:5432`. Es **otra** que el Postgres de Immich
+(que sigue privado en su pod, con su imagen de vectores): no las mezcles. Lo que no se deduce
+del rol:
+
+- **No tiene vhost de NGINX ni lo va a tener.** Postgres no habla HTTP y un proxy L4 no puede
+  terminar su TLS. El container usa `Network=host` (sin `PublishPort`, para no pagar el proxy
+  del port-forward rootless y para que `pg_hba` vea la IP real del cliente), así que la frontera
+  de red es `listen_addresses` + `pg_hba.conf` + el firewall. El TLS lo termina Postgres con una
+  **copia** del cert de NGINX; `postgres-cert-sync.path` la refresca cuando `acme` renueva.
+- **Alta de una database = una entrada en `postgres_databases` (`services.yml`)** y
+  `-t postgres_databases`. Siempre queda con owner `ndelucca`. Sacar la entrada no la borra. Las
+  tablas no se modelan en Ansible.
+- **Un cambio de MAJOR no se aplica con `site.yml`.** Cada major vive en
+  `appdata/postgres/pgroot/<major>/`; si subís `postgres_major` y corrés el rol, el preflight
+  **falla a propósito** (si no, la imagen nueva haría initdb de un cluster vacío al lado del
+  viejo). El camino es `playbooks/postgres_upgrade.yml`: dump con la versión vieja, restore en
+  la nueva, y el cluster viejo queda en disco para el rollback (volver las variables atrás).
+- **`pgroot` está en `backup_excludes`**: la única copia que llega a D-Ursa son los dumps de
+  `appdata/postgres/dumps/`, que escribe `pg-dump-all` (script de ESTE rol, invocado por el
+  backup nocturno). Si ese script falta o falla, el backup sale degradado, no roto.
+- **La password del admin se repara sola**: si la del vault no entra (rotación), `connect.yml`
+  la re-impone por `podman exec` (socket + auth `peer`). `POSTGRES_PASSWORD` sólo cuenta en el
+  initdb.
+- Los cambios de `postgresql.conf`/`pg_hba.conf` hacen **reload**; el rol reinicia sólo si
+  `pg_settings.pending_restart` lo pide.
 
 ## Imágenes pinneadas
 

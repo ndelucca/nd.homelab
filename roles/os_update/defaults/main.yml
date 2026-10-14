@@ -65,6 +65,7 @@ os_update_user_services:
   - kavita.service
   - uptime-kuma.service
   - nd_market.service
+  - postgres.service
 
 # Vhosts a golpear de punta a punta después del reboot. Se resuelven contra el propio
 # server para no depender del resolver del nodo de control.

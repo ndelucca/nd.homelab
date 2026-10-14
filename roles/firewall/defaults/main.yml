@@ -24,6 +24,9 @@ firewall_open_ports:
   - { port: "80/tcp", comment: "NGINX HTTP", when: "{{ nginx_firewall_enabled | default(true) | bool }}" }
   - { port: "443/tcp", comment: "NGINX HTTPS", when: "{{ nginx_firewall_enabled | default(true) | bool }}" }
   - { port: "{{ firewall_forgejo_ssh_port }}/tcp", comment: "Forgejo git SSH", when: "{{ firewall_forgejo_enabled | bool }}" }
+  # PostgreSQL compartido: expuesto directo en la LAN (no es HTTP, no pasa por NGINX).
+  # Ambas vars vienen de services.yml; sin ellas el puerto queda cerrado.
+  - { port: "{{ postgres_port | default(5432) }}/tcp", comment: "PostgreSQL", when: "{{ postgres_firewall_enabled | default(false) | bool }}" }
   # Puerto de peers BitTorrent de Cloud Torrent — apagado por defecto (host solo en
   # LAN, sin forward en el router, así que no pueden llegar peers entrantes). Setear
   # cloud_torrent_open_peer_port y cloud_torrent_peer_port en services.yml para

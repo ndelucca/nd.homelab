@@ -1,0 +1,53 @@
+[Unit]
+Description=PostgreSQL {{ postgres_major }} (shared database server)
+Documentation=https://www.postgresql.org/docs/{{ postgres_major }}/
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ postgres_image }}
+ContainerName={{ postgres_container_name }}
+
+# Mapeo rootless: el usuario de servicio del host (uid {{ postgres_uid }}) pasa a ser el
+# usuario `postgres` del container (uid 999), que es como corre el server. Así PGDATA es
+# de {{ postgres_user }} en el host y no de un subuid (la trampa del Postgres de Immich).
+UserNS=keep-id:uid=999,gid=999
+
+# Red del host, sin PublishPort: el port-forward rootless pasa por un proxy en espacio
+# de usuario (único overhead real del container para una DB) y le oculta a Postgres la
+# IP del cliente. Con Network=host escucha directo donde dice listen_addresses
+# ({{ postgres_host }} y {{ postgres_lan_host }}, puerto {{ postgres_port }}) y pg_hba filtra por subred real.
+Network=host
+
+# /dev/shm para la memoria compartida dinámica de las queries paralelas.
+ShmSize={{ postgres_shm_size }}
+
+# La imagen (>= 18) pone PGDATA en /var/lib/postgresql/<major>/docker: un subdirectorio
+# por major bajo el mismo volumen.
+Volume={{ postgres_root_dir }}:/var/lib/postgresql
+Volume={{ postgres_config_dir }}:/etc/postgresql:ro
+
+# Sólo lo lee el initdb del primer arranque de cada cluster.
+EnvironmentFile={{ postgres_secrets_dir }}/initdb.env
+Environment=TZ={{ postgres_timezone }}
+
+Exec=postgres -c config_file=/etc/postgresql/postgresql.conf
+
+HealthCmd=pg_isready -q -h {{ postgres_host }} -p {{ postgres_port }}
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=5
+HealthStartPeriod=60s
+
+# Shutdown "fast" de Postgres (SIGINT, el STOPSIGNAL de la imagen) con margen para el
+# checkpoint final antes de que Podman mande SIGKILL.
+StopTimeout=120
+
+[Service]
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=300
+TimeoutStopSec=150
+
+[Install]
+WantedBy=multi-user.target default.target

@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Naza
+  description: Install and configure a shared PostgreSQL server (rootless Podman) on Fedora
+  license: MIT
+  min_ansible_version: '2.13'
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+
+dependencies: []
+
+collections:
+  - community.general
+  - community.postgresql
+  - ansible.posix

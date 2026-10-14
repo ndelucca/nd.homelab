@@ -1,0 +1,42 @@
+---
+# Roles de la instancia. Son DOS y los dos los gestiona este repo:
+#   - {{ postgres_admin_user }}: superuser. Su password la impone connect.yml.
+#   - {{ postgres_app_user }}: rol de trabajo, sin superuser ni CREATEROLE.
+
+- name: Manage PostgreSQL roles
+  when: postgres_reachable | default(false)
+  module_defaults:
+    group/community.postgresql.all:
+      login_host: "{{ postgres_host }}"
+      login_port: "{{ postgres_port }}"
+      login_user: "{{ postgres_admin_user }}"
+      login_password: "{{ postgres_admin_password }}"
+  block:
+    - name: Ensure the application role exists with its attributes and password
+      community.postgresql.postgresql_user:
+        login_db: postgres
+        name: "{{ postgres_app_user }}"
+        password: "{{ postgres_app_password }}"
+        role_attr_flags: "{{ postgres_app_role_flags }}"
+        comment: "Rol de trabajo de las apps (gestionado por nd.homelab)"
+      no_log: true
+
+    # Roles predefinidos: dan diagnóstico y mantenimiento sin acercarse a superuser
+    # (nada de leer/escribir archivos del server ni ejecutar programas).
+    - name: Grant the predefined monitoring and maintenance roles
+      community.postgresql.postgresql_membership:
+        login_db: postgres
+        groups: "{{ postgres_app_role_memberships }}"
+        target_roles:
+          - "{{ postgres_app_user }}"
+        state: present
+
+    # Diagnóstico de queries para cualquier database: la extensión se instala en
+    # template1 (la heredan las databases nuevas) y en `postgres`.
+    - name: Enable pg_stat_statements for new databases
+      community.postgresql.postgresql_ext:
+        login_db: "{{ item }}"
+        name: pg_stat_statements
+      loop:
+        - template1
+        - postgres

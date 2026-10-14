@@ -1,0 +1,68 @@
+---
+# Punto de entrada principal del role postgres
+
+- name: Include preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: ['postgres', 'preflight']
+
+- name: Install Podman and dependencies
+  ansible.builtin.import_tasks: install.yml
+  tags: ['postgres', 'install']
+
+- name: Deploy PostgreSQL configuration
+  ansible.builtin.import_tasks: configure.yml
+  tags: ['postgres', 'configure']
+
+# Antes del primer start: postgresql.conf tiene ssl = on y el server no arranca sin cert.
+- name: Deploy TLS certificate and renewal sync
+  ansible.builtin.import_tasks: tls.yml
+  tags: ['postgres', 'tls']
+
+- name: Deploy Quadlet configuration
+  ansible.builtin.import_tasks: quadlet.yml
+  tags: ['postgres', 'quadlet']
+
+# Se aplican los contextos SELinux antes de que arranque el container para que un host
+# en modo enforcing no deniegue el acceso a los volúmenes en la primera corrida.
+- name: Configure SELinux (shared container_base step)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: selinux
+  vars:
+    container_base_selinux_paths: "{{ [postgres_root_dir, postgres_config_dir] }}"
+  tags: ['postgres', 'selinux']
+  when: postgres_manage_selinux | bool
+
+# El primer arranque corre initdb, así que se permite un timeout de espera más largo.
+- name: Configure systemd service (shared container_base step)
+  ansible.builtin.include_role:
+    name: container_base
+    tasks_from: service
+  vars:
+    container_base_user: "{{ postgres_user }}"
+    container_base_uid: "{{ postgres_uid }}"
+    container_base_service_name: "{{ postgres_service_name }}"
+    container_base_host: "{{ postgres_host }}"
+    container_base_port: "{{ postgres_port }}"
+    container_base_service_enabled: "{{ postgres_service_enabled }}"
+    container_base_service_state: "{{ postgres_service_state }}"
+    container_base_wait_timeout: 180
+  tags: ['postgres', 'service']
+
+# Los tres pasos que hablan SQL comparten connect.yml, que también corre con
+# `-t postgres_databases` solo (el camino rápido para dar de alta una database).
+- name: Verify the admin connection
+  ansible.builtin.import_tasks: connect.yml
+  tags: ['postgres', 'postgres_roles', 'postgres_databases']
+
+- name: Manage roles
+  ansible.builtin.import_tasks: roles.yml
+  tags: ['postgres', 'postgres_roles']
+
+- name: Manage declared databases
+  ansible.builtin.import_tasks: databases.yml
+  tags: ['postgres', 'postgres_databases']
+
+- name: Deploy dump, restore and maintenance tooling
+  ansible.builtin.import_tasks: maintenance.yml
+  tags: ['postgres', 'maintenance']

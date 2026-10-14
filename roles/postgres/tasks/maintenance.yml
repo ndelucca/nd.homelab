@@ -1,0 +1,59 @@
+---
+# Herramientas de dump / restore / mantenimiento. Corren como el usuario de servicio
+# (rootless) y hablan con el server por `podman exec` (socket + auth peer), así que no
+# guardan ninguna password.
+
+- name: Ensure user bin and systemd unit directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: '0755'
+  become: true
+  loop:
+    - "{{ postgres_bin_dir }}"
+    - "{{ postgres_user_unit_dir }}"
+
+- name: Deploy the dump, restore and maintenance scripts
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: '0750'
+  become: true
+  loop:
+    - {src: pg-dump-all.sh.j2, dest: "{{ postgres_dump_script }}"}
+    - {src: pg-restore-db.sh.j2, dest: "{{ postgres_restore_script }}"}
+    - {src: postgres-maintenance.sh.j2, dest: "{{ postgres_maintenance_script }}"}
+  loop_control:
+    label: "{{ item.dest }}"
+
+- name: Deploy the maintenance systemd user units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ postgres_user_unit_dir }}/{{ item }}"
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: '0644'
+  become: true
+  loop:
+    - postgres-maintenance.service
+    - postgres-maintenance.timer
+  notify: Postgres daemon-reload-user
+
+- name: Flush handlers so the user manager sees the maintenance units
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start the maintenance timer
+  ansible.builtin.systemd:
+    name: postgres-maintenance.timer
+    enabled: true
+    state: started
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"

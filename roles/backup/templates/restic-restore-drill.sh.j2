@@ -33,7 +33,7 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "${tmp}"' EXIT
 
 includes=(
-{% for app in (['immich'] if backup_immich_enabled else []) + (backup_sqlite_dbs | map(attribute='app') | list) + (backup_copy_dbs | map(attribute='app') | list) %}
+{% for app in (['immich'] if backup_immich_enabled else []) + (['postgres'] if backup_postgres_enabled else []) + (backup_sqlite_dbs | map(attribute='app') | list) + (backup_copy_dbs | map(attribute='app') | list) %}
   --include "{{ app_data_root }}/{{ app }}/dumps"
 {% endfor %}
 )

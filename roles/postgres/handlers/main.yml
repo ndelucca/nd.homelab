@@ -1,0 +1,35 @@
+---
+# Los handlers de container (`Container daemon-reload-user`, `Container apply selinux
+# context`, `Container restart`) los provee el role compartido container_base (incluido
+# desde tasks/install.yml). Acá sólo viven los propios de Postgres.
+
+# Reload (SIGHUP) en vez de restart: postgresql.conf, pg_hba.conf y el cert TLS se
+# releen sin cortar conexiones. Los parámetros que SÍ exigen restart los detecta
+# tasks/connect.yml vía pg_settings.pending_restart. Si el container todavía no corre
+# (primera corrida) no hay nada que recargar: el start lo lee todo.
+- name: Postgres reload
+  ansible.builtin.shell:
+    cmd: |
+      if [ "$(podman container inspect -f '{{ '{{' }}.State.Running{{ '}}' }}' {{ postgres_container_name }} 2>/dev/null)" = "true" ]; then
+        podman kill --signal HUP {{ postgres_container_name }}
+      fi
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+  changed_when: false
+
+- name: Postgres daemon-reload-system
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+# `systemctl --user daemon-reload` explícito, igual que en container_base.
+- name: Postgres daemon-reload-user  # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: systemctl --user daemon-reload
+  become: true
+  become_user: "{{ postgres_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ postgres_uid }}"
+  changed_when: false

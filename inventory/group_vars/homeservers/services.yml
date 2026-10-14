@@ -92,6 +92,11 @@ adguard_dns_rewrites:
   - domain: "status.{{ nginx_domain }}"
     answer: 192.168.10.10
     enabled: true
+  # PostgreSQL compartido: NO pasa por NGINX (no es HTTP). El nombre apunta al server y
+  # el propio Postgres escucha el 5432 en la IP de la LAN, con TLS del wildcard.
+  - domain: "db.{{ nginx_domain }}"
+    answer: 192.168.10.10
+    enabled: true
   # Impresora Raspberry (.12) — sirve su PROPIO cert TLS (printer.{{ nginx_domain }}).
   - domain: "printer.{{ nginx_domain }}"
     answer: 192.168.10.12
@@ -147,6 +152,8 @@ forgejo_admin_password: "{{ vault_forgejo_admin_password }}"
 forgejo_github_token: "{{ vault_forgejo_github_token }}"
 backup_password: "{{ vault_backup_password }}"
 deploy_ssh_private_key: "{{ vault_deploy_ssh_private_key }}"
+postgres_admin_password: "{{ vault_postgres_admin_password }}"
+postgres_app_password: "{{ vault_postgres_app_password }}"
 
 # --- Puertos de los servicios: ÚNICA fuente de verdad ---------------------------
 # Viven acá, en group_vars, y no en los defaults de cada rol, porque ansible.cfg usa
@@ -170,11 +177,27 @@ forgejo_port: 3000
 forgejo_ssh_port: 2222
 monitoring_port: 3011
 nd_market_port: 28310
+postgres_port: 5432
 
 filebrowser_firewall_zone: FedoraServer
 filebrowser_root_dir: /srv/disks
 
 immich_upload_location: "{{ app_media_root }}/Gallery"
+
+# --- PostgreSQL compartido (db.<dominio>:5432) ----------------------------------
+# postgres_firewall_enabled vive acá (y no sólo en el rol) porque lo lee el rol firewall.
+postgres_firewall_enabled: true
+# Redes que pueden conectarse por TCP, siempre con TLS + scram.
+postgres_allowed_cidrs:
+  - 192.168.10.0/24
+# Databases de la instancia. Cada una se crea con owner `ndelucca`. Para sumar una:
+# agregarla acá y correr `site.yml -l ndelucca-server -t postgres_databases`.
+# Sacar una entrada NO la borra del server.
+#   - name: mi_app
+#     schemas: [app]          # opcional
+#     extensions: [pg_trgm]   # opcional
+postgres_databases:
+  - name: nd_market
 
 kavita_extra_libraries:
   - name: books

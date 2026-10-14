@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Restaura la instancia compartida de PostgreSQL desde los dumps de pg-dump-all.
+#
+# Uso:
+#   pg-restore-db <db> [archivo.dump]     restaura UNA database (falla si ya existe)
+#   pg-restore-db --force <db> [archivo]  idem, pero la DROPEA y recrea si ya existe
+#   pg-restore-db --globals [archivo.sql] recrea roles y memberships
+#   pg-restore-db --all [directorio]      globals + todas las databases del directorio
+#                                         (instancia nueva: rebuild o upgrade de major)
+#
+# Defaults: {{ postgres_dump_dir }}/<db>.dump y {{ postgres_dump_dir }}/globals.sql.
+# La database vuelve con su dueño, permisos y configuración originales, por eso los
+# roles tienen que existir antes (--globals, o haber corrido el rol de Ansible).
+set -euo pipefail
+
+CONTAINER="{{ postgres_container_name }}"
+ADMIN="{{ postgres_admin_user }}"
+DUMP_DIR="{{ postgres_dump_dir }}"
+
+log() { echo "[pg-restore-db] $*"; }
+die() { echo "[pg-restore-db][ERROR] $*" >&2; exit 1; }
+pg() { podman exec -i "${CONTAINER}" "$@"; }
+sql() { pg psql --username="${ADMIN}" --dbname=postgres --no-psqlrc -At --set=ON_ERROR_STOP=1 "$@"; }
+usage() { sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+
+restore_globals() {
+  local file="${1:-${DUMP_DIR}/globals.sql}"
+  [ -s "${file}" ] || die "no existe o está vacío: ${file}"
+  log "restaurando roles desde ${file}"
+  # Los roles que ya existen (el admin siempre; {{ postgres_app_user }} si corrió el rol)
+  # dan "already exists" en el CREATE y siguen con su ALTER ROLE: es lo esperado. Cualquier
+  # OTRO error sí es un fallo.
+  local errors
+  errors="$(pg psql --username="${ADMIN}" --dbname=postgres --no-psqlrc --quiet < "${file}" 2>&1 >/dev/null \
+            | grep -E '^(psql:|ERROR|FATAL)' | grep -Ev 'role "[^"]+" already exists' || true)"
+  [ -z "${errors}" ] || die "errores al restaurar globals:"$'\n'"${errors}"
+}
+
+restore_db() {
+  local force="$1" db="$2" file="${3:-${DUMP_DIR}/$2.dump}"
+  [[ "${db}" =~ ^[A-Za-z0-9_.-]+$ ]] || die "nombre de database no soportado: '${db}'"
+  [ -s "${file}" ] || die "no existe o está vacío: ${file}"
+
+  # `postgres` es la database de mantenimiento: no se puede dropear estando conectado a
+  # ella, así que se restaura su contenido en el lugar.
+  if [ "${db}" = "postgres" ]; then
+    log "restaurando el contenido de postgres desde ${file}"
+    pg pg_restore --username="${ADMIN}" --dbname=postgres --clean --if-exists --exit-on-error < "${file}"
+    return
+  fi
+
+  local exists
+  exists="$(sql -c "SELECT count(*) FROM pg_database WHERE datname = '${db}'")"
+  if [ "${exists}" -ne 0 ]; then
+    [ "${force}" -eq 1 ] || die "la database ${db} ya existe; usá --force para dropearla y restaurarla"
+    log "dropeando ${db} (--force)"
+    sql -c "DROP DATABASE \"${db}\" WITH (FORCE)" >/dev/null
+  fi
+  log "restaurando ${db} desde ${file}"
+  pg pg_restore --username="${ADMIN}" --dbname=postgres --create --exit-on-error < "${file}"
+}
+
+podman container inspect -f '{% raw %}{{.State.Running}}{% endraw %}' "${CONTAINER}" 2>/dev/null | grep -qx true \
+  || die "el container ${CONTAINER} no está corriendo"
+
+[ $# -ge 1 ] || usage
+case "$1" in
+  -h|--help) usage ;;
+  --globals) restore_globals "${2:-}" ;;
+  --all)
+    dir="${2:-${DUMP_DIR}}"
+    restore_globals "${dir}/globals.sql"
+    shopt -s nullglob
+    for file in "${dir}"/*.dump; do
+      restore_db 1 "$(basename "${file}" .dump)" "${file}"
+    done
+    ;;
+  --force) [ $# -ge 2 ] || usage; restore_db 1 "$2" "${3:-}" ;;
+  -*) usage ;;
+  *) restore_db 0 "$1" "${2:-}" ;;
+esac
+log "done"
