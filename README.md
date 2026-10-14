@@ -37,7 +37,7 @@ internet**.
 | `books.` | Kavita (lectura) | `kavita` | Podman `.container` |
 | `git.` | Forgejo (+ git SSH :2222) | `forgejo` | Podman `.container` |
 | `status.` | Uptime-Kuma | `monitoring` | Podman `.container` |
-| `market.` | nd.market (Markets) | `nd_market` | Podman `.container` (Forgejo Actions) |
+| `market.` | nd.market (Markets) | `nd_market` | Podman `.container` (Forgejo Actions; base en `postgres`) |
 | `db.` (**:5432**, sin NGINX) | PostgreSQL compartido | `postgres` | Podman `.container` (`Network=host`) |
 
 Roles transversales: `storage` (discos), `acme` (TLS), `nginx` (proxy),

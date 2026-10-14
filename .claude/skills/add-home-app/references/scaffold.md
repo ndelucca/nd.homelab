@@ -173,8 +173,12 @@ cumplir esto o la app no arranca:
   `UserNS=keep-id:uid=1000`. Como root, el proceso no puede escribir `/data`.
 - **El estado va a `/data`.** Es el **único** volumen que monta la unit. Cualquier otra ruta se
   escribe en el layer efímero y se pierde en cada deploy.
-- **Tiene que arrancar sin ninguna variable de entorno.** La plantilla Quadlet no define
-  `Environment=`: los defaults de la imagen (`ENV …`) son lo único que hay.
+- **Tiene que arrancar con los defaults de la imagen.** La plantilla Quadlet no define
+  `Environment=` para nada imprescindible: los defaults de la imagen (`ENV …`) tienen que
+  alcanzar. La excepción es una credencial —una app que usa el PostgreSQL compartido
+  necesita su URL con password—: eso va en un archivo `0600` del rol (`<app>/secrets/`,
+  escrito con `no_log`, nunca montado) que la unit carga con `EnvironmentFile=`. Nunca en
+  `Environment=`, que queda en una unit `0644`. Ver `roles/nd_market`.
 - **CA certs.** Si la base es `scratch`/`distroless` y la app hace HTTPS de salida, copiá
   `ca-certificates.crt` desde el stage de build o todos los fetch fallan.
 

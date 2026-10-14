@@ -11,6 +11,9 @@ nd_market_uid: 1000  # Se obtiene dinámicamente vía getent en preflight
 # El estado vive en el disco de appdata (app_data_root, en homeservers/storage.yml).
 nd_market_base_dir: "{{ app_data_root }}/nd_market"
 nd_market_data_dir: "{{ nd_market_base_dir }}/data"
+# Credenciales que la unit le pasa al contenedor por EnvironmentFile=. NO se monta: lo lee
+# systemd del lado del host, igual que initdb.env en el rol postgres.
+nd_market_secrets_dir: "{{ nd_market_base_dir }}/secrets"
 
 nd_market_quadlet_dir: /etc/containers/systemd/users
 nd_market_container_name: nd_market
@@ -36,3 +39,20 @@ nd_market_claude_bridge_enabled: true
 # nd_market_ las mantiene dentro de este rol (mismo patrón que firewall_forgejo_ssh_port).
 nd_market_claude_socket_dir: "{{ claude_bridge_socket_dir | default('/run/home-claude') }}"
 nd_market_claude_mount: "{{ claude_bridge_container_mount | default('/run/home-claude') }}"
+
+# --- Base de datos: el PostgreSQL compartido (rol postgres, db.<dominio>:5432) -----------
+# La app ya no guarda una SQLite en /data: habla con la base `nd_market` del servidor
+# compartido, con el rol de trabajo de las apps. La URL completa —con la password— entra al
+# contenedor como NDM_DB_URL, escrita en un archivo 0600 que la unit carga con
+# EnvironmentFile=. Sin esa variable la app no arranca, y lo dice.
+#
+# La password se mapea en services.yml a vault_postgres_app_password (el rol postgres y este
+# comparten el mismo rol de base). El host se resuelve por AdGuard a la IP de LAN, y la
+# conexion va con TLS verificado contra el wildcard de Let's Encrypt: `verify-full` es lo
+# unico que pg_hba acepta desde la LAN.
+nd_market_db_host: "db.{{ nginx_domain }}"
+nd_market_db_port: "{{ postgres_port | default(5432) }}"
+nd_market_db_name: nd_market
+nd_market_db_user: "{{ postgres_app_user | default('ndelucca') }}"
+nd_market_db_password: ""
+nd_market_db_sslmode: verify-full

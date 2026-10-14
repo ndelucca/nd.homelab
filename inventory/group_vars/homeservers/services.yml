@@ -154,6 +154,13 @@ backup_password: "{{ vault_backup_password }}"
 deploy_ssh_private_key: "{{ vault_deploy_ssh_private_key }}"
 postgres_admin_password: "{{ vault_postgres_admin_password }}"
 postgres_app_password: "{{ vault_postgres_app_password }}"
+# nd_market usa el mismo rol de base que gestiona el rol postgres.
+nd_market_db_password: "{{ vault_postgres_app_password }}"
+# Secret NDM_TEST_DB_URL de Actions: los tests del adapter Postgres de nd.market corren
+# contra nd_market_test durante el build de la imagen. Sin el secret el build falla a
+# proposito (los tests se saltearian y la compuerta pasaria en falso).
+forgejo_runner_nd_market_test_db_url: >-
+  postgres://{{ postgres_app_user | default('ndelucca') }}:{{ vault_postgres_app_password | urlencode }}@db.{{ nginx_domain }}:{{ postgres_port }}/nd_market_test?sslmode=verify-full
 
 # --- Puertos de los servicios: ÚNICA fuente de verdad ---------------------------
 # Viven acá, en group_vars, y no en los defaults de cada rol, porque ansible.cfg usa
@@ -198,6 +205,9 @@ postgres_allowed_cidrs:
 #     extensions: [pg_trgm]   # opcional
 postgres_databases:
   - name: nd_market
+  # Base de los tests del adapter de nd.market (schema efimero por test). El helper de test
+  # rechaza una URL que apunte a nd_market: los tests jamas corren contra produccion.
+  - name: nd_market_test
 
 kavita_extra_libraries:
   - name: books

@@ -13,6 +13,10 @@
     container_base_user: "{{ nd_market_user }}"
   tags: ['nd_market', 'install']
 
+- name: Deploy database credentials (EnvironmentFile for the unit)
+  ansible.builtin.import_tasks: secrets.yml
+  tags: ['nd_market', 'secrets']
+
 - name: Deploy Quadlet configuration
   ansible.builtin.import_tasks: quadlet.yml
   tags: ['nd_market', 'quadlet']

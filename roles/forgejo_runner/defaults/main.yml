@@ -72,3 +72,5 @@ forgejo_runner_admin_password: "{{ forgejo_admin_password | default('') }}"
 forgejo_runner_deploy_ssh_private_key: "{{ deploy_ssh_private_key | default('') }}"
 # Token de API de Forgejo (vaulteado) -> secret REGISTRY_TOKEN (login/push al registry).
 forgejo_runner_registry_token: "{{ vault_forgejo_api_token | default('') }}"
+# URL de la base de tests de nd.market -> secret NDM_TEST_DB_URL (se arma en services.yml).
+forgejo_runner_nd_market_test_db_url: ""

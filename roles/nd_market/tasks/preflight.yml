@@ -36,6 +36,16 @@
       podman login {{ nd_market_image.split('/')[0] }} -u ndelucca
   when: nd_market_registry_login.rc != 0
 
+# Sin password no hay NDM_DB_URL y la app no arranca. Se corta aca, con nombre, en vez de
+# dejar que la unit entre en un loop de Restart=on-failure cada 30 segundos.
+- name: Ensure the database password is available (vault_postgres_app_password)
+  ansible.builtin.assert:
+    that:
+      - nd_market_db_password | length > 0
+    fail_msg: >-
+      nd_market_db_password esta vacia: services.yml tiene que mapearla a
+      vault_postgres_app_password (es el mismo rol de base que gestiona el rol postgres).
+
 - name: Ensure base and data directories exist
   ansible.builtin.file:
     path: "{{ item }}"
@@ -47,3 +57,12 @@
   loop:
     - "{{ nd_market_base_dir }}"
     - "{{ nd_market_data_dir }}"
+
+- name: Ensure the secrets directory exists (host side only, never mounted)
+  ansible.builtin.file:
+    path: "{{ nd_market_secrets_dir }}"
+    state: directory
+    owner: "{{ nd_market_user }}"
+    group: "{{ nd_market_group }}"
+    mode: '0700'
+  become: true
