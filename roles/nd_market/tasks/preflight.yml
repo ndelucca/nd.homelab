@@ -10,9 +10,23 @@
   ansible.builtin.set_fact:
     nd_market_uid: "{{ container_base_uid }}"
 
-# El Quadlet usa Pull=newer contra el registry PRIVADO de Forgejo, cuyo login lo hace ndelucca a
-# mano (no lo gestiona Ansible; ver docs/BOOTSTRAP.md §4b). Sin login el pull falla en SILENCIO y
-# la unit no arranca. Verificar acá y fallar con un mensaje claro en vez de un 502 misterioso.
+# El Quadlet usa Pull=newer contra el registry de Forgejo. Si el paquete es privado, sin login el
+# pull falla en SILENCIO y la unit no arranca. Si el token de lectura esta en el vault, el login lo
+# hace Ansible acá; si no, lo hace ndelucca a mano (docs/BOOTSTRAP.md §4b) y abajo solo se avisa.
+# Al 14/10/2026 el paquete nd.market es PUBLICO (el pull anda sin auth.json en el host), asi que
+# el aviso de abajo es informativo hasta que eso cambie.
+- name: Log podman in to the container registry (vault_forgejo_registry_pull_token)
+  ansible.builtin.command:
+    cmd: "podman login --username {{ nd_market_registry_user }} --password-stdin {{ nd_market_image.split('/')[0] }}"
+    stdin: "{{ nd_market_registry_token }}"
+  become: true
+  become_user: "{{ nd_market_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ nd_market_uid }}"
+  when: nd_market_registry_token | length > 0
+  changed_when: false
+  no_log: true
+
 - name: Check whether podman is logged in to the container registry
   ansible.builtin.command: "podman login --get-login {{ nd_market_image.split('/')[0] }}"
   become: true

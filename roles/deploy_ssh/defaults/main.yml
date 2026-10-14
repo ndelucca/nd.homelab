@@ -21,3 +21,19 @@ deploy_ssh_script_path: /usr/local/bin/home-deploy
 # unit y el valor es el repositorio OCI sin tag.
 deploy_ssh_immutable_images:
   nd_market: "git.{{ nginx_domain }}/ndelucca/nd.market"
+
+# Chequeo de salud POST-restart. Sin esto, un action verde solo decia "systemd reinicio la
+# unit": la app podia quedar muerta (base inalcanzable, env var faltante, pull fallido con la
+# imagen vieja en pie) y nada lo avisaba hasta abrir el sitio. El dispatcher espera hasta
+# deploy_ssh_health_timeout segundos a que la URL conteste 2xx y falla el ssh —y con el, el
+# job— si no lo hace. La URL es loopback: no depende de nginx ni de DNS, y el puerto es el
+# mismo nd_market_port que arma NDM_ADDR (services.yml).
+#
+# Si la app publica su version en el cuerpo de healthz ("ok <sha>"), `version` dice con que
+# comparar: el dispatcher recibe el commit como tercer campo (<app>@sha256:<digest>#<sha>) y
+# exige que la que contesta sea ESA, no la anterior que todavia no termino de bajar.
+deploy_ssh_health_checks:
+  nd_market:
+    url: "http://127.0.0.1:{{ nd_market_port | default(28310) }}/healthz"
+    version: true
+deploy_ssh_health_timeout: 120

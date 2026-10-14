@@ -100,6 +100,10 @@ gestiona ningún rol. Tras un rebuild hay que rehacerlas o las apps que dependen
   ```bash
   podman login git.ndelucca.dedyn.io -u ndelucca   # token con scope read:package
   ```
+  Para que deje de ser manual: generá ese token (read:package) en Forgejo y guardalo en el vault
+  como `vault_forgejo_registry_pull_token`. El preflight de `nd_market` hace el `podman login`
+  con él en cada corrida y este paso desaparece. El preflight igual avisa si al final no hay
+  login.
 
 - **CLI de Claude + login OAuth (para el rol `claude_bridge`).** El bridge expone el CLI `claude`
   del host a los contenedores por un socket unix; el binario y la sesión OAuth viven del lado del

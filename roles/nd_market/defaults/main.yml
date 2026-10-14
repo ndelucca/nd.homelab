@@ -21,6 +21,15 @@ nd_market_container_name: nd_market
 # Imagen publicada por el workflow en el registry de Forgejo (usa el NOMBRE DE REPO, con puntos).
 nd_market_image: "git.{{ nginx_domain }}/ndelucca/nd.market:latest"
 
+# Login de podman al registry PRIVADO, para el Pull=newer de la unit. Si el token esta en el
+# vault (un token de Forgejo con scope read:package alcanza), preflight hace el login y el
+# paso a mano de docs/BOOTSTRAP.md §4b deja de existir. Vacio = se mantiene el login manual,
+# y preflight solo avisa si falta. Es un token DISTINTO del de REGISTRY_TOKEN del runner
+# (vault_forgejo_api_token), que tiene permiso de escritura y no tiene por que vivir en el
+# auth.json del host.
+nd_market_registry_user: ndelucca
+nd_market_registry_token: "{{ vault_forgejo_registry_pull_token | default('') }}"
+
 nd_market_port: 28310            # HTTP en loopback, servido vía NGINX (nginx_nd_market_port)
 nd_market_host: 127.0.0.1
 # Con Network=host no hay PublishPort: la app escucha directamente en host:port (NDM_ADDR).

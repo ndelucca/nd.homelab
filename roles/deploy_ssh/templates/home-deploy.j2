@@ -2,8 +2,10 @@
 # home-deploy — dispatcher de deploy (forced-command de la clave DEPLOY_SSH_KEY).
 # Gestionado por Ansible (rol deploy_ssh) — no editar a mano.
 #
-# El runner de Forgejo invoca:  ssh deploy@host <app> o <app>@sha256:<digest>
-# El nombre <app> llega en $SSH_ORIGINAL_COMMAND (el forced-command ignora el resto).
+# El runner de Forgejo invoca:  ssh deploy@host <app>, <app>@sha256:<digest> o
+# <app>@sha256:<digest>#<commit>. El nombre <app> llega en $SSH_ORIGINAL_COMMAND (el
+# forced-command ignora el resto). El <commit> es opcional y solo sirve para el chequeo de
+# salud: si la app publica su version en healthz, se exige que sea esa.
 # <app> es el nombre del service/unit (convención de la casa: guión_bajo, ej. nd_market),
 # que puede diferir del nombre del repo/imagen (ej. repo nd.market -> unit nd_market).
 # Solo se aceptan apps con una unit de usuario gestionada, para no permitir pulls/restarts
@@ -18,10 +20,26 @@ export XDG_RUNTIME_DIR
 command=$(printf '%s' "${SSH_ORIGINAL_COMMAND:-}" | tr -d '\r\n')
 app="$command"
 ref=""
+commit=""
+case "$command" in
+  *#*)
+    commit=${command#*#}
+    command=${command%%#*}
+    app="$command"
+    ;;
+esac
 case "$command" in
   *@sha256:*)
     app=${command%@*}
     ref=${command#*@}
+    ;;
+esac
+case "$commit" in
+  '' | *[!0-9a-fA-F]*)
+    if [ -n "$commit" ]; then
+      echo "home-deploy: commit inválido: '${commit}'" >&2
+      exit 2
+    fi
     ;;
 esac
 
@@ -79,5 +97,38 @@ fi
 {% endfor %}
 echo "home-deploy: restarting ${unit}"
 systemctl --user restart "$unit"
+
+# Un restart que "anduvo" no dice que la app ande: la unit queda active con el proceso
+# muerto o reiniciando (Restart=on-failure cada 30 s). Se espera a que conteste, y si se
+# pidio, a que conteste CON la version deployada: un healthz 200 de la build anterior,
+# todavia en pie mientras la nueva baja, no cuenta.
+{% for health_app, check in deploy_ssh_health_checks.items() %}
+if [ "$app" = "{{ health_app }}" ]; then
+  url="{{ check.url }}"
+  esperado=""
+{% if check.version | default(false) %}
+  esperado="$commit"
+{% endif %}
+  echo "home-deploy: esperando a ${app} en ${url}${esperado:+ (version ${esperado})}"
+  i=0
+  while :; do
+    cuerpo=$(curl -fsS --max-time 5 "$url" 2>/dev/null || true)
+    if [ -n "$cuerpo" ]; then
+      case "$esperado" in
+        '') break ;;
+        *) case "$cuerpo" in *"$esperado"*) break ;; esac ;;
+      esac
+    fi
+    i=$((i + 1))
+    if [ "$i" -ge {{ deploy_ssh_health_timeout | int }} ]; then
+      echo "home-deploy: ${app} no contesto en ${url} tras {{ deploy_ssh_health_timeout }}s (ultimo cuerpo: '${cuerpo}')" >&2
+      systemctl --user --no-pager -l status "$unit" >&2 || true
+      exit 4
+    fi
+    sleep 1
+  done
+  echo "home-deploy: ${app} contesta: ${cuerpo}"
+fi
+{% endfor %}
 
 echo "home-deploy: ${app} OK"
