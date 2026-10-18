@@ -24,7 +24,7 @@ forgejo_runner_service_name: forgejo-runner  # unit forgejo-runner.container -> 
 # la auth de registry por secrets DOCKER_USERNAME/DOCKER_PASSWORD, y la config
 # container.network_mode). Nada de eso lo usa el workflow de nd.market; si se agregan
 # workflows nuevos, revisar contra las release notes de v13.0.0 antes de subir el pin.
-forgejo_runner_version: "13.1.0"
+forgejo_runner_version: "13.2.0"
 forgejo_runner_image: "code.forgejo.org/forgejo/runner:{{ forgejo_runner_version }}"
 
 # Instancia contra la que registra. Se usa el dominio interno (resuelto por AdGuard a la
