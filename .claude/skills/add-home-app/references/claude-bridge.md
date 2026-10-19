@@ -62,6 +62,7 @@ Notas para el cliente:
   corrompan el refresh del token OAuth. Una consulta larga hace esperar a las demás: dimensioná el
   timeout del cliente en consecuencia.
 
-Ejemplo de referencia: el adapter `bridge` de `nd.market`
-(`internal/adapters/claude`, `NewBridge`) — `net.Dial("unix", …)` + `CloseWrite()` +
-`io.ReadAll`, con `NDM_CLAUDE_PROVIDER=bridge` / `NDM_CLAUDE_SOCKET`.
+Ejemplo de referencia: el adapter `bridge` que tuvo `nd.market` hasta el commit `8b22ec7`
+(`internal/adapters/claude/claude.go`, `NewBridge`; se fue con el consultor, así que hoy ninguna
+app usa el bridge) — `net.Dial("unix", …)` + `CloseWrite()` + `io.ReadAll`. Para verlo:
+`git -C ~/dev/nd.market show 8b22ec7:internal/adapters/claude/claude.go`.

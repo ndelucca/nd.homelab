@@ -65,7 +65,7 @@ nginx_vhosts:
   - {subdomain: "books", port: "{{ nginx_kavita_port }}"}
   - {subdomain: "git", port: "{{ nginx_forgejo_port }}", client_max_body_size: "0"}
   - {subdomain: "status", port: "{{ nginx_uptime_kuma_port }}"}
-  # nd.market usa Server-Sent Events (/stream/{symbol}, /claude/stream/{id}), no WebSockets:
+  # nd.market usa Server-Sent Events (/stream/{symbol}), no WebSockets:
   # sin proxy_buffering off los precios en vivo se acumulan en el buffer y no llegan.
   - subdomain: "market"
     port: "{{ nginx_nd_market_port }}"

@@ -216,7 +216,7 @@ En orden (detalle y plantillas en `references/app-role.md`):
    service/unit). La clave de deploy vive en el usuario ndelucca, con forced-command.
 7. **(Opcional) Bridge de Claude**: si la app necesita invocar el CLI de Claude desde el
    contenedor, montá el socket del rol `claude_bridge` en la Quadlet. Ver
-   `references/claude-bridge.md` (protocolo, frontera de confianza, ejemplo en `nd_market`).
+   `references/claude-bridge.md` (protocolo, frontera de confianza, cliente de ejemplo).
 
 ### 3. Cerrar
 

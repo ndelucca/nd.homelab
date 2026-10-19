@@ -21,22 +21,15 @@ UserNS=keep-id:uid={{ nd_market_uid }},gid={{ nd_market_uid }}
 Network=host
 Environment=NDM_ADDR={{ nd_market_host }}:{{ nd_market_port }}
 
-# /data ya no tiene la base (vive en el PostgreSQL compartido); queda para el perfil del
-# consultor (perfil.md) y lo que la app quiera persistir fuera de la base.
+# /data es el WORKDIR de la imagen. La app ya no escribe nada ahi: la base vive en el
+# PostgreSQL compartido y el perfil del consultor se fue con el consultor. Queda montado porque
+# guarda el respaldo de la SQLite vieja (nd.market.db) hasta que se borre a mano.
 Volume={{ nd_market_data_dir }}:/data:Z
 
 # NDM_DB_URL, con la password adentro. Va por EnvironmentFile y no por Environment= porque
 # este archivo es 0644 y lo lee cualquiera; el .env es 0600 del usuario. Es la UNICA variable
 # sin la que la app no arranca.
 EnvironmentFile={{ nd_market_secrets_dir }}/nd_market.env
-{% if nd_market_claude_bridge_enabled %}
-
-# Bridge del CLI de Claude (rol claude_bridge). Sin `:z` ni `:Z`: el dir ya viene etiquetado
-# container_file_t, y `:Z` (MCS privado) se lo robaría a las demás apps que comparten el socket.
-Volume={{ nd_market_claude_socket_dir }}:{{ nd_market_claude_mount }}
-Environment=NDM_CLAUDE_PROVIDER=bridge
-Environment=NDM_CLAUDE_SOCKET={{ nd_market_claude_mount }}/sock
-{% endif %}
 
 # El dispatcher de deploy trae el digest publicado y lo etiqueta como :latest antes de
 # reiniciar; Pull=newer conserva la recuperación automática si la unit arranca por fuera
